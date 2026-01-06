@@ -55,9 +55,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                 Expanded(child: Text('Ошибка загрузки закладок: $e')),
               ],
             ),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: const Color(0xFFFF6B6B),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
           ),
         );
       }
@@ -78,9 +79,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                 Text('Удалено из закладок'),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: const Color(0xFF4ECDC4),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
           ),
         );
       }
@@ -108,108 +110,88 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0.1),
-                              Colors.white.withValues(alpha: 0.05),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.arrow_back, color: Colors.white),
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF4ECDC4),
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Закладки',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Закладки',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2D3436),
+                            letterSpacing: 0.5,
                           ),
-                          Text(
-                            'Сохранённые книги',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.6),
-                            ),
+                        ),
+                        const Text(
+                          'Сохранённые книги',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF636E72),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4ECDC4),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_bookmarks.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_bookmarks.length}',
-                        style: const TextStyle(
-                          color: Color(0xFF14FFEC),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              // Content
-              Expanded(
-                child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: const Color(0xFF14FFEC),
-                          strokeWidth: 2.5,
-                        ),
-                      )
-                    : _bookmarks.isEmpty
-                        ? _buildEmptyState()
-                        : _buildBookmarksList(),
-              ),
-            ],
-          ),
+            // Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF4ECDC4),
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : _bookmarks.isEmpty
+                      ? _buildEmptyState()
+                      : _buildBookmarksList(),
+            ),
+          ],
         ),
       ),
     );
@@ -224,37 +206,32 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withValues(alpha: 0.05),
-                  Colors.white.withValues(alpha: 0.02),
-                ],
-              ),
+              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.bookmark_border_rounded,
               size: 100,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: Color(0xFF4ECDC4),
             ),
           ),
           const SizedBox(height: 24),
-          Text(
+          const Text(
             'Нет сохранённых книг',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Color(0xFF2D3436),
             ),
           ),
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 48),
             child: Text(
               'Добавляйте книги в закладки, чтобы быстро находить их',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Colors.white.withValues(alpha: 0.5),
+                color: Color(0xFF636E72),
                 height: 1.5,
               ),
             ),
@@ -296,22 +273,13 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.02),
-          ],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-          width: 1.5,
-        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -334,8 +302,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                          blurRadius: 15,
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
@@ -365,7 +333,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Color(0xFF2D3436),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -373,9 +341,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                       const SizedBox(height: 6),
                       Text(
                         author,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Color(0xFF636E72),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -387,17 +355,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                          ),
+                          color: const Color(0xFF4ECDC4),
                           borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -428,17 +387,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                   icon: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.red.withValues(alpha: 0.2),
-                          Colors.red.withValues(alpha: 0.1),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
                     ),
                     child: const Icon(
                       Icons.bookmark_remove_rounded,
-                      color: Colors.redAccent,
+                      color: Color(0xFFFF6B6B),
                       size: 20,
                     ),
                   ),
@@ -446,55 +400,47 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: const Color(0xFF1A1F3A),
+                        backgroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            width: 1.5,
-                          ),
                         ),
                         title: const Text(
                           'Удалить закладку?',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Color(0xFF2D3436),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         content: Text(
                           'Вы уверены, что хотите удалить "$title" из закладок?',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
+                          style: const TextStyle(
+                            color: Color(0xFF636E72),
                           ),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: Text(
+                            child: const Text(
                               'Отмена',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
+                                color: Color(0xFF636E72),
                               ),
                             ),
                           ),
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.red.shade400,
-                                  Colors.red.shade600,
-                                ],
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _removeBookmark(bookId);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF6B6B),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _removeBookmark(bookId);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                              ),
-                              child: const Text('Удалить'),
-                            ),
+                            child: const Text('Удалить'),
                           ),
                         ],
                       ),
@@ -512,18 +458,13 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
   Widget _buildPlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.02),
-          ],
-        ),
+        color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
       ),
-      child: Center(
+      child: const Center(
         child: Icon(
           Icons.book_rounded,
           size: 40,
-          color: Colors.white.withValues(alpha: 0.2),
+          color: Color(0xFF4ECDC4),
         ),
       ),
     );

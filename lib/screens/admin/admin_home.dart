@@ -48,67 +48,47 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-              const Color(0xFF0D7377).withValues(alpha: 0.3),
-            ],
-          ),
-        ),
-        child: FadeTransition(
-          opacity: _animController,
-          child: _screens[_selectedIndex],
-        ),
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: FadeTransition(
+        opacity: _animController,
+        child: _screens[_selectedIndex],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF1A1F3A).withValues(alpha: 0.95),
-              const Color(0xFF0A0E27),
-            ],
-          ),
+          color: Colors.white,
           border: Border(
             top: BorderSide(
-              color: const Color(0xFF14FFEC).withValues(alpha: 0.2),
-              width: 1.5,
+              color: const Color(0xFFE0E5EC),
+              width: 1,
             ),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 20,
-              offset: const Offset(0, -5),
+              offset: const Offset(0, -2),
             ),
           ],
         ),
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(
-                  icon: Icons.auto_stories_rounded,
+                  icon: Icons.menu_book_rounded,
                   label: 'Книги',
                   index: 0,
                 ),
                 _buildNavItem(
-                  icon: Icons.people_rounded,
+                  icon: Icons.people_outline,
                   label: 'Пользователи',
                   index: 1,
                 ),
                 _buildNavItem(
-                  icon: Icons.person_rounded,
+                  icon: Icons.person_outline,
                   label: 'Профиль',
                   index: 2,
                 ),
@@ -130,112 +110,39 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
     return Expanded(
       child: GestureDetector(
         onTap: () => _onItemTapped(index),
-        child: TweenAnimationBuilder(
-          duration: const Duration(milliseconds: 250),
-          tween: Tween<double>(begin: 0, end: isSelected ? 1 : 0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          builder: (context, double value, child) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: value > 0
-                    ? LinearGradient(
-                        colors: [
-                          const Color(0xFF14FFEC).withValues(alpha: 0.25 * value),
-                          const Color(0xFF0D7377).withValues(alpha: 0.15 * value),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF14FFEC).withValues(alpha: 0.4 * value)
-                      : Colors.transparent,
-                  width: 1.5,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? const Color(0xFF4ECDC4).withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isSelected 
+                    ? const Color(0xFF4ECDC4)
+                    : const Color(0xFF636E72),
+                size: 26,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected 
+                      ? const Color(0xFF4ECDC4)
+                      : const Color(0xFF636E72),
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFF14FFEC).withValues(alpha: 0.3 * value),
-                          blurRadius: 12 * value,
-                          spreadRadius: 2 * value,
-                        ),
-                      ]
-                    : null,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Иконка с анимацией масштаба
-                  Transform.scale(
-                    scale: 1 + (0.15 * value),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: value > 0
-                            ? LinearGradient(
-                                colors: [
-                                  const Color(0xFF14FFEC).withValues(alpha: 0.3 * value),
-                                  const Color(0xFF0D7377).withValues(alpha: 0.2 * value),
-                                ],
-                              )
-                            : null,
-                      ),
-                      child: Icon(
-                        icon,
-                        color: Color.lerp(
-                          Colors.white.withValues(alpha: 0.5),
-                          const Color(0xFF14FFEC),
-                          value,
-                        ),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // Текст с анимацией
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: Color.lerp(
-                        Colors.white.withValues(alpha: 0.5),
-                        const Color(0xFF14FFEC),
-                        value,
-                      ),
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  // Индикатор активности
-                  const SizedBox(height: 4),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    height: 3,
-                    width: isSelected ? 20 : 0,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                      ),
-                      borderRadius: BorderRadius.circular(2),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF14FFEC).withValues(alpha: 0.5),
-                                blurRadius: 6,
-                              ),
-                            ]
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );

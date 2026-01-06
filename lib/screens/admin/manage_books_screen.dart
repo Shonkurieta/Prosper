@@ -30,7 +30,6 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
       curve: Curves.easeInOut,
     );
     _animController.forward();
-    // ИЗМЕНЕНО: используем getAdminBooks вместо fetchBooks
     _books = BookService().getAdminBooks(widget.token);
     _updateBookCount();
   }
@@ -50,7 +49,6 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
 
   Future<void> _refreshBooks() async {
     setState(() {
-      // ИЗМЕНЕНО: используем getAdminBooks вместо fetchBooks
       _books = BookService().getAdminBooks(widget.token);
     });
     await _updateBookCount();
@@ -85,9 +83,10 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+        backgroundColor: isError ? const Color(0xFFFF6B6B) : const Color(0xFF4ECDC4),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -97,22 +96,25 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1F3A),
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Удалить книгу?',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF2D3436),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           'Вы уверены, что хотите удалить книгу "$title"?',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+          style: const TextStyle(color: Color(0xFF636E72)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
+            child: const Text(
               'Отмена',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+              style: TextStyle(color: Color(0xFF636E72)),
             ),
           ),
           ElevatedButton(
@@ -121,12 +123,14 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
               _deleteBook(id, title);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: const Color(0xFFFF6B6B),
+              foregroundColor: Colors.white,
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Удалить', style: TextStyle(color: Colors.white)),
+            child: const Text('Удалить'),
           ),
         ],
       ),
@@ -164,367 +168,310 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-              const Color(0xFF0D7377).withValues(alpha: 0.3),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Заголовок
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
-                        ),
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Заголовок
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF4ECDC4),
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Color(0xFF14FFEC)),
-                        onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Управление',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2D3436),
+                          ),
+                        ),
+                        const Text(
+                          'Библиотека книг',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF636E72),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Индикатор количества
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4ECDC4),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$_bookCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                  ),
+                ],
+              ),
+            ),
+
+            // Список книг
+            Expanded(
+              child: FutureBuilder<List<dynamic>>(
+                future: _books,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF4ECDC4),
+                      ),
+                    );
+                  } else if (snapshot.hasError) {
+                    return Center(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                            ).createShader(bounds),
-                            child: const Text(
-                              'Управление',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                          const Icon(
+                            Icons.error_outline,
+                            size: 80,
+                            color: Color(0xFFFF6B6B),
+                          ),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              'Ошибка: ${snapshot.error}',
+                              style: const TextStyle(
+                                color: Color(0xFF636E72),
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
-                          Text(
-                            'Библиотека книг',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.6),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _refreshBooks,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Обновить'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4ECDC4),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    // Индикатор количества
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$_bookCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Список книг
-              Expanded(
-                child: FutureBuilder<List<dynamic>>(
-                  future: _books,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(
-                              color: Color(0xFF14FFEC),
+                    );
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Загрузка...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    } else if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
+                            child: const Icon(
+                              Icons.menu_book_outlined,
                               size: 80,
-                              color: Colors.red.withValues(alpha: 0.5),
+                              color: Color(0xFF4ECDC4),
                             ),
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 32),
-                              child: Text(
-                                'Ошибка: ${snapshot.error}',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Нет книг',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3436),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Добавьте первую книгу',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF636E72),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final books = snapshot.data!;
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: RefreshIndicator(
+                      onRefresh: _refreshBooks,
+                      color: const Color(0xFF4ECDC4),
+                      backgroundColor: Colors.white,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: books.length,
+                        itemBuilder: (context, index) {
+                          final book = books[index];
+                          final title = book['title'] ?? 'Без названия';
+                          final author = book['author'] ?? 'Без автора';
+                          final bookId = book['id'];
+
+                          return TweenAnimationBuilder(
+                            duration: Duration(milliseconds: 300 + (index * 50)),
+                            tween: Tween<double>(begin: 0, end: 1),
+                            builder: (context, double value, child) {
+                              return Opacity(
+                                opacity: value,
+                                child: Transform.translate(
+                                  offset: Offset(0, 20 * (1 - value)),
+                                  child: child,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: _refreshBooks,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Обновить'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF14FFEC),
-                                foregroundColor: const Color(0xFF0A0E27),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.library_books_outlined,
-                              size: 80,
-                              color: Colors.white.withValues(alpha: 0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Нет книг',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Добавьте первую книгу',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withValues(alpha: 0.4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final books = snapshot.data!;
-                    return FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: RefreshIndicator(
-                        onRefresh: _refreshBooks,
-                        color: const Color(0xFF14FFEC),
-                        backgroundColor: const Color(0xFF1A1F3A),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: books.length,
-                          itemBuilder: (context, index) {
-                            final book = books[index];
-                            final title = book['title'] ?? 'Без названия';
-                            final author = book['author'] ?? 'Без автора';
-                            final bookId = book['id'];
-
-                            return TweenAnimationBuilder(
-                              duration: Duration(milliseconds: 300 + (index * 50)),
-                              tween: Tween<double>(begin: 0, end: 1),
-                              builder: (context, double value, child) {
-                                return Opacity(
-                                  opacity: value,
-                                  child: Transform.translate(
-                                    offset: Offset(0, 20 * (1 - value)),
-                                    child: child,
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
                                   ),
-                                );
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.05),
-                                      Colors.white.withValues(alpha: 0.02),
+                                ],
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                leading: Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                                  ),
+                                  child: const Icon(
+                                    Icons.menu_book,
+                                    color: Color(0xFF4ECDC4),
+                                    size: 26,
+                                  ),
+                                ),
+                                title: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2D3436),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.person_outline,
+                                        size: 14,
+                                        color: Color(0xFF636E72),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          author,
+                                          style: const TextStyle(
+                                            color: Color(0xFF636E72),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.1),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
+                                ),
+                                onTap: () => _openChapters(book),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                                        ),
+                                        child: const Icon(
+                                          Icons.list_alt,
+                                          color: Color(0xFF4ECDC4),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      onPressed: () => _openChapters(book),
+                                      tooltip: 'Главы',
+                                    ),
+                                    IconButton(
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
+                                        ),
+                                        child: const Icon(
+                                          Icons.delete_outline,
+                                          color: Color(0xFFFF6B6B),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      onPressed: () => _showDeleteDialog(bookId, title),
+                                      tooltip: 'Удалить',
                                     ),
                                   ],
                                 ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  leading: Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF14FFEC),
-                                          Color(0xFF0D7377),
-                                        ],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF14FFEC)
-                                              .withValues(alpha: 0.3),
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.menu_book,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.person_outline,
-                                          size: 14,
-                                          color: Colors.white.withValues(alpha: 0.6),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            author,
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.6),
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  onTap: () => _openChapters(book),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: const Color(0xFF14FFEC)
-                                              .withValues(alpha: 0.1),
-                                        ),
-                                        child: IconButton(
-                                          icon: const Icon(
-                                            Icons.list_alt,
-                                            color: Color(0xFF14FFEC),
-                                          ),
-                                          onPressed: () => _openChapters(book),
-                                          tooltip: 'Главы',
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.red.withValues(alpha: 0.1),
-                                        ),
-                                        child: IconButton(
-                                          icon: Icon(
-                                            Icons.delete_outline,
-                                            color: Colors.red.shade400,
-                                          ),
-                                          onPressed: () =>
-                                              _showDeleteDialog(bookId, title),
-                                          tooltip: 'Удалить',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
-        ),
-      ),
-      // FAB для добавления книги
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF14FFEC).withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: FloatingActionButton.extended(
-          onPressed: _openAddBook,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text(
-            'Добавить',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+      ),
+      // FAB для добавления книги
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddBook,
+        backgroundColor: const Color(0xFF4ECDC4),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          'Добавить',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),

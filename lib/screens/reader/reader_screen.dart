@@ -51,54 +51,54 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
   }
 
   Future<void> _loadChapter() async {
-  setState(() => _isLoading = true);
-  try {
-    final chapter = await _bookService.getChapter(
-      widget.token,
-      widget.bookId,
-      _currentChapter,
-    );
-    final chapters = await _bookService.getBookChapters(widget.token, widget.bookId);
-    
-    await _bookmarkService.updateProgress(
-      widget.token,
-      widget.bookId,
-      _currentChapter,
-    );
-
-    setState(() {
-      _chapter = chapter;
-      _totalChapters = chapters.length;
-      _isLoading = false;
-    });
-    
-    // ✅ ИСПРАВЛЕНО: Прокручиваем только после отрисовки виджета
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _scrollController.hasClients) {
-        _scrollController.jumpTo(0);
-      }
-    });
-    
-  } catch (e) {
-    setState(() => _isLoading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('Ошибка загрузки: $e')),
-            ],
-          ),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+    setState(() => _isLoading = true);
+    try {
+      final chapter = await _bookService.getChapter(
+        widget.token,
+        widget.bookId,
+        _currentChapter,
       );
+      final chapters = await _bookService.getBookChapters(widget.token, widget.bookId);
+      
+      await _bookmarkService.updateProgress(
+        widget.token,
+        widget.bookId,
+        _currentChapter,
+      );
+
+      setState(() {
+        _chapter = chapter;
+        _totalChapters = chapters.length;
+        _isLoading = false;
+      });
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
+      
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Ошибка загрузки: $e')),
+              ],
+            ),
+            backgroundColor: const Color(0xFFFF6B6B),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
+          ),
+        );
+      }
     }
   }
-}
 
   void _nextChapter() {
     if (_currentChapter < _totalChapters) {
@@ -125,24 +125,46 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: _showControls
           ? AppBar(
-              backgroundColor: const Color(0xFF1A1F3A),
+              backgroundColor: Colors.white,
               elevation: 0,
               title: Text(
                 _chapter?['title'] ?? 'Глава $_currentChapter',
-                style: const TextStyle(fontSize: 16, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF2D3436),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+              leading: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7FA),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF4ECDC4)),
+                  onPressed: () => Navigator.pop(context),
+                  iconSize: 20,
+                ),
               ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings, color: Color(0xFF14FFEC)),
-                  onPressed: _showFontSettings,
+                Container(
+                  margin: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F7FA),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.tune_rounded, color: Color(0xFF4ECDC4)),
+                    onPressed: _showFontSettings,
+                    iconSize: 22,
+                  ),
                 ),
               ],
             )
@@ -150,259 +172,285 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
-                color: const Color(0xFF14FFEC),
+                color: const Color(0xFF4ECDC4),
                 strokeWidth: 2.5,
               ),
             )
           : GestureDetector(
               onTap: _toggleControls,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      const Color(0xFF0A0E27),
-                      const Color(0xFF1A1F3A),
-                    ],
+              child: Stack(
+                children: [
+                  // Decorative background
+                  Positioned(
+                    top: -size.height * 0.15,
+                    left: -size.width * 0.25,
+                    child: Container(
+                      width: size.width * 0.8,
+                      height: size.width * 0.8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFFFFE66D).withValues(alpha: 0.1),
+                      ),
+                    ),
                   ),
-                ),
-                child: Opacity(
-                  opacity: _brightness,
-                  child: Stack(
-                    children: [
-                      SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: EdgeInsets.fromLTRB(
-                          24,
-                          _showControls ? 24 : 80,
-                          24,
-                          120,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Chapter title
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.white.withValues(alpha: 0.05),
-                                    Colors.white.withValues(alpha: 0.02),
-                                  ],
+                  Positioned(
+                    bottom: -size.height * 0.1,
+                    right: -size.width * 0.2,
+                    child: Container(
+                      width: size.width * 0.7,
+                      height: size.width * 0.7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF4ECDC4).withValues(alpha: 0.08),
+                      ),
+                    ),
+                  ),
+
+                  // Content
+                  Opacity(
+                    opacity: _brightness,
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        _showControls ? 24 : 80,
+                        24,
+                        120,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Chapter badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.auto_stories_outlined,
+                                  color: Color(0xFF4ECDC4),
+                                  size: 16,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                  width: 1.5,
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Глава $_currentChapter из $_totalChapters',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF4ECDC4),
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Глава $_currentChapter',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: const Color(0xFF14FFEC),
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _chapter?['title'] ?? 'Без названия',
-                                    style: TextStyle(
-                                      fontSize: _fontSize + 6,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Chapter title
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              _chapter?['title'] ?? 'Без названия',
+                              style: TextStyle(
+                                fontSize: _fontSize + 8,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF2D3436),
+                                height: 1.3,
+                                letterSpacing: 0.3,
                               ),
                             ),
-                            const SizedBox(height: 32),
-                            // Content
-                            Text(
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Content
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Text(
                               _chapter?['content'] ?? '',
                               style: TextStyle(
                                 fontSize: _fontSize,
                                 height: 1.9,
-                                color: Colors.white.withValues(alpha: 0.85),
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Navigation bottom bar
-                      if (_showControls)
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: AnimatedBuilder(
-                            animation: _animController,
-                            builder: (context, child) {
-                              return Transform.translate(
-                                offset: Offset(0, 100 * (1 - _animController.value)),
-                                child: child,
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    const Color(0xFF1A1F3A).withValues(alpha: 0.95),
-                                    const Color(0xFF0A0E27),
-                                  ],
-                                ),
-                                border: Border(
-                                  top: BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.1),
-                                    width: 1,
-                                  ),
-                                ),
-                              ),
-                              child: SafeArea(
-                                top: false,
-                                child: Row(
-                                  children: [
-                                    // Previous button
-                                    Expanded(
-                                      child: Container(
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          gradient: _currentChapter > 1
-                                              ? LinearGradient(
-                                                  colors: [
-                                                    Colors.white.withValues(alpha: 0.1),
-                                                    Colors.white.withValues(alpha: 0.05),
-                                                  ],
-                                                )
-                                              : null,
-                                          color: _currentChapter <= 1
-                                              ? Colors.white.withValues(alpha: 0.03)
-                                              : null,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.1),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed:
-                                              _currentChapter > 1 ? _prevChapter : null,
-                                          icon: const Icon(Icons.arrow_back_rounded),
-                                          label: const Text('Назад'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            foregroundColor: _currentChapter > 1
-                                                ? Colors.white
-                                                : Colors.white.withValues(alpha: 0.3),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                    // Chapter counter
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                                          ),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          '$_currentChapter/$_totalChapters',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                    // Next button
-                                    Expanded(
-                                      child: Container(
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          gradient: _currentChapter < _totalChapters
-                                              ? const LinearGradient(
-                                                  colors: [
-                                                    Color(0xFF14FFEC),
-                                                    Color(0xFF0D7377),
-                                                  ],
-                                                )
-                                              : null,
-                                          color: _currentChapter >= _totalChapters
-                                              ? Colors.white.withValues(alpha: 0.03)
-                                              : null,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: _currentChapter >= _totalChapters
-                                              ? Border.all(
-                                                  color: Colors.white.withValues(alpha: 0.1),
-                                                  width: 1.5,
-                                                )
-                                              : null,
-                                          boxShadow: _currentChapter < _totalChapters
-                                              ? [
-                                                  BoxShadow(
-                                                    color: const Color(0xFF14FFEC)
-                                                        .withValues(alpha: 0.3),
-                                                    blurRadius: 15,
-                                                    offset: const Offset(0, 4),
-                                                  ),
-                                                ]
-                                              : null,
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed: _currentChapter < _totalChapters
-                                              ? _nextChapter
-                                              : null,
-                                          icon: const Icon(Icons.arrow_forward_rounded),
-                                          label: const Text('Вперёд'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            foregroundColor:
-                                                _currentChapter < _totalChapters
-                                                    ? Colors.white
-                                                    : Colors.white.withValues(alpha: 0.3),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                color: const Color(0xFF2D3436),
+                                letterSpacing: 0.2,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+
+                  // Navigation bottom bar
+                  if (_showControls)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: AnimatedBuilder(
+                        animation: _animController,
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(0, 100 * (1 - _animController.value)),
+                            child: child,
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 20,
+                                offset: const Offset(0, -4),
+                              ),
+                            ],
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            child: Row(
+                              children: [
+                                // Previous button
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 54,
+                                    child: ElevatedButton(
+                                      onPressed: _currentChapter > 1 ? _prevChapter : null,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _currentChapter > 1
+                                            ? const Color(0xFFF5F7FA)
+                                            : const Color(0xFFF5F7FA).withValues(alpha: 0.5),
+                                        foregroundColor: _currentChapter > 1
+                                            ? const Color(0xFF4ECDC4)
+                                            : const Color(0xFF636E72).withValues(alpha: 0.3),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.chevron_left_rounded, size: 24),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Назад',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Chapter counter
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4ECDC4),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF4ECDC4).withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      '$_currentChapter/$_totalChapters',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Next button
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 54,
+                                    child: ElevatedButton(
+                                      onPressed: _currentChapter < _totalChapters
+                                          ? _nextChapter
+                                          : null,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _currentChapter < _totalChapters
+                                            ? const Color(0xFF4ECDC4)
+                                            : const Color(0xFFF5F7FA).withValues(alpha: 0.5),
+                                        foregroundColor: Colors.white,
+                                        disabledForegroundColor:
+                                            const Color(0xFF636E72).withValues(alpha: 0.3),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Text(
+                                            'Вперёд',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          SizedBox(width: 4),
+                                          Icon(Icons.chevron_right_rounded, size: 24),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
     );
@@ -414,147 +462,194 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF1A1F3A),
-                const Color(0xFF0A0E27),
-              ],
-            ),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1.5,
-            ),
+          padding: const EdgeInsets.all(28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 40,
-                  height: 4,
+                  width: 48,
+                  height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+                    color: const Color(0xFF636E72).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 const Text(
                   'Настройки чтения',
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2D3436),
                   ),
                 ),
                 const SizedBox(height: 32),
+
                 // Font size
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.format_size,
-                        color: Color(0xFF14FFEC),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F7FA),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.format_size_rounded,
+                              color: Color(0xFF4ECDC4),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Text(
                             'Размер шрифта',
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 14,
+                              color: Color(0xFF2D3436),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          Slider(
-                            value: _fontSize,
-                            min: 14,
-                            max: 28,
-                            divisions: 7,
-                            activeColor: const Color(0xFF14FFEC),
-                            inactiveColor: Colors.white.withValues(alpha: 0.1),
-                            onChanged: (value) {
-                              setState(() => _fontSize = value);
-                              setModalState(() {});
-                            },
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4ECDC4),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${_fontSize.round()}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    Text(
-                      '${_fontSize.round()}',
-                      style: const TextStyle(
-                        color: Color(0xFF14FFEC),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Brightness
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
+                      const SizedBox(height: 8),
+                      SliderTheme(
+                        data: SliderThemeData(
+                          activeTrackColor: const Color(0xFF4ECDC4),
+                          inactiveTrackColor: const Color(0xFF4ECDC4).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFF4ECDC4),
+                          overlayColor: const Color(0xFF4ECDC4).withValues(alpha: 0.2),
+                          trackHeight: 6,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        child: Slider(
+                          value: _fontSize,
+                          min: 14,
+                          max: 28,
+                          divisions: 7,
+                          onChanged: (value) {
+                            setState(() => _fontSize = value);
+                            setModalState(() {});
+                          },
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.brightness_6,
-                        color: Color(0xFF14FFEC),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Brightness
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F7FA),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE66D).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.wb_sunny_outlined,
+                              color: Color(0xFFFFE66D),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Text(
                             'Яркость',
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 14,
+                              color: Color(0xFF2D3436),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          Slider(
-                            value: _brightness,
-                            min: 0.5,
-                            max: 1.0,
-                            activeColor: const Color(0xFF14FFEC),
-                            inactiveColor: Colors.white.withValues(alpha: 0.1),
-                            onChanged: (value) {
-                              setState(() => _brightness = value);
-                              setModalState(() {});
-                            },
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE66D),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${(_brightness * 100).round()}%',
+                              style: const TextStyle(
+                                color: Color(0xFF2D3436),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      SliderTheme(
+                        data: SliderThemeData(
+                          activeTrackColor: const Color(0xFFFFE66D),
+                          inactiveTrackColor: const Color(0xFFFFE66D).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFFFFE66D),
+                          overlayColor: const Color(0xFFFFE66D).withValues(alpha: 0.2),
+                          trackHeight: 6,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                        ),
+                        child: Slider(
+                          value: _brightness,
+                          min: 0.5,
+                          max: 1.0,
+                          onChanged: (value) {
+                            setState(() => _brightness = value);
+                            setModalState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+
+                const SizedBox(height: 20),
               ],
             ),
           ),

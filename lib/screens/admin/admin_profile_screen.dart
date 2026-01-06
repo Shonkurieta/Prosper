@@ -13,7 +13,7 @@ class AdminProfileScreen extends StatefulWidget {
 class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
   
   String _username = '';
   String _email = '';
@@ -23,17 +23,20 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
   void initState() {
     super.initState();
     _animController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
     _fadeAnimation = CurvedAnimation(
       parent: _animController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeOut,
     );
-    _scaleAnimation = CurvedAnimation(
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
       parent: _animController,
-      curve: Curves.elasticOut,
-    );
+      curve: Curves.easeOutCubic,
+    ));
     _animController.forward();
     _loadUserData();
   }
@@ -57,22 +60,25 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1F3A),
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Выход из системы',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF2D3436),
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        content: Text(
+        content: const Text(
           'Вы уверены, что хотите выйти?',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+          style: TextStyle(color: Color(0xFF636E72)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
+            child: const Text(
               'Отмена',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+              style: TextStyle(color: Color(0xFF636E72)),
             ),
           ),
           ElevatedButton(
@@ -87,12 +93,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: const Color(0xFFFF6B6B),
+              foregroundColor: Colors.white,
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Выйти', style: TextStyle(color: Colors.white)),
+            child: const Text('Выйти'),
           ),
         ],
       ),
@@ -102,76 +110,58 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-              const Color(0xFF0D7377).withValues(alpha: 0.3),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      color: const Color(0xFF14FFEC),
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF4ECDC4),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: SlideTransition(
+                    position: _slideAnimation,
                     child: Column(
                       children: [
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
 
-                        // Аватар с анимацией
-                        ScaleTransition(
-                          scale: _scaleAnimation,
+                        // Аватар
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(32),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 colors: [
-                                  Color(0xFF14FFEC),
-                                  Color(0xFF0D7377),
+                                  const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                                  const Color(0xFF44A08D).withValues(alpha: 0.1),
                                 ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF14FFEC).withValues(alpha: 0.4),
-                                  blurRadius: 30,
-                                  spreadRadius: 5,
-                                ),
-                              ],
                             ),
-                            child: Container(
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFF1A1F3A),
-                                    const Color(0xFF0A0E27),
-                                  ],
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.admin_panel_settings_rounded,
-                                size: 80,
-                                color: Color(0xFF14FFEC),
-                              ),
+                            child: const Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 70,
+                              color: Color(0xFF4ECDC4),
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 24),
 
                         // Роль
                         Container(
@@ -180,31 +170,26 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.red.shade400.withValues(alpha: 0.3),
-                                Colors.red.shade600.withValues(alpha: 0.3),
-                              ],
-                            ),
+                            color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: Colors.red.shade400.withValues(alpha: 0.5),
+                              color: const Color(0xFFFF6B6B).withValues(alpha: 0.3),
                               width: 1.5,
                             ),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.verified_user,
-                                color: Colors.red.shade300,
+                                color: Color(0xFFFF6B6B),
                                 size: 18,
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Text(
                                 'АДМИНИСТРАТОР',
                                 style: TextStyle(
-                                  color: Colors.red.shade300,
+                                  color: Color(0xFFFF6B6B),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                   letterSpacing: 1.2,
@@ -214,23 +199,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
                         // Имя пользователя
-                        ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                          ).createShader(bounds),
-                          child: Text(
-                            _username,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                            textAlign: TextAlign.center,
+                        Text(
+                          _username,
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2D3436),
+                            letterSpacing: 0.5,
                           ),
+                          textAlign: TextAlign.center,
                         ),
 
                         const SizedBox(height: 8),
@@ -240,94 +220,78 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.email_outlined,
-                                color: Colors.white.withValues(alpha: 0.5),
+                              const Icon(
+                                Icons.alternate_email,
+                                color: Color(0xFF636E72),
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 _email,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Color(0xFF636E72),
                                 ),
                               ),
                             ],
                           ),
 
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 40),
 
                         // Информационные карточки
                         _buildInfoCard(
                           icon: Icons.shield_outlined,
                           title: 'Полный доступ',
                           description: 'Управление книгами и пользователями',
+                          color: const Color(0xFF4ECDC4),
                         ),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
 
                         _buildInfoCard(
                           icon: Icons.security_outlined,
                           title: 'Безопасность',
                           description: 'Ваша сессия защищена токеном',
+                          color: const Color(0xFFFFE66D),
                         ),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
 
                         _buildInfoCard(
                           icon: Icons.verified_outlined,
                           title: 'Статус',
                           description: 'Авторизован как администратор',
+                          color: const Color(0xFF6C5CE7),
                         ),
 
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 40),
 
                         // Кнопка выхода
-                        Container(
+                        SizedBox(
                           width: double.infinity,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.red.shade600,
-                                Colors.red.shade800,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.red.withValues(alpha: 0.4),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
+                          height: 60,
                           child: ElevatedButton(
                             onPressed: _logout,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
+                              backgroundColor: const Color(0xFFFF6B6B),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.logout_rounded,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
+                                Icon(Icons.logout_rounded, size: 22),
                                 SizedBox(width: 12),
                                 Text(
                                   'Выйти из системы',
                                   style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
                               ],
@@ -339,7 +303,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                       ],
                     ),
                   ),
-          ),
+                ),
         ),
       ),
     );
@@ -349,26 +313,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
     required IconData icon,
     required String title,
     required String description,
+    required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.02),
-          ],
-        ),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1.5,
-        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -378,17 +334,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                  const Color(0xFF0D7377).withValues(alpha: 0.2),
-                ],
-              ),
+              color: color.withValues(alpha: 0.15),
             ),
             child: Icon(
               icon,
-              color: const Color(0xFF14FFEC),
-              size: 28,
+              color: color,
+              size: 26,
             ),
           ),
           const SizedBox(width: 16),
@@ -399,7 +350,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                 Text(
                   title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF2D3436),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -407,8 +358,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
+                  style: const TextStyle(
+                    color: Color(0xFF636E72),
                     fontSize: 13,
                   ),
                 ),
