@@ -1,4 +1,4 @@
-package com.example.ebookreader
+package com.example.prosper
 
 import io.flutter.embedding.android.FlutterActivity
 

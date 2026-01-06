@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/user_service.dart';
+import 'package:prosper/services/user_service.dart';
 
 class ManageUsersScreen extends StatefulWidget {
   final String token;

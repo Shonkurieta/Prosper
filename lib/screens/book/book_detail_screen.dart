@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/book_service.dart';
-import 'package:ebookreader/services/bookmark_service.dart';
-import 'package:ebookreader/screens/reader/reader_screen.dart';
-import 'package:ebookreader/constants/api_constants.dart';
+import 'package:prosper/services/book_service.dart';
+import 'package:prosper/services/bookmark_service.dart';
+import 'package:prosper/screens/reader/reader_screen.dart';
+import 'package:prosper/constants/api_constants.dart';
 
 class BookDetailScreen extends StatefulWidget {
   final String token;

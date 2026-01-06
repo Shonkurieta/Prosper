@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/screens/home/home_screen.dart';
-import 'package:ebookreader/screens/profile/profile_screen.dart';
+import 'package:prosper/screens/home/home_screen.dart';
+import 'package:prosper/screens/profile/profile_screen.dart';
 
 class UserHome extends StatefulWidget {
   final String token;

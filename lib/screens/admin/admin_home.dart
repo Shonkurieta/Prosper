@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/screens/admin/manage_books_screen.dart';
-import 'package:ebookreader/screens/admin/manage_users_screen.dart';
-import 'package:ebookreader/screens/profile/profile_screen.dart';
+import 'package:prosper/screens/admin/manage_books_screen.dart';
+import 'package:prosper/screens/admin/manage_users_screen.dart';
+import 'package:prosper/screens/profile/profile_screen.dart';
 
 class AdminHome extends StatefulWidget {
   final String token;

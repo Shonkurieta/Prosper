@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/book_service.dart';
-import 'package:ebookreader/screens/admin/add_book_screen.dart';
-import 'package:ebookreader/screens/admin/manage_chapters_screen.dart';
+import 'package:prosper/services/book_service.dart';
+import 'package:prosper/screens/admin/add_book_screen.dart';
+import 'package:prosper/screens/admin/manage_chapters_screen.dart';
 
 class ManageBooksScreen extends StatefulWidget {
   final String token;
