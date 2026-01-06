@@ -21,14 +21,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isLoading = true;
   bool _isSearching = false;
   late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+    ));
     _loadBooks();
   }
 
@@ -65,9 +78,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Expanded(child: Text('Ошибка загрузки книг: $e')),
               ],
             ),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: const Color(0xFFFF6B6B),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
           ),
         );
       }
@@ -117,143 +131,203 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-            ],
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: Stack(
+        children: [
+          // Decorative background shapes
+          Positioned(
+            top: -size.height * 0.1,
+            right: -size.width * 0.15,
+            child: Container(
+              width: size.width * 0.7,
+              height: size.width * 0.7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          Positioned(
+            bottom: -size.height * 0.15,
+            left: -size.width * 0.2,
+            child: Container(
+              width: size.width * 0.8,
+              height: size.width * 0.8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFFE66D).withValues(alpha: 0.2),
+              ),
+            ),
+          ),
+          Positioned(
+            top: size.height * 0.3,
+            left: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+
+          // Main content
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                                const Color(0xFF0D7377).withValues(alpha: 0.1),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.auto_stories_rounded,
-                            color: Color(0xFF14FFEC),
-                            size: 26,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              const Text(
-                                'Библиотека',
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
+                              TweenAnimationBuilder(
+                                duration: const Duration(milliseconds: 1200),
+                                tween: Tween<double>(begin: 0, end: 1),
+                                builder: (context, double value, child) {
+                                  return Transform.rotate(
+                                    angle: value * 0.1,
+                                    child: Icon(
+                                      Icons.menu_book_rounded,
+                                      size: 32,
+                                      color: Color.lerp(
+                                        const Color(0xFF4ECDC4),
+                                        const Color(0xFF44A08D),
+                                        value,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              Text(
-                                '${_books.length} книг',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.6),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Библиотека',
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF2D3436),
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${_books.length} книг доступно',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF636E72),
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    // Search bar
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.white.withValues(alpha: 0.08),
-                            Colors.white.withValues(alpha: 0.04),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _searchBooks,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Поиск книг...',
-                          hintStyle: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.4),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
-                            color: const Color(0xFF14FFEC).withValues(alpha: 0.7),
-                          ),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(
-                                    Icons.clear_rounded,
-                                    color: Colors.white.withValues(alpha: 0.5),
+                          const SizedBox(height: 24),
+                          // Search bar
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: _searchBooks,
+                              style: const TextStyle(
+                                color: Color(0xFF2D3436),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Поиск книг по названию или автору...',
+                                hintStyle: TextStyle(
+                                  color: const Color(0xFF636E72).withValues(alpha: 0.5),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.search_rounded,
+                                  color: Color(0xFF4ECDC4),
+                                  size: 24,
+                                ),
+                                suffixIcon: _searchController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                          color: Color(0xFF636E72),
+                                          size: 22,
+                                        ),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          _searchBooks('');
+                                        },
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF4ECDC4),
+                                    width: 2,
                                   ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _searchBooks('');
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 14,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
+                    ),
+
+                    // Books Grid
+                    Expanded(
+                      child: _isLoading || _isSearching
+                          ? Center(
+                              child: CircularProgressIndicator(
+                                color: const Color(0xFF4ECDC4),
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : _filteredBooks.isEmpty
+                              ? _buildEmptyState()
+                              : _buildBooksGrid(),
                     ),
                   ],
                 ),
               ),
-
-              // Books Grid
-              Expanded(
-                child: _isLoading || _isSearching
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: const Color(0xFF14FFEC),
-                          strokeWidth: 2.5,
-                        ),
-                      )
-                    : _filteredBooks.isEmpty
-                        ? _buildEmptyState()
-                        : _buildBooksGrid(),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -264,37 +338,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withValues(alpha: 0.05),
-                  Colors.white.withValues(alpha: 0.02),
-                ],
-              ),
+              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
             ),
             child: Icon(
-              Icons.search_off_rounded,
+              Icons.library_books_outlined,
               size: 80,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: const Color(0xFF4ECDC4).withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 24),
-          Text(
+          const Text(
             'Книги не найдены',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2D3436),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Попробуйте изменить запрос',
+          const Text(
+            'Попробуйте изменить поисковый запрос',
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 15,
+              color: Color(0xFF636E72),
             ),
           ),
         ],
@@ -304,12 +373,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildBooksGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.50,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 18,
+        childAspectRatio: 0.52,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
       ),
       itemCount: _filteredBooks.length,
       itemBuilder: (context, index) {
@@ -339,24 +408,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         tag: 'book-$bookId',
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.05),
-                Colors.white.withValues(alpha: 0.02),
-              ],
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
-              width: 1.5,
-            ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 15,
-                offset: const Offset(0, 8),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -367,20 +425,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Expanded(
                 flex: 5,
                 child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.03),
-                        Colors.white.withValues(alpha: 0.01),
-                      ],
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
                   ),
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
+                      top: Radius.circular(20),
                     ),
                     child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
                         ? Image.network(
@@ -390,22 +442,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
                               return Container(
-                                color: Colors.white.withValues(alpha: 0.03),
+                                color: const Color(0xFFF5F7FA),
                                 child: Center(
                                   child: CircularProgressIndicator(
                                     value: loadingProgress.expectedTotalBytes != null
                                         ? loadingProgress.cumulativeBytesLoaded / 
                                           loadingProgress.expectedTotalBytes!
                                         : null,
-                                    color: const Color(0xFF14FFEC),
+                                    color: const Color(0xFF4ECDC4),
                                     strokeWidth: 2,
                                   ),
                                 ),
                               );
                             },
                             errorBuilder: (context, error, stackTrace) {
-                              print('❌ Ошибка загрузки обложки: $error');
-                              print('📍 URL: ${ApiConstants.getCoverUrl(book['coverUrl'])}');
                               return _buildPlaceholder();
                             },
                           )
@@ -418,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Expanded(
                 flex: 4,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -431,60 +481,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               book['title'] ?? 'Без названия',
                               style: const TextStyle(
                                 fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.3,
-                                height: 1.2,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF2D3436),
+                                letterSpacing: 0.2,
+                                height: 1.3,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              book['author'] ?? 'Неизвестный автор',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white.withValues(alpha: 0.6),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person_outline,
+                                  size: 14,
+                                  color: Color(0xFF636E72),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    book['author'] ?? 'Неизвестный автор',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF636E72),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 8),
                       Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 7,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          color: const Color(0xFF4ECDC4),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Row(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.play_arrow_rounded,
+                              Icons.chrome_reader_mode_outlined,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 5),
+                            SizedBox(width: 6),
                             Text(
-                              'Читать',
+                              'Открыть',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
                               ),
                             ),
                           ],
@@ -504,18 +561,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildPlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.02),
-          ],
-        ),
+        color: const Color(0xFFF5F7FA),
       ),
       child: Center(
         child: Icon(
-          Icons.book_rounded,
+          Icons.auto_stories_outlined,
           size: 80,
-          color: Colors.white.withValues(alpha: 0.2),
+          color: const Color(0xFF636E72).withValues(alpha: 0.3),
         ),
       ),
     );

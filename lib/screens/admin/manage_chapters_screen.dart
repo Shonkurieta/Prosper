@@ -88,9 +88,10 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+        backgroundColor: isError ? const Color(0xFFFF6B6B) : const Color(0xFF4ECDC4),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -103,296 +104,252 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
       text: chapter?['chapterOrder']?.toString() ?? '',
     );
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (ctx) => Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
+    await showDialog(
+      context: context,
+      builder: (ctx) => Dialog.fullscreen(
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF5F7FA),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Color(0xFF4ECDC4)),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  chapter == null ? 'Добавить главу' : 'Редактировать',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3436),
+                  ),
+                ),
+                Text(
+                  chapter == null ? 'Новая глава' : 'Изменить главу',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF636E72),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Номер главы',
+                  style: TextStyle(
+                    color: Color(0xFF2D3436),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: orderController,
+                    style: const TextStyle(
+                      color: Color(0xFF2D3436),
+                      fontSize: 16,
+                    ),
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Введите номер главы',
+                      hintStyle: TextStyle(
+                        color: const Color(0xFF636E72).withValues(alpha: 0.5),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.numbers,
+                        color: Color(0xFF4ECDC4),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Название главы',
+                  style: TextStyle(
+                    color: Color(0xFF2D3436),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: titleController,
+                    style: const TextStyle(
+                      color: Color(0xFF2D3436),
+                      fontSize: 16,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Введите название главы',
+                      hintStyle: TextStyle(
+                        color: const Color(0xFF636E72).withValues(alpha: 0.5),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.title,
+                        color: Color(0xFF4ECDC4),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Содержимое главы',
+                  style: TextStyle(
+                    color: Color(0xFF2D3436),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: contentController,
+                    style: const TextStyle(
+                      color: Color(0xFF2D3436),
+                      fontSize: 15,
+                      height: 1.6,
+                    ),
+                    maxLines: 20,
+                    decoration: InputDecoration(
+                      hintText: 'Введите текст главы...',
+                      hintStyle: TextStyle(
+                        color: const Color(0xFF636E72).withValues(alpha: 0.5),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+          bottomNavigationBar: Container(
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF0A0E27),
-                  const Color(0xFF1A1F3A),
-                  const Color(0xFF0D7377).withValues(alpha: 0.3),
-                ],
-              ),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: SafeArea(
-              child: Column(
+              child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF14FFEC).withValues(alpha: 0.15),
-                          const Color(0xFF0D7377).withValues(alpha: 0.1),
-                        ],
-                      ),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                                const Color(0xFF0D7377).withValues(alpha: 0.1),
-                              ],
-                            ),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Color(0xFF14FFEC)),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            chapter == null ? Icons.add : Icons.edit,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ShaderMask(
-                                shaderCallback: (bounds) => const LinearGradient(
-                                  colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                                ).createShader(bounds),
-                                child: Text(
-                                  chapter == null ? 'Добавить главу' : 'Редактировать главу',
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                chapter == null ? 'Создание новой главы' : 'Изменение существующей главы',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Глава',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.1),
-                              ),
-                            ),
-                            child: TextField(
-                              controller: orderController,
-                              style: const TextStyle(color: Colors.white, fontSize: 16),
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                hintText: 'Введите номер главы',
-                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                                prefixIcon: Icon(Icons.numbers, color: const Color(0xFF14FFEC).withValues(alpha: 0.6)),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.all(16),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Название главы',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                            ),
-                            child: TextField(
-                              controller: titleController,
-                              style: const TextStyle(color: Colors.white, fontSize: 16),
-                              decoration: InputDecoration(
-                                hintText: 'Введите название главы',
-                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                                prefixIcon: Icon(Icons.title, color: const Color(0xFF14FFEC).withValues(alpha: 0.6)),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.all(16),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Содержимое главы',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                            ),
-                            child: TextField(
-                              controller: contentController,
-                              style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.6),
-                              maxLines: 20,
-                              decoration: InputDecoration(
-                                hintText: 'Введите текст главы...\n\nЗдесь вы можете написать полное содержимое главы.',
-                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.all(16),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(
+                          color: Color(0xFFE0E5EC),
+                          width: 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Отмена',
+                        style: TextStyle(
+                          color: Color(0xFF636E72),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF1A1F3A).withValues(alpha: 0.8),
-                          const Color(0xFF0A0E27).withValues(alpha: 0.95),
-                        ],
-                      ),
-                      border: Border(
-                        top: BorderSide(color: const Color(0xFF14FFEC).withValues(alpha: 0.2), width: 1),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
-                            ),
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text(
-                                'Отмена',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final payload = {
+                          'title': titleController.text.trim(),
+                          'content': contentController.text.trim(),
+                          'chapterOrder': int.tryParse(orderController.text.trim()) ?? 0,
+                        };
+                        Navigator.pop(ctx);
+                        if (chapter == null) {
+                          await _createChapter(payload);
+                        } else {
+                          await _updateChapter(chapter['id'], payload);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4ECDC4),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [Color(0xFF14FFEC), Color(0xFF0D7377)]),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF14FFEC).withValues(alpha: 0.4),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final payload = {
-                                  'title': titleController.text.trim(),
-                                  'content': contentController.text.trim(),
-                                  'chapterOrder': int.tryParse(orderController.text.trim()) ?? 0,
-                                };
-                                Navigator.pop(ctx);
-                                if (chapter == null) {
-                                  await _createChapter(payload);
-                                } else {
-                                  await _updateChapter(chapter['id'], payload);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Сохранить главу', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
+                      ),
+                      child: const Text(
+                        'Сохранить',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -444,14 +401,26 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1F3A),
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Удалить главу?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Text('Вы уверены, что хотите удалить главу "$title"?', style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
+        title: const Text(
+          'Удалить главу?',
+          style: TextStyle(
+            color: Color(0xFF2D3436),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Вы уверены, что хотите удалить главу "$title"?',
+          style: const TextStyle(color: Color(0xFF636E72)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Отмена', style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
+            child: const Text(
+              'Отмена',
+              style: TextStyle(color: Color(0xFF636E72)),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -459,10 +428,14 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
               _deleteChapter(id, title);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: const Color(0xFFFF6B6B),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Удалить', style: TextStyle(color: Colors.white)),
+            child: const Text('Удалить'),
           ),
         ],
       ),
@@ -489,202 +462,255 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-              const Color(0xFF0D7377).withValues(alpha: 0.3),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF4ECDC4),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Главы',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2D3436),
+                          ),
                         ),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Color(0xFF14FFEC)),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF14FFEC), Color(0xFF0D7377)],
-                            ).createShader(bounds),
-                            child: const Text(
-                              'Главы',
-                              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
+                        Text(
+                          widget.bookTitle,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF636E72),
                           ),
-                          Text(
-                            widget.bookTitle,
-                            style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.6)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4ECDC4),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${chapters.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF14FFEC), Color(0xFF0D7377)]),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text('${chapters.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: loading
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(color: Color(0xFF14FFEC)),
-                            const SizedBox(height: 16),
-                            Text('Загрузка...', style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
-                          ],
-                        ),
-                      )
-                    : chapters.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.menu_book_outlined, size: 80, color: Colors.white.withValues(alpha: 0.3)),
-                                const SizedBox(height: 16),
-                                Text('Нет глав', style: TextStyle(fontSize: 18, color: Colors.white.withValues(alpha: 0.6))),
-                                const SizedBox(height: 8),
-                                Text('Добавьте первую главу', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.4))),
-                              ],
-                            ),
-                          )
-                        : FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: RefreshIndicator(
-                              onRefresh: _loadChapters,
-                              color: const Color(0xFF14FFEC),
-                              backgroundColor: const Color(0xFF1A1F3A),
-                              child: ListView.builder(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: chapters.length,
-                                itemBuilder: (context, index) {
-                                  final c = chapters[index];
-                                  final title = c['title'] ?? 'Без названия';
-                                  final order = c['chapterOrder'] ?? 0;
+            ),
+            Expanded(
+              child: loading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF4ECDC4),
+                      ),
+                    )
+                  : chapters.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
+                                ),
+                                child: const Icon(
+                                  Icons.menu_book_outlined,
+                                  size: 80,
+                                  color: Color(0xFF4ECDC4),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              const Text(
+                                'Нет глав',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D3436),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Добавьте первую главу',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF636E72),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: RefreshIndicator(
+                            onRefresh: _loadChapters,
+                            color: const Color(0xFF4ECDC4),
+                            backgroundColor: Colors.white,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: chapters.length,
+                              itemBuilder: (context, index) {
+                                final c = chapters[index];
+                                final title = c['title'] ?? 'Без названия';
+                                final order = c['chapterOrder'] ?? 0;
 
-                                  return TweenAnimationBuilder(
-                                    duration: Duration(milliseconds: 300 + (index * 50)),
-                                    tween: Tween<double>(begin: 0, end: 1),
-                                    builder: (context, double value, child) {
-                                      return Opacity(
-                                        opacity: value,
-                                        child: Transform.translate(offset: Offset(0, 20 * (1 - value)), child: child),
-                                      );
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(16),
-                                        gradient: LinearGradient(
-                                          colors: [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.02)],
-                                        ),
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
-                                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))],
+                                return TweenAnimationBuilder(
+                                  duration: Duration(milliseconds: 300 + (index * 50)),
+                                  tween: Tween<double>(begin: 0, end: 1),
+                                  builder: (context, double value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 20 * (1 - value)),
+                                        child: child,
                                       ),
-                                      child: ListTile(
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        leading: Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(12),
-                                            gradient: const LinearGradient(colors: [Color(0xFF14FFEC), Color(0xFF0D7377)]),
-                                            boxShadow: [BoxShadow(color: const Color(0xFF14FFEC).withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2)],
-                                          ),
-                                          child: Center(
-                                            child: Text('$order', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                    );
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.04),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      leading: Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '$order',
+                                            style: const TextStyle(
+                                              color: Color(0xFF4ECDC4),
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
-                                        subtitle: Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Text('Глава $order', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+                                      ),
+                                      title: Text(
+                                        title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2D3436),
+                                          fontSize: 16,
                                         ),
-                                        onTap: () => _addOrEditChapter(chapter: c),
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
+                                      ),
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          'Глава $order',
+                                          style: const TextStyle(
+                                            color: Color(0xFF636E72),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      onTap: () => _addOrEditChapter(chapter: c),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: Container(
+                                              padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: const Color(0xFF14FFEC).withValues(alpha: 0.1),
+                                                color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
                                               ),
-                                              child: IconButton(
-                                                icon: const Icon(Icons.edit_outlined, color: Color(0xFF14FFEC)),
-                                                onPressed: () => _addOrEditChapter(chapter: c),
-                                                tooltip: 'Редактировать',
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Container(
-                                              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withValues(alpha: 0.1)),
-                                              child: IconButton(
-                                                icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
-                                                onPressed: () => _showDeleteDialog(c['id'], title),
-                                                tooltip: 'Удалить',
+                                              child: const Icon(
+                                                Icons.edit_outlined,
+                                                color: Color(0xFF4ECDC4),
+                                                size: 20,
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                            onPressed: () => _addOrEditChapter(chapter: c),
+                                            tooltip: 'Редактировать',
+                                          ),
+                                          IconButton(
+                                            icon: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
+                                              ),
+                                              child: const Icon(
+                                                Icons.delete_outline,
+                                                color: Color(0xFFFF6B6B),
+                                                size: 20,
+                                              ),
+                                            ),
+                                            onPressed: () => _showDeleteDialog(c['id'], title),
+                                            tooltip: 'Удалить',
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-              ),
-            ],
-          ),
+                        ),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF14FFEC), Color(0xFF0D7377)]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: const Color(0xFF14FFEC).withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8))],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () => _addOrEditChapter(),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text('Добавить', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _addOrEditChapter(),
+        backgroundColor: const Color(0xFF4ECDC4),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          'Добавить',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );

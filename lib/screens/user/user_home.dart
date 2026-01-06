@@ -10,8 +10,25 @@ class UserHome extends StatefulWidget {
   State<UserHome> createState() => _UserHomeState();
 }
 
-class _UserHomeState extends State<UserHome> {
+class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,154 +38,170 @@ class _UserHomeState extends State<UserHome> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0A0E27),
-              const Color(0xFF1A1F3A),
-              const Color(0xFF0D7377).withValues(alpha: 0.3),
-            ],
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: Stack(
+        children: [
+          // Декоративные элементы фона
+          Positioned(
+            top: -100,
+            right: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF4ECDC4).withValues(alpha: 0.08),
+                    const Color(0xFF4ECDC4).withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        child: screens[_selectedIndex],
+          Positioned(
+            bottom: -50,
+            left: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFFE66D).withValues(alpha: 0.1),
+                    const Color(0xFFFFE66D).withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Основной контент
+          screens[_selectedIndex],
+        ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF1A1F3A).withValues(alpha: 0.95),
-              const Color(0xFF0A0E27),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          height: 70,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: const Color(0xFF4ECDC4).withValues(alpha: 0.05),
+                blurRadius: 20,
+                spreadRadius: -5,
+              ),
             ],
           ),
-          border: Border(
-            top: BorderSide(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildModernNavItem(
+                    icon: Icons.library_books_outlined,
+                    activeIcon: Icons.library_books_rounded,
+                    label: 'Каталог',
+                    index: 0,
+                  ),
+                  Container(
+                    width: 1,
+                    height: 35,
+                    color: const Color(0xFF636E72).withValues(alpha: 0.1),
+                  ),
+                  _buildModernNavItem(
+                    icon: Icons.person_outline_rounded,
+                    activeIcon: Icons.person_rounded,
+                    label: 'Профиль',
+                    index: 1,
+                  ),
+                ],
+              ),
             ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF14FFEC),
-          unselectedItemColor: Colors.white.withValues(alpha: 0.4),
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-            letterSpacing: 0.5,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-          items: [
-            BottomNavigationBarItem(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: _selectedIndex == 0
-                    ? BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      )
-                    : null,
-                child: const Icon(Icons.library_books_outlined, size: 26),
-              ),
-              activeIcon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
+      ),
+    );
+  }
+
+  Widget _buildModernNavItem({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedIndex == index;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _selectedIndex = index);
+          _animController.forward(from: 0);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                      const Color(0xFF0D7377).withValues(alpha: 0.1),
+                      const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                      const Color(0xFF44A08D).withValues(alpha: 0.1),
                     ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                    ),
-                  ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedScale(
+                scale: isSelected ? 1.0 : 0.95,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  isSelected ? activeIcon : icon,
+                  color: isSelected 
+                      ? const Color(0xFF4ECDC4)
+                      : const Color(0xFF636E72).withValues(alpha: 0.6),
+                  size: 24,
                 ),
-                child: const Icon(Icons.library_books, size: 26),
               ),
-              label: 'Каталог',
-            ),
-            BottomNavigationBarItem(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: _selectedIndex == 1
-                    ? BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                            const Color(0xFF0D7377).withValues(alpha: 0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      )
-                    : null,
-                child: const Icon(Icons.person_outline, size: 26),
-              ),
-              activeIcon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF14FFEC).withValues(alpha: 0.2),
-                      const Color(0xFF0D7377).withValues(alpha: 0.1),
-                    ],
+              const SizedBox(width: 8),
+              Flexible(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected 
+                        ? const Color(0xFF2D3436)
+                        : const Color(0xFF636E72).withValues(alpha: 0.7),
+                    letterSpacing: 0.2,
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF14FFEC).withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                    ),
-                  ],
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                child: const Icon(Icons.person, size: 26),
               ),
-              label: 'Профиль',
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
