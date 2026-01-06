@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/user_service.dart';
-import 'package:ebookreader/services/storage_service.dart';
-import 'package:ebookreader/screens/bookmarks/bookmarks_screen.dart';
-import 'package:ebookreader/screens/auth/login_screen.dart';
+import 'package:prosper/services/user_service.dart';
+import 'package:prosper/services/storage_service.dart';
+import 'package:prosper/screens/bookmarks/bookmarks_screen.dart';
+import 'package:prosper/screens/auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;

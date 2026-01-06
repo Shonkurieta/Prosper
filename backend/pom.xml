@@ -5,7 +5,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.example</groupId>
-    <artifactId>ebookreader-backend</artifactId>
+    <artifactId>prosper-backend</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 

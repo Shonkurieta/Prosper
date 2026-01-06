@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:ebookreader/constants/api_constants.dart';
+import 'package:prosper/constants/api_constants.dart';
 
 class BookmarkService {
   // Убрали /api, так как он уже есть в ApiConstants.baseUrl

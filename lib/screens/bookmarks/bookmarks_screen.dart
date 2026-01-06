@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/bookmark_service.dart';
-import 'package:ebookreader/screens/book/book_detail_screen.dart';
+import 'package:prosper/services/bookmark_service.dart';
+import 'package:prosper/screens/book/book_detail_screen.dart';
 
 class BookmarksScreen extends StatefulWidget {
   final String token;

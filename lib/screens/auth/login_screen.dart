@@ -1,10 +1,10 @@
-import 'package:ebookreader/screens/admin/admin_main_screen.dart';
+import 'package:prosper/screens/admin/admin_main_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/auth_service.dart';
+import 'package:prosper/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ebookreader/screens/user/user_home.dart';
-import 'package:ebookreader/screens/admin/admin_home.dart';
-import 'package:ebookreader/screens/auth/register_screen.dart';
+import 'package:prosper/screens/user/user_home.dart';
+import 'package:prosper/screens/admin/admin_home.dart';
+import 'package:prosper/screens/auth/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ebookreader/services/book_service.dart';
-import 'package:ebookreader/screens/book/book_detail_screen.dart';
-import 'package:ebookreader/constants/api_constants.dart';
+import 'package:prosper/services/book_service.dart';
+import 'package:prosper/screens/book/book_detail_screen.dart';
+import 'package:prosper/constants/api_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;

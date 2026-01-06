@@ -1,6 +1,6 @@
 {
-    "name": "ebookreader",
-    "short_name": "ebookreader",
+    "name": "prosper",
+    "short_name": "prosper",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
