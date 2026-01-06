@@ -1,4 +1,4 @@
-package com.example.ebookreader.config;
+package com.example.prosper.config;
 
 import java.io.IOException;
 import java.util.Arrays;
