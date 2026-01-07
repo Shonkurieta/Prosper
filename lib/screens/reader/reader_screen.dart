@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/bookmark_service.dart';
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
+import 'dart:ui';
 
 class ReaderScreen extends StatefulWidget {
   final String token;
@@ -18,7 +21,7 @@ class ReaderScreen extends StatefulWidget {
   State<ReaderScreen> createState() => _ReaderScreenState();
 }
 
-class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderStateMixin {
+class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMixin {
   final BookService _bookService = BookService();
   final BookmarkService _bookmarkService = BookmarkService();
   final ScrollController _scrollController = ScrollController();
@@ -30,28 +33,55 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
   bool _showControls = true;
   double _fontSize = 18;
   double _brightness = 1.0;
-  late AnimationController _animController;
+  late AnimationController _controlsAnimController;
+  late AnimationController _contentAnimController;
+  late Animation<double> _controlsFadeAnimation;
+  late Animation<Offset> _controlsSlideAnimation;
 
   @override
   void initState() {
     super.initState();
     _currentChapter = widget.chapterOrder;
-    _animController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+    
+    _controlsAnimController = AnimationController(
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
+    _contentAnimController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _controlsFadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _controlsAnimController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _controlsSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controlsAnimController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    _controlsAnimController.forward();
     _loadChapter();
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _controlsAnimController.dispose();
+    _contentAnimController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _loadChapter() async {
     setState(() => _isLoading = true);
+    _contentAnimController.reset();
+    
     try {
       final chapter = await _bookService.getChapter(
         widget.token,
@@ -72,15 +102,22 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
         _isLoading = false;
       });
       
+      _contentAnimController.forward();
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _scrollController.hasClients) {
-          _scrollController.jumpTo(0);
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
         }
       });
       
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
+        final theme = context.read<ThemeProvider>();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -90,7 +127,7 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
                 Expanded(child: Text('Ошибка загрузки: $e')),
               ],
             ),
-            backgroundColor: const Color(0xFFFF6B6B),
+            backgroundColor: theme.errorColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
@@ -117,331 +154,213 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
   void _toggleControls() {
     setState(() => _showControls = !_showControls);
     if (_showControls) {
-      _animController.forward();
+      _controlsAnimController.forward();
     } else {
-      _animController.reverse();
+      _controlsAnimController.reverse();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: _showControls
-          ? AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              title: Text(
-                _chapter?['title'] ?? 'Глава $_currentChapter',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF2D3436),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              leading: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F7FA),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF4ECDC4)),
-                  onPressed: () => Navigator.pop(context),
-                  iconSize: 20,
-                ),
-              ),
-              actions: [
-                Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FA),
-                    borderRadius: BorderRadius.circular(10),
+    return Consumer<ThemeProvider>(
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.backgroundColor,
+          extendBodyBehindAppBar: true,
+          appBar: _showControls
+              ? AppBar(
+                  backgroundColor: theme.cardColor.withValues(alpha: 0.95),
+                  elevation: 0,
+                  title: Text(
+                    _chapter?['title'] ?? 'Глава $_currentChapter',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: theme.textPrimaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune_rounded, color: Color(0xFF4ECDC4)),
-                    onPressed: _showFontSettings,
-                    iconSize: 22,
-                  ),
-                ),
-              ],
-            )
-          : null,
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: const Color(0xFF4ECDC4),
-                strokeWidth: 2.5,
-              ),
-            )
-          : GestureDetector(
-              onTap: _toggleControls,
-              child: Stack(
-                children: [
-                  // Decorative background
-                  Positioned(
-                    top: -size.height * 0.15,
-                    left: -size.width * 0.25,
-                    child: Container(
-                      width: size.width * 0.8,
-                      height: size.width * 0.8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFFFE66D).withValues(alpha: 0.1),
+                  leading: Container(
+                    margin: const EdgeInsets.all(8),
+                    child: Material(
+                      color: theme.inputBackgroundColor,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: theme.primaryColor,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: -size.height * 0.1,
-                    right: -size.width * 0.2,
-                    child: Container(
-                      width: size.width * 0.7,
-                      height: size.width * 0.7,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF4ECDC4).withValues(alpha: 0.08),
+                  actions: [
+                    Container(
+                      margin: const EdgeInsets.all(8),
+                      child: Material(
+                        color: theme.inputBackgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: () => _showFontSettings(theme),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(
+                              Icons.settings_outlined,
+                              color: theme.primaryColor,
+                              size: 22,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
+                  ],
+                  flexibleSpace: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(color: Colors.transparent),
+                    ),
                   ),
-
-                  // Content
-                  Opacity(
-                    opacity: _brightness,
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      padding: EdgeInsets.fromLTRB(
-                        24,
-                        _showControls ? 24 : 80,
-                        24,
-                        120,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Chapter badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                )
+              : null,
+          body: _isLoading
+              ? Center(
+                  child: TweenAnimationBuilder(
+                    duration: const Duration(milliseconds: 1000),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, double value, child) {
+                      return Transform.scale(
+                        scale: 0.8 + (value * 0.2),
+                        child: Opacity(
+                          opacity: value,
+                          child: CircularProgressIndicator(
+                            color: theme.primaryColor,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              : GestureDetector(
+                  onTap: _toggleControls,
+                  child: Stack(
+                    children: [
+                      // Content
+                      Opacity(
+                        opacity: _brightness,
+                        child: AnimatedBuilder(
+                          animation: _contentAnimController,
+                          builder: (context, child) {
+                            return Opacity(
+                              opacity: _contentAnimController.value,
+                              child: Transform.translate(
+                                offset: Offset(0, 20 * (1 - _contentAnimController.value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              _showControls ? 100 : 60,
+                              20,
+                              140,
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Icon(
-                                  Icons.auto_stories_outlined,
-                                  color: Color(0xFF4ECDC4),
-                                  size: 16,
+                                // Progress indicator
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: theme.borderColor,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                        child: FractionallySizedBox(
+                                          alignment: Alignment.centerLeft,
+                                          widthFactor: _currentChapter / _totalChapters,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: theme.primaryGradient,
+                                              ),
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: theme.primaryColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: theme.primaryColor.withValues(alpha: 0.3),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '$_currentChapter/$_totalChapters',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme.primaryColor,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
+                                
+                                const SizedBox(height: 32),
+
+                                // Chapter title
                                 Text(
-                                  'Глава $_currentChapter из $_totalChapters',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF4ECDC4),
-                                    fontWeight: FontWeight.w700,
+                                  _chapter?['title'] ?? 'Без названия',
+                                  style: TextStyle(
+                                    fontSize: _fontSize + 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: theme.textPrimaryColor,
+                                    height: 1.2,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Chapter title
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              _chapter?['title'] ?? 'Без названия',
-                              style: TextStyle(
-                                fontSize: _fontSize + 8,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF2D3436),
-                                height: 1.3,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Content
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.03),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              _chapter?['content'] ?? '',
-                              style: TextStyle(
-                                fontSize: _fontSize,
-                                height: 1.9,
-                                color: const Color(0xFF2D3436),
-                                letterSpacing: 0.2,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Navigation bottom bar
-                  if (_showControls)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: AnimatedBuilder(
-                        animation: _animController,
-                        builder: (context, child) {
-                          return Transform.translate(
-                            offset: Offset(0, 100 * (1 - _animController.value)),
-                            child: child,
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 20,
-                                offset: const Offset(0, -4),
-                              ),
-                            ],
-                          ),
-                          child: SafeArea(
-                            top: false,
-                            child: Row(
-                              children: [
-                                // Previous button
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 54,
-                                    child: ElevatedButton(
-                                      onPressed: _currentChapter > 1 ? _prevChapter : null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _currentChapter > 1
-                                            ? const Color(0xFFF5F7FA)
-                                            : const Color(0xFFF5F7FA).withValues(alpha: 0.5),
-                                        foregroundColor: _currentChapter > 1
-                                            ? const Color(0xFF4ECDC4)
-                                            : const Color(0xFF636E72).withValues(alpha: 0.3),
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: const [
-                                          Icon(Icons.chevron_left_rounded, size: 24),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Назад',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                Container(
+                                  height: 3,
+                                  width: 60,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: theme.primaryGradient,
                                     ),
+                                    borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
 
-                                // Chapter counter
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF4ECDC4),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF4ECDC4).withValues(alpha: 0.3),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Text(
-                                      '$_currentChapter/$_totalChapters',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                const SizedBox(height: 32),
 
-                                // Next button
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 54,
-                                    child: ElevatedButton(
-                                      onPressed: _currentChapter < _totalChapters
-                                          ? _nextChapter
-                                          : null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _currentChapter < _totalChapters
-                                            ? const Color(0xFF4ECDC4)
-                                            : const Color(0xFFF5F7FA).withValues(alpha: 0.5),
-                                        foregroundColor: Colors.white,
-                                        disabledForegroundColor:
-                                            const Color(0xFF636E72).withValues(alpha: 0.3),
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: const [
-                                          Text(
-                                            'Вперёд',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                          SizedBox(width: 4),
-                                          Icon(Icons.chevron_right_rounded, size: 24),
-                                        ],
-                                      ),
-                                    ),
+                                // Content
+                                Text(
+                                  _chapter?['content'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: _fontSize,
+                                    height: 2.0,
+                                    color: theme.textPrimaryColor,
+                                    letterSpacing: 0.3,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
                               ],
@@ -449,211 +368,320 @@ class _ReaderScreenState extends State<ReaderScreen> with SingleTickerProviderSt
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
+
+                      // Bottom navigation
+                      if (_showControls)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: AnimatedBuilder(
+                            animation: _controlsAnimController,
+                            builder: (context, child) {
+                              return SlideTransition(
+                                position: _controlsSlideAnimation,
+                                child: FadeTransition(
+                                  opacity: _controlsFadeAnimation,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: ClipRect(
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: theme.cardColor.withValues(alpha: 0.9),
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: theme.borderColor,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  child: SafeArea(
+                                    top: false,
+                                    child: Row(
+                                      children: [
+                                        // Previous button
+                                        Expanded(
+                                          child: Material(
+                                            color: _currentChapter > 1
+                                                ? theme.inputBackgroundColor
+                                                : theme.inputBackgroundColor.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(14),
+                                            child: InkWell(
+                                              onTap: _currentChapter > 1 ? _prevChapter : null,
+                                              borderRadius: BorderRadius.circular(14),
+                                              child: Container(
+                                                height: 54,
+                                                alignment: Alignment.center,
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.arrow_back_ios_new_rounded,
+                                                      size: 18,
+                                                      color: _currentChapter > 1
+                                                          ? theme.primaryColor
+                                                          : theme.textSecondaryColor.withValues(alpha: 0.3),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      'Назад',
+                                                      style: TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: _currentChapter > 1
+                                                            ? theme.primaryColor
+                                                            : theme.textSecondaryColor.withValues(alpha: 0.3),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        const SizedBox(width: 12),
+
+                                        // Next button
+                                        Expanded(
+                                          child: Material(
+                                            color: _currentChapter < _totalChapters
+                                                ? theme.primaryColor
+                                                : theme.inputBackgroundColor.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(14),
+                                            child: InkWell(
+                                              onTap: _currentChapter < _totalChapters
+                                                  ? _nextChapter
+                                                  : null,
+                                              borderRadius: BorderRadius.circular(14),
+                                              child: Container(
+                                                height: 54,
+                                                alignment: Alignment.center,
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      'Вперёд',
+                                                      style: TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: _currentChapter < _totalChapters
+                                                            ? Colors.white
+                                                            : theme.textSecondaryColor.withValues(alpha: 0.3),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Icon(
+                                                      Icons.arrow_forward_ios_rounded,
+                                                      size: 18,
+                                                      color: _currentChapter < _totalChapters
+                                                          ? Colors.white
+                                                          : theme.textSecondaryColor.withValues(alpha: 0.3),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+        );
+      },
     );
   }
 
-  void _showFontSettings() {
+  void _showFontSettings(ThemeProvider theme) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          padding: const EdgeInsets.all(28),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 48,
-                  height: 5,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF636E72).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(3),
+                    color: theme.borderColor,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
+                const SizedBox(height: 24),
+                
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.tune_rounded,
+                        color: theme.primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      'Настройки чтения',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: theme.textPrimaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                
                 const SizedBox(height: 28),
-                const Text(
-                  'Настройки чтения',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2D3436),
-                  ),
-                ),
-                const SizedBox(height: 32),
 
-                // Font size
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FA),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.format_size_rounded,
-                              color: Color(0xFF4ECDC4),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          const Text(
-                            'Размер шрифта',
-                            style: TextStyle(
-                              color: Color(0xFF2D3436),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4ECDC4),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${_fontSize.round()}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      SliderTheme(
-                        data: SliderThemeData(
-                          activeTrackColor: const Color(0xFF4ECDC4),
-                          inactiveTrackColor: const Color(0xFF4ECDC4).withValues(alpha: 0.2),
-                          thumbColor: const Color(0xFF4ECDC4),
-                          overlayColor: const Color(0xFF4ECDC4).withValues(alpha: 0.2),
-                          trackHeight: 6,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-                        ),
-                        child: Slider(
-                          value: _fontSize,
-                          min: 14,
-                          max: 28,
-                          divisions: 7,
-                          onChanged: (value) {
-                            setState(() => _fontSize = value);
-                            setModalState(() {});
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Brightness
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FA),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFE66D).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.wb_sunny_outlined,
-                              color: Color(0xFFFFE66D),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          const Text(
-                            'Яркость',
-                            style: TextStyle(
-                              color: Color(0xFF2D3436),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFE66D),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${(_brightness * 100).round()}%',
-                              style: const TextStyle(
-                                color: Color(0xFF2D3436),
-                                fontWeight: FontWeight.w900,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      SliderTheme(
-                        data: SliderThemeData(
-                          activeTrackColor: const Color(0xFFFFE66D),
-                          inactiveTrackColor: const Color(0xFFFFE66D).withValues(alpha: 0.2),
-                          thumbColor: const Color(0xFFFFE66D),
-                          overlayColor: const Color(0xFFFFE66D).withValues(alpha: 0.2),
-                          trackHeight: 6,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-                        ),
-                        child: Slider(
-                          value: _brightness,
-                          min: 0.5,
-                          max: 1.0,
-                          onChanged: (value) {
-                            setState(() => _brightness = value);
-                            setModalState(() {});
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                _buildSettingItem(
+                  theme: theme,
+                  icon: Icons.format_size_rounded,
+                  title: 'Размер шрифта',
+                  value: _fontSize,
+                  displayValue: '${_fontSize.round()}',
+                  min: 14,
+                  max: 28,
+                  divisions: 7,
+                  color: theme.primaryColor,
+                  onChanged: (value) {
+                    setState(() => _fontSize = value);
+                    setModalState(() {});
+                  },
                 ),
 
                 const SizedBox(height: 20),
+
+                _buildSettingItem(
+                  theme: theme,
+                  icon: Icons.brightness_6_outlined,
+                  title: 'Яркость',
+                  value: _brightness,
+                  displayValue: '${(_brightness * 100).round()}%',
+                  min: 0.5,
+                  max: 1.0,
+                  color: theme.warningColor,
+                  onChanged: (value) {
+                    setState(() => _brightness = value);
+                    setModalState(() {});
+                  },
+                ),
+
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required ThemeProvider theme,
+    required IconData icon,
+    required String title,
+    required double value,
+    required String displayValue,
+    required double min,
+    required double max,
+    required Color color,
+    required ValueChanged<double> onChanged,
+    int? divisions,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.inputBackgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  color: theme.textPrimaryColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  displayValue,
+                  style: TextStyle(
+                    color: color == theme.warningColor 
+                        ? theme.textPrimaryColor
+                        : Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: color,
+              inactiveTrackColor: color.withValues(alpha: 0.2),
+              thumbColor: color,
+              overlayColor: color.withValues(alpha: 0.2),
+              trackHeight: 5,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
       ),
     );
   }

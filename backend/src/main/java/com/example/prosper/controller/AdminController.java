@@ -51,7 +51,7 @@ public class AdminController {
     @Autowired
     private UserRepository userRepository;
 
-    // === УПРАВЛЕНИЕ КНИГАМИ ===
+    // === УПРАВЛЕНИЕ НовеллаМИ ===
 
     @GetMapping("/books")
     public ResponseEntity<List<Book>> getAllBooks() {
@@ -81,11 +81,11 @@ public class AdminController {
 
         try {
             if (title == null || title.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(createError("Название книги обязательно"));
+                return ResponseEntity.badRequest().body(createError("Название новеллы обязательно"));
             }
 
             if (author == null || author.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(createError("Автор книги обязателен"));
+                return ResponseEntity.badRequest().body(createError("Автор новеллы обязателен"));
             }
 
             Book newBook = new Book();
@@ -127,7 +127,7 @@ public class AdminController {
         } catch (Exception e) {
             System.err.println("   ❌ Error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createError("Ошибка при создании книги: " + e.getMessage()));
+                    .body(createError("Ошибка при создании новеллы: " + e.getMessage()));
         }
     }
 
@@ -137,7 +137,7 @@ public class AdminController {
 
         try {
             Book existingBook = bookRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Книга не найдена"));
+                    .orElseThrow(() -> new RuntimeException("Новелла не найдена"));
 
             existingBook.setTitle(bookDetails.getTitle());
             existingBook.setAuthor(bookDetails.getAuthor());
@@ -154,7 +154,7 @@ public class AdminController {
         } catch (Exception e) {
             System.err.println("   ❌ Error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createError("Ошибка при обновлении книги: " + e.getMessage()));
+                    .body(createError("Ошибка при обновлении новеллы: " + e.getMessage()));
         }
     }
 
@@ -178,7 +178,7 @@ public class AdminController {
 
                     bookRepository.delete(book);
                     System.out.println("   ✅ Book deleted: " + id);
-                    return ResponseEntity.ok(createSuccess("Книга удалена"));
+                    return ResponseEntity.ok(createSuccess("Новелла удалена"));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

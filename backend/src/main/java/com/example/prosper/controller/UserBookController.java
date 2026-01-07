@@ -161,7 +161,7 @@ public class UserBookController {
         return ResponseEntity.ok(Map.of("message", "Прогресс сохранён"));
     }
 
-    // Получить прогресс чтения книги
+    // Получить прогресс чтения новеллы
     @GetMapping("/{bookId}/progress")
     public ResponseEntity<?> getProgress(
             @RequestHeader("Authorization") String token,

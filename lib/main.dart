@@ -1,20 +1,33 @@
-import 'package:prosper/screens/admin/admin_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// 🔹 Экраны
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
+// Экраны
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
-import 'screens/admin/admin_home.dart';
+import 'screens/admin/admin_main_screen.dart';
 import 'screens/bookmarks/bookmarks_screen.dart';
 import 'screens/user/user_home.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  runApp(const MyApp());
+  
+  // Загружаем .env если он есть, иначе игнорируем
+  try {
+    await dotenv.load(fileName: ".env");
+    print('✅ .env загружен успешно');
+  } catch (e) {
+    print('⚠️ .env файл не найден, используем значения по умолчанию из ApiConstants');
+  }
+  
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -36,10 +49,14 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _loadUserSession() async {
+    print('🔄 Загружаем сессию пользователя...');
     final prefs = await SharedPreferences.getInstance();
     final savedToken = prefs.getString('token');
     final savedRole = prefs.getString('role');
-
+    
+    print('🔑 Token: ${savedToken != null ? "найден" : "отсутствует"}');
+    print('👤 Role: $savedRole');
+    
     setState(() {
       token = savedToken;
       role = savedRole;
@@ -50,39 +67,57 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const MaterialApp(
-        home: Scaffold(
-          body: Center(child: CircularProgressIndicator()),
+      return Consumer<ThemeProvider>(
+        builder: (context, theme, _) => MaterialApp(
+          home: Scaffold(
+            backgroundColor: theme.backgroundColor,
+            body: Center(
+              child: CircularProgressIndicator(
+                color: theme.primaryColor,
+              ),
+            ),
+          ),
         ),
       );
     }
 
+    // Определяем стартовый экран
     Widget startScreen;
-
     if (token != null && role != null) {
       if (role == 'ADMIN') {
+        print('🔐 Авторизован как ADMIN');
         startScreen = AdminMainScreen(token: token!);
       } else {
+        print('🔐 Авторизован как USER');
         startScreen = UserHome(token: token!);
       }
     } else {
+      print('🔓 Не авторизован, показываем LoginScreen');
       startScreen = const LoginScreen();
     }
 
-    return MaterialApp(
-      title: 'Prosper',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
-      home: startScreen,
-      routes: {
-        '/login': (_) => const LoginScreen(),
-        '/register': (_) => const RegisterScreen(),
-        '/home': (_) => HomeScreen(token: token ?? ''),
-        '/admin': (_) => AdminMainScreen(token: token ?? ''),
-        '/bookmarks': (_) => BookmarksScreen(token: token ?? ''),
+    return Consumer<ThemeProvider>(
+      builder: (context, theme, child) {
+        return MaterialApp(
+          title: 'Prosper',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            scaffoldBackgroundColor: theme.backgroundColor,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: theme.primaryColor,
+              brightness: theme.isDarkMode ? Brightness.dark : Brightness.light,
+            ),
+          ),
+          home: startScreen,
+          routes: {
+            '/login': (_) => const LoginScreen(),
+            '/register': (_) => const RegisterScreen(),
+            '/home': (_) => HomeScreen(token: token ?? ''),
+            '/admin': (_) => AdminMainScreen(token: token ?? ''),
+            '/bookmarks': (_) => BookmarksScreen(token: token ?? ''),
+          },
+        );
       },
     );
   }

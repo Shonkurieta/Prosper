@@ -29,7 +29,7 @@ public class BookController {
     @Autowired
     private ChapterRepository chapterRepository;
 
-    // Получить все книги
+    // Получить все новеллы
     @GetMapping
     public ResponseEntity<List<Book>> getAllBooks() {
         return ResponseEntity.ok(bookRepository.findAll());
@@ -40,7 +40,7 @@ public class BookController {
     public ResponseEntity<List<Book>> searchBooks(
             @RequestParam(required = false, defaultValue = "") String query) {
         
-        // Если запрос пустой, возвращаем все книги
+        // Если запрос пустой, возвращаем все новеллы
         if (query == null || query.trim().isEmpty()) {
             return ResponseEntity.ok(bookRepository.findAll());
         }
@@ -63,7 +63,7 @@ public class BookController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Получить все главы книги
+    // Получить все главы новеллы
     @GetMapping("/{bookId}/chapters")
     public ResponseEntity<List<ChapterDTO>> getBookChapters(@PathVariable Long bookId) {
         List<Chapter> chapters = chapterRepository.findByBookIdOrderByChapterOrderAsc(bookId);

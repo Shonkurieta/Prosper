@@ -1,15 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
 import '../constants/api_constants.dart';
 
 class AdminService {
-  /// Базовый URL из .env или fallback
-  static final String baseUrl =
-      dotenv.env['ADMIN_API_URL'] ?? ApiConstants.adminUrl;
+  /// Базовый URL - БЕЗ dotenv чтобы избежать NotInitializedError
+  static final String baseUrl = ApiConstants.adminUrl;
 
   final String token;
 
@@ -20,7 +18,7 @@ class AdminService {
         'Authorization': 'Bearer $token',
       };
 
-  /// === 📚 Получить все книги ===
+  /// === 📚 Получить все новеллы ===
   Future<List<dynamic>> getBooks() async {
     final url = Uri.parse('$baseUrl/books');
     print('📡 [getBooks] GET $url');
@@ -99,7 +97,7 @@ class AdminService {
       if (response.statusCode == 403) {
         throw Exception('Доступ запрещён (403 Forbidden)');
       }
-      throw Exception('Ошибка добавления книги: ${response.statusCode} — ${response.body}');
+      throw Exception('Ошибка добавления новеллы: ${response.statusCode} — ${response.body}');
     }
   }
 
@@ -110,7 +108,7 @@ class AdminService {
     final res = await http.delete(url, headers: headers);
     print('📦 [deleteBook] STATUS: ${res.statusCode}');
     if (res.statusCode != 200) {
-      throw Exception('Ошибка удаления книги: ${res.statusCode}');
+      throw Exception('Ошибка удаления новеллы: ${res.statusCode}');
     }
   }
 

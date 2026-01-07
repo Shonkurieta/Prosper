@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:prosper/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/screens/user/user_home.dart';
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -87,6 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       setState(() => _isLoading = false);
       if (!mounted) return;
       
+      final theme = context.read<ThemeProvider>();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -96,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               Expanded(child: Text('Ошибка регистрации: ${e.toString()}')),
             ],
           ),
-          backgroundColor: const Color(0xFFFF6B6B),
+          backgroundColor: theme.errorColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(20),
@@ -110,308 +113,324 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: Stack(
-        children: [
-          // Decorative background shapes
-          Positioned(
-            top: -size.height * 0.15,
-            left: -size.width * 0.2,
-            child: Container(
-              width: size.width * 0.8,
-              height: size.width * 0.8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFFE66D).withValues(alpha: 0.2),
+    return Consumer<ThemeProvider>(
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.backgroundColor,
+          body: Stack(
+            children: [
+              // Decorative background shapes
+              Positioned(
+                top: -size.height * 0.15,
+                left: -size.width * 0.2,
+                child: Container(
+                  width: size.width * 0.8,
+                  height: size.width * 0.8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.decorativeCircle2,
+                  ),
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            bottom: -size.height * 0.1,
-            right: -size.width * 0.25,
-            child: Container(
-              width: size.width * 0.7,
-              height: size.width * 0.7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+              Positioned(
+                bottom: -size.height * 0.1,
+                right: -size.width * 0.25,
+                child: Container(
+                  width: size.width * 0.7,
+                  height: size.width * 0.7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.decorativeCircle1,
+                  ),
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            top: size.height * 0.25,
-            right: -30,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
+              Positioned(
+                top: size.height * 0.25,
+                right: -30,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.decorativeCircle3,
+                  ),
+                ),
               ),
-            ),
-          ),
-          
-          // Main content
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Back button
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
+              
+              // Main content
+              SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Back button and theme toggle
+                              Row(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: theme.cardColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [theme.cardShadow],
+                                    ),
+                                    child: IconButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      icon: Icon(
+                                        Icons.arrow_back_ios_new,
+                                        color: theme.primaryColor,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: theme.cardColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [theme.cardShadow],
+                                    ),
+                                    child: IconButton(
+                                      onPressed: () async {
+                                        await theme.toggleTheme();
+                                      },
+                                      icon: Icon(
+                                        theme.isDarkMode 
+                                            ? Icons.light_mode_outlined 
+                                            : Icons.dark_mode_outlined,
+                                        color: theme.primaryColor,
+                                        size: 24,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                              child: IconButton(
-                                onPressed: () => Navigator.pop(context),
-                                icon: const Icon(
-                                  Icons.arrow_back_ios_new,
-                                  color: Color(0xFF4ECDC4),
-                                  size: 20,
+
+                              const SizedBox(height: 32),
+
+                              // Icon
+                              Center(
+                                child: TweenAnimationBuilder(
+                                  duration: const Duration(milliseconds: 1200),
+                                  tween: Tween<double>(begin: 0, end: 1),
+                                  builder: (context, double value, child) {
+                                    return Transform.rotate(
+                                      angle: value * 0.1,
+                                      child: Icon(
+                                        Icons.person_add_rounded,
+                                        size: 72,
+                                        color: theme.primaryColor,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
-                            ),
-                          ),
 
-                          const SizedBox(height: 32),
+                              const SizedBox(height: 32),
 
-                          // Simple icon without container
-                          Center(
-                            child: TweenAnimationBuilder(
-                              duration: const Duration(milliseconds: 1200),
-                              tween: Tween<double>(begin: 0, end: 1),
-                              builder: (context, double value, child) {
-                                return Transform.rotate(
-                                  angle: value * 0.1,
-                                  child: Icon(
-                                    Icons.person_add_rounded,
-                                    size: 72,
-                                    color: Color.lerp(
-                                      const Color(0xFF4ECDC4),
-                                      const Color(0xFF44A08D),
-                                      value,
+                              // Title
+                              Text(
+                                'Регистрация',
+                                style: TextStyle(
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.textPrimaryColor,
+                                  height: 1.1,
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              Text(
+                                'Создайте новый аккаунт',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  color: theme.textSecondaryColor,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+
+                              const SizedBox(height: 40),
+
+                              // Username field
+                              _buildMinimalTextField(
+                                theme: theme,
+                                controller: _usernameController,
+                                label: 'Имя пользователя',
+                                hint: 'Введите имя пользователя',
+                                icon: Icons.person_outline,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Введите имя пользователя';
+                                  }
+                                  if (value.trim().length < 3) {
+                                    return 'Минимум 3 символа';
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Email field
+                              _buildMinimalTextField(
+                                theme: theme,
+                                controller: _emailController,
+                                label: 'Email',
+                                hint: 'Введите ваш email',
+                                icon: Icons.alternate_email,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Введите email';
+                                  }
+                                  if (!value.trim().contains('@')) {
+                                    return 'Введите корректный email';
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Password field
+                              _buildMinimalTextField(
+                                theme: theme,
+                                controller: _passwordController,
+                                label: 'Пароль',
+                                hint: 'Минимум 8 символов',
+                                icon: Icons.lock_open,
+                                obscureText: _obscurePassword,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword 
+                                        ? Icons.visibility_off_outlined 
+                                        : Icons.visibility_outlined,
+                                    color: theme.textSecondaryColor,
+                                    size: 22,
+                                  ),
+                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Введите пароль';
+                                  }
+                                  if (value.trim().length < 8) {
+                                    return 'Минимум 8 символов';
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Confirm Password field
+                              _buildMinimalTextField(
+                                theme: theme,
+                                controller: _confirmPasswordController,
+                                label: 'Подтвердите пароль',
+                                hint: 'Введите пароль еще раз',
+                                icon: Icons.lock_clock_outlined,
+                                obscureText: _obscureConfirmPassword,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureConfirmPassword 
+                                        ? Icons.visibility_off_outlined 
+                                        : Icons.visibility_outlined,
+                                    color: theme.textSecondaryColor,
+                                    size: 22,
+                                  ),
+                                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Подтвердите пароль';
+                                  }
+                                  if (value.trim() != _passwordController.text.trim()) {
+                                    return 'Пароли не совпадают';
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 40),
+
+                              // Register button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 60,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _register,
+                                  style: theme.getPrimaryButtonStyle().copyWith(
+                                    padding: const WidgetStatePropertyAll(
+                                      EdgeInsets.symmetric(vertical: 18),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Title - left aligned
-                          const Text(
-                            'Регистрация',
-                            style: TextStyle(
-                              fontSize: 44,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2D3436),
-                              height: 1.1,
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          const Text(
-                            'Создайте новый аккаунт',
-                            style: TextStyle(
-                              fontSize: 17,
-                              color: Color(0xFF636E72),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-
-                          const SizedBox(height: 40),
-
-                          // Username field
-                          _buildMinimalTextField(
-                            controller: _usernameController,
-                            label: 'Имя пользователя',
-                            hint: 'Введите имя пользователя',
-                            icon: Icons.person_outline,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Введите имя пользователя';
-                              }
-                              if (value.trim().length < 3) {
-                                return 'Минимум 3 символа';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Email field
-                          _buildMinimalTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            hint: 'Введите ваш email',
-                            icon: Icons.alternate_email,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Введите email';
-                              }
-                              if (!value.trim().contains('@')) {
-                                return 'Введите корректный email';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Password field
-                          _buildMinimalTextField(
-                            controller: _passwordController,
-                            label: 'Пароль',
-                            hint: 'Минимум 8 символов',
-                            icon: Icons.lock_open,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword 
-                                    ? Icons.visibility_off_outlined 
-                                    : Icons.visibility_outlined,
-                                color: const Color(0xFF636E72),
-                                size: 22,
-                              ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Введите пароль';
-                              }
-                              if (value.trim().length < 8) {
-                                return 'Минимум 8 символов';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Confirm Password field
-                          _buildMinimalTextField(
-                            controller: _confirmPasswordController,
-                            label: 'Подтвердите пароль',
-                            hint: 'Введите пароль еще раз',
-                            icon: Icons.lock_clock_outlined,
-                            obscureText: _obscureConfirmPassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword 
-                                    ? Icons.visibility_off_outlined 
-                                    : Icons.visibility_outlined,
-                                color: const Color(0xFF636E72),
-                                size: 22,
-                              ),
-                              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Подтвердите пароль';
-                              }
-                              if (value.trim() != _passwordController.text.trim()) {
-                                return 'Пароли не совпадают';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 40),
-
-                          // Register button - full width solid color
-                          SizedBox(
-                            width: double.infinity,
-                            height: 60,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _register,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4ECDC4),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Зарегистрироваться',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
                                 ),
-                                disabledBackgroundColor: const Color(0xFF4ECDC4).withValues(alpha: 0.6),
                               ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Зарегистрироваться',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.3,
-                                      ),
+
+                              const SizedBox(height: 24),
+
+                              // Login link
+                              Center(
+                                child: TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  ),
+                                  child: Text(
+                                    'Уже есть аккаунт? Войти',
+                                    style: TextStyle(
+                                      color: theme.textSecondaryColor,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Login link - centered
-                          Center(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              ),
-                              child: const Text(
-                                'Уже есть аккаунт? Войти',
-                                style: TextStyle(
-                                  color: Color(0xFF636E72),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
+                              
+                              const SizedBox(height: 20),
+                            ],
                           ),
-                          
-                          const SizedBox(height: 20),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildMinimalTextField({
+    required ThemeProvider theme,
     required TextEditingController controller,
     required String label,
     required String hint,
@@ -428,84 +447,35 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF2D3436),
+              color: theme.textPrimaryColor,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: theme.isDarkMode 
+                ? Border.all(color: theme.borderColor, width: 1.5)
+                : null,
+            boxShadow: [theme.cardShadow],
           ),
           child: TextFormField(
             controller: controller,
             obscureText: obscureText,
             keyboardType: keyboardType,
-            style: const TextStyle(
-              color: Color(0xFF2D3436),
+            style: TextStyle(
+              color: theme.textPrimaryColor,
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
-            decoration: InputDecoration(
+            decoration: theme.getInputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(
-                color: const Color(0xFF636E72).withValues(alpha: 0.5),
-                fontWeight: FontWeight.w400,
-              ),
-              prefixIcon: Icon(
-                icon,
-                color: const Color(0xFF4ECDC4),
-                size: 22,
-              ),
+              prefixIcon: icon,
               suffixIcon: suffixIcon,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF4ECDC4),
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFF6B6B),
-                  width: 2,
-                ),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFF6B6B),
-                  width: 2,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-              errorStyle: const TextStyle(
-                color: Color(0xFFFF6B6B),
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
             ),
             validator: validator,
           ),

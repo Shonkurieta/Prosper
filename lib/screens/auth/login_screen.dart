@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:prosper/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/screens/user/user_home.dart';
-import 'package:prosper/screens/admin/admin_home.dart';
 import 'package:prosper/screens/auth/register_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!mounted) return;
     
     if (!isConnected) {
+      final theme = context.read<ThemeProvider>();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -61,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               Text('Не удается подключиться к серверу'),
             ],
           ),
-          backgroundColor: const Color(0xFFFF6B6B),
+          backgroundColor: theme.errorColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(20),
@@ -105,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       if (!mounted) return;
 
+      final theme = context.read<ThemeProvider>();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -114,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               Text('Добро пожаловать, $usernameFromServer!'),
             ],
           ),
-          backgroundColor: const Color(0xFF4ECDC4),
+          backgroundColor: theme.successColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(20),
@@ -133,6 +136,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       setState(() => _isLoading = false);
       if (!mounted) return;
       
+      final theme = context.read<ThemeProvider>();
       String errorMessage = e.toString().replaceAll('Exception:', '').trim();
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -144,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               Expanded(child: Text(errorMessage)),
             ],
           ),
-          backgroundColor: const Color(0xFFFF6B6B),
+          backgroundColor: theme.errorColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(20),
@@ -158,229 +162,254 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: Stack(
-        children: [
-          // Decorative background shapes
-          Positioned(
-            top: -size.height * 0.15,
-            right: -size.width * 0.2,
-            child: Container(
-              width: size.width * 0.8,
-              height: size.width * 0.8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+    return Consumer<ThemeProvider>(
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.backgroundColor,
+          body: Stack(
+            children: [
+              // Decorative background shapes
+              Positioned(
+                top: -size.height * 0.15,
+                right: -size.width * 0.2,
+                child: Container(
+                  width: size.width * 0.8,
+                  height: size.width * 0.8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.decorativeCircle1,
+                  ),
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            bottom: -size.height * 0.1,
-            left: -size.width * 0.25,
-            child: Container(
-              width: size.width * 0.7,
-              height: size.width * 0.7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFFE66D).withValues(alpha: 0.2),
+              Positioned(
+                bottom: -size.height * 0.1,
+                left: -size.width * 0.25,
+                child: Container(
+                  width: size.width * 0.7,
+                  height: size.width * 0.7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.decorativeCircle2,
+                  ),
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            top: size.height * 0.3,
-            left: -50,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+              Positioned(
+                top: size.height * 0.3,
+                left: -50,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.decorativeCircle3,
+                  ),
+                ),
               ),
-            ),
-          ),
-          
-          // Main content
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Simple icon without container
-                          Center(
-                            child: TweenAnimationBuilder(
-                              duration: const Duration(milliseconds: 1200),
-                              tween: Tween<double>(begin: 0, end: 1),
-                              builder: (context, double value, child) {
-                                return Transform.rotate(
-                                  angle: value * 0.1,
-                                  child: Icon(
-                                    Icons.menu_book_rounded,
-                                    size: 80,
-                                    color: Color.lerp(
-                                      const Color(0xFF4ECDC4),
-                                      const Color(0xFF44A08D),
-                                      value,
+              
+              // Main content
+              SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Theme toggle button
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: theme.cardColor,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [theme.cardShadow],
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () async {
+                                      await theme.toggleTheme();
+                                    },
+                                    icon: Icon(
+                                      theme.isDarkMode 
+                                          ? Icons.light_mode_outlined 
+                                          : Icons.dark_mode_outlined,
+                                      color: theme.primaryColor,
+                                      size: 24,
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(height: 40),
-
-                          // Title - left aligned
-                          const Text(
-                            'Вход',
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF2D3436),
-                              height: 1.1,
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          const Text(
-                            'Войдите, чтобы продолжить',
-                            style: TextStyle(
-                              fontSize: 17,
-                              color: Color(0xFF636E72),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-
-                          const SizedBox(height: 48),
-
-                          // Username field
-                          _buildMinimalTextField(
-                            controller: _usernameController,
-                            label: 'Email или имя пользователя',
-                            hint: 'Введите ваш email',
-                            icon: Icons.alternate_email,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Введите email или имя пользователя';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Password field
-                          _buildMinimalTextField(
-                            controller: _passwordController,
-                            label: 'Пароль',
-                            hint: 'Введите ваш пароль',
-                            icon: Icons.lock_open,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword 
-                                    ? Icons.visibility_off_outlined 
-                                    : Icons.visibility_outlined,
-                                color: const Color(0xFF636E72),
-                                size: 22,
-                              ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Введите пароль';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 40),
-
-                          // Login button - full width solid color
-                          SizedBox(
-                            width: double.infinity,
-                            height: 60,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4ECDC4),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                disabledBackgroundColor: const Color(0xFF4ECDC4).withValues(alpha: 0.6),
                               ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Войти',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                            ),
-                          ),
 
-                          const SizedBox(height: 24),
+                              const SizedBox(height: 20),
 
-                          // Register link - centered
-                          Center(
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                                );
-                              },
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              // Icon
+                              Center(
+                                child: TweenAnimationBuilder(
+                                  duration: const Duration(milliseconds: 1200),
+                                  tween: Tween<double>(begin: 0, end: 1),
+                                  builder: (context, double value, child) {
+                                    return Transform.rotate(
+                                      angle: value * 0.1,
+                                      child: Icon(
+                                        Icons.menu_book_rounded,
+                                        size: 80,
+                                        color: theme.primaryColor,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                              child: const Text(
-                                'Нет аккаунта? Зарегистрироваться',
+
+                              const SizedBox(height: 40),
+
+                              // Title
+                              Text(
+                                'Вход',
                                 style: TextStyle(
-                                  color: Color(0xFF636E72),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.textPrimaryColor,
+                                  height: 1.1,
                                 ),
                               ),
-                            ),
+
+                              const SizedBox(height: 8),
+
+                              Text(
+                                'Войдите, чтобы продолжить',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  color: theme.textSecondaryColor,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+
+                              const SizedBox(height: 48),
+
+                              // Username field
+                              _buildMinimalTextField(
+                                theme: theme,
+                                controller: _usernameController,
+                                label: 'Email или имя пользователя',
+                                hint: 'Введите ваш email',
+                                icon: Icons.alternate_email,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Введите email или имя пользователя';
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Password field
+                              _buildMinimalTextField(
+                                theme: theme,
+                                controller: _passwordController,
+                                label: 'Пароль',
+                                hint: 'Введите ваш пароль',
+                                icon: Icons.lock_open,
+                                obscureText: _obscurePassword,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword 
+                                        ? Icons.visibility_off_outlined 
+                                        : Icons.visibility_outlined,
+                                    color: theme.textSecondaryColor,
+                                    size: 22,
+                                  ),
+                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Введите пароль';
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 40),
+
+                              // Login button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 60,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _login,
+                                  style: theme.getPrimaryButtonStyle().copyWith(
+                                    padding: const WidgetStatePropertyAll(
+                                      EdgeInsets.symmetric(vertical: 18),
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Войти',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // Register link
+                              Center(
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  ),
+                                  child: Text(
+                                    'Нет аккаунта? Зарегистрироваться',
+                                    style: TextStyle(
+                                      color: theme.textSecondaryColor,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 20),
+                            ],
                           ),
-                          
-                          const SizedBox(height: 20),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildMinimalTextField({
+    required ThemeProvider theme,
     required TextEditingController controller,
     required String label,
     required String hint,
@@ -396,83 +425,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF2D3436),
+              color: theme.textPrimaryColor,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: theme.isDarkMode 
+                ? Border.all(color: theme.borderColor, width: 1.5)
+                : null,
+            boxShadow: [theme.cardShadow],
           ),
           child: TextFormField(
             controller: controller,
             obscureText: obscureText,
-            style: const TextStyle(
-              color: Color(0xFF2D3436),
+            style: TextStyle(
+              color: theme.textPrimaryColor,
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
-            decoration: InputDecoration(
+            decoration: theme.getInputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(
-                color: const Color(0xFF636E72).withValues(alpha: 0.5),
-                fontWeight: FontWeight.w400,
-              ),
-              prefixIcon: Icon(
-                icon,
-                color: const Color(0xFF4ECDC4),
-                size: 22,
-              ),
+              prefixIcon: icon,
               suffixIcon: suffixIcon,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF4ECDC4),
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFF6B6B),
-                  width: 2,
-                ),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFF6B6B),
-                  width: 2,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-              errorStyle: const TextStyle(
-                color: Color(0xFFFF6B6B),
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
             ),
             validator: validator,
           ),
