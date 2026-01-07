@@ -174,7 +174,7 @@ class UserService {
       if (response.statusCode == 200) {
         return;
       } else if (response.statusCode == 404) {
-        throw Exception('Книга не найдена');
+        throw Exception('Новелла не найдена');
       } else if (response.statusCode == 401) {
         throw Exception('Сессия истекла. Войдите заново');
       } else if (response.statusCode == 403) {
@@ -288,7 +288,7 @@ class UserService {
     }
   }
 
-  /// Получить прогресс чтения книги
+  /// Получить прогресс чтения новеллы
   Future<Map<String, dynamic>> getProgress(String token, int bookId) async {
     try {
       print('=== GET PROGRESS REQUEST ===');

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:prosper/screens/admin/manage_books_screen.dart';
 import 'package:prosper/screens/admin/manage_users_screen.dart';
 import 'package:prosper/screens/profile/profile_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
 
 class AdminHome extends StatefulWidget {
   final String token;
@@ -47,60 +49,68 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: FadeTransition(
-        opacity: _animController,
-        child: _screens[_selectedIndex],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: const Color(0xFFE0E5EC),
-              width: 1,
-            ),
+    return Consumer<ThemeProvider>(
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.backgroundColor,
+          body: FadeTransition(
+            opacity: _animController,
+            child: _screens[_selectedIndex],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.menu_book_rounded,
-                  label: 'Книги',
-                  index: 0,
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              border: Border(
+                top: BorderSide(
+                  color: theme.borderColor,
+                  width: 1,
                 ),
-                _buildNavItem(
-                  icon: Icons.people_outline,
-                  label: 'Пользователи',
-                  index: 1,
-                ),
-                _buildNavItem(
-                  icon: Icons.person_outline,
-                  label: 'Профиль',
-                  index: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor,
+                  blurRadius: 20,
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(
+                      theme: theme,
+                      icon: Icons.menu_book_rounded,
+                      label: 'новеллы',
+                      index: 0,
+                    ),
+                    _buildNavItem(
+                      theme: theme,
+                      icon: Icons.people_outline,
+                      label: 'Пользователи',
+                      index: 1,
+                    ),
+                    _buildNavItem(
+                      theme: theme,
+                      icon: Icons.person_outline,
+                      label: 'Профиль',
+                      index: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildNavItem({
+    required ThemeProvider theme,
     required IconData icon,
     required String label,
     required int index,
@@ -116,7 +126,7 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
             color: isSelected 
-                ? const Color(0xFF4ECDC4).withValues(alpha: 0.1)
+                ? theme.primaryColor.withValues(alpha: 0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -126,8 +136,8 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
               Icon(
                 icon,
                 color: isSelected 
-                    ? const Color(0xFF4ECDC4)
-                    : const Color(0xFF636E72),
+                    ? theme.primaryColor
+                    : theme.textSecondaryColor,
                 size: 26,
               ),
               const SizedBox(height: 4),
@@ -135,8 +145,8 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
                 label,
                 style: TextStyle(
                   color: isSelected 
-                      ? const Color(0xFF4ECDC4)
-                      : const Color(0xFF636E72),
+                      ? theme.primaryColor
+                      : theme.textSecondaryColor,
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),

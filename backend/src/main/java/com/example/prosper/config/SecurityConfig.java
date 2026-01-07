@@ -44,7 +44,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // ✅ Публичные эндпоинты (доступны БЕЗ авторизации)
                 .requestMatchers("/api/auth/**").permitAll()        // Регистрация, логин, refresh
-                .requestMatchers("/api/books/**").permitAll()       // Книги доступны всем
+                .requestMatchers("/api/books/**").permitAll()       // новеллы доступны всем
                 .requestMatchers("/api/genres/**").permitAll()      // Жанры доступны всем
                 .requestMatchers("/api/test/**").permitAll()        // Тестовые эндпоинты
                 

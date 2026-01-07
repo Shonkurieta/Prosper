@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class BookService {
   final String baseUrl = 'http://192.168.10.5:8080/api';
 
-  // Получить все книги
+  // Получить все новеллы
   Future<List<dynamic>> getAllBooks(String token) async {
     try {
       print('=== GET ALL BOOKS REQUEST ===');
@@ -45,7 +45,7 @@ class BookService {
     }
   }
 
-  // Получить все книги (для админа)
+  // Получить все новеллы (для админа)
   Future<List<dynamic>> getAdminBooks(String token) async {
     try {
       print('=== GET ADMIN BOOKS REQUEST ===');
@@ -105,15 +105,15 @@ class BookService {
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
-          throw Exception('Книга не найдена');
+          throw Exception('Новелла не найдена');
         }
         return json.decode(response.body);
       } else if (response.statusCode == 404) {
-        throw Exception('Книга не найдена');
+        throw Exception('Новелла не найдена');
       } else if (response.statusCode == 401) {
         throw Exception('Сессия истекла. Войдите заново');
       } else {
-        throw Exception('Ошибка загрузки книги: ${response.statusCode}');
+        throw Exception('Ошибка загрузки новеллы: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in getBookById: $e');
@@ -142,18 +142,18 @@ class BookService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (response.body.isEmpty) {
-          return {'success': true, 'message': 'Книга добавлена'};
+          return {'success': true, 'message': 'Новелла добавлена'};
         }
         return json.decode(response.body);
       } else if (response.statusCode == 400) {
         final error = json.decode(response.body);
-        throw Exception(error['message'] ?? 'Неверные данные книги');
+        throw Exception(error['message'] ?? 'Неверные данные новеллы');
       } else if (response.statusCode == 401) {
         throw Exception('Сессия истекла. Войдите заново');
       } else if (response.statusCode == 403) {
         throw Exception('Доступ запрещен. Требуются права администратора');
       } else {
-        throw Exception('Ошибка добавления книги: ${response.statusCode}');
+        throw Exception('Ошибка добавления новеллы: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in addBook: $e');
@@ -182,20 +182,20 @@ class BookService {
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
-          return {'success': true, 'message': 'Книга обновлена'};
+          return {'success': true, 'message': 'Новелла обновлена'};
         }
         return json.decode(response.body);
       } else if (response.statusCode == 404) {
-        throw Exception('Книга не найдена');
+        throw Exception('Новелла не найдена');
       } else if (response.statusCode == 400) {
         final error = json.decode(response.body);
-        throw Exception(error['message'] ?? 'Неверные данные книги');
+        throw Exception(error['message'] ?? 'Неверные данные новеллы');
       } else if (response.statusCode == 401) {
         throw Exception('Сессия истекла. Войдите заново');
       } else if (response.statusCode == 403) {
         throw Exception('Доступ запрещен');
       } else {
-        throw Exception('Ошибка обновления книги: ${response.statusCode}');
+        throw Exception('Ошибка обновления новеллы: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in updateBook: $e');
@@ -224,13 +224,13 @@ class BookService {
       if (response.statusCode == 200 || response.statusCode == 204) {
         return;
       } else if (response.statusCode == 404) {
-        throw Exception('Книга не найдена');
+        throw Exception('Новелла не найдена');
       } else if (response.statusCode == 401) {
         throw Exception('Сессия истекла. Войдите заново');
       } else if (response.statusCode == 403) {
         throw Exception('Доступ запрещен. Требуются права администратора');
       } else {
-        throw Exception('Ошибка удаления книги: ${response.statusCode}');
+        throw Exception('Ошибка удаления новеллы: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in deleteBook: $e');
@@ -281,7 +281,7 @@ class BookService {
     }
   }
 
-  // Получить главы книги
+  // Получить главы новеллы
   Future<List<dynamic>> getBookChapters(String token, int bookId) async {
     try {
       print('=== GET BOOK CHAPTERS REQUEST ===');

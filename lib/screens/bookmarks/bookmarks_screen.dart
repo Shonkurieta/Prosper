@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/bookmark_service.dart';
 import 'package:prosper/screens/book/book_detail_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
 
 class BookmarksScreen extends StatefulWidget {
   final String token;
@@ -46,6 +48,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
+        final theme = context.read<ThemeProvider>();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -55,7 +58,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                 Expanded(child: Text('Ошибка загрузки закладок: $e')),
               ],
             ),
-            backgroundColor: const Color(0xFFFF6B6B),
+            backgroundColor: theme.errorColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
@@ -66,6 +69,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
   }
 
   Future<void> _removeBookmark(int bookId) async {
+    final theme = context.read<ThemeProvider>();
     try {
       await _bookmarkService.removeBookmark(widget.token, bookId);
       _loadBookmarks();
@@ -79,7 +83,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                 Text('Удалено из закладок'),
               ],
             ),
-            backgroundColor: const Color(0xFF4ECDC4),
+            backgroundColor: theme.successColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
@@ -109,95 +113,99 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF4ECDC4).withValues(alpha: 0.15),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF4ECDC4),
+    return Consumer<ThemeProvider>(
+      builder: (context, theme, child) {
+        return Scaffold(
+          backgroundColor: theme.backgroundColor,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.primaryColor.withValues(alpha: 0.15),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: theme.primaryColor,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Закладки',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF2D3436),
-                            letterSpacing: 0.5,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Закладки',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                color: theme.textPrimaryColor,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              'Сохранённые новеллы',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: theme.textSecondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_bookmarks.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const Text(
-                          'Сохранённые книги',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF636E72),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4ECDC4),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${_bookmarks.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF4ECDC4),
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : _bookmarks.isEmpty
-                      ? _buildEmptyState()
-                      : _buildBookmarksList(),
+                // Content
+                Expanded(
+                  child: _isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: theme.primaryColor,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : _bookmarks.isEmpty
+                          ? _buildEmptyState(theme)
+                          : _buildBookmarksList(theme),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeProvider theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -206,32 +214,32 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
+              color: theme.primaryColor.withValues(alpha: 0.1),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.bookmark_border_rounded,
               size: 100,
-              color: Color(0xFF4ECDC4),
+              color: theme.primaryColor,
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Нет сохранённых книг',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2D3436),
+              color: theme.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 48),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
-              'Добавляйте книги в закладки, чтобы быстро находить их',
+              'Добавляйте новеллы в закладки, чтобы быстро находить их',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF636E72),
+                color: theme.textSecondaryColor,
                 height: 1.5,
               ),
             ),
@@ -241,7 +249,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildBookmarksList() {
+  Widget _buildBookmarksList(ThemeProvider theme) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       itemCount: _bookmarks.length,
@@ -254,7 +262,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
               offset: Offset(0, 30 * (1 - value)),
               child: Opacity(
                 opacity: value,
-                child: _buildBookmarkCard(_bookmarks[index]),
+                child: _buildBookmarkCard(_bookmarks[index], theme),
               ),
             );
           },
@@ -263,7 +271,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildBookmarkCard(Map<String, dynamic> bookmark) {
+  Widget _buildBookmarkCard(Map<String, dynamic> bookmark, ThemeProvider theme) {
     final bookId = bookmark['id'] as int;
     final title = bookmark['title'] ?? 'Без названия';
     final author = bookmark['author'] ?? 'Неизвестный автор';
@@ -272,17 +280,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: theme.getCardDecoration(),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -300,13 +298,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                     height: 120,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      boxShadow: [theme.cardShadow],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -314,9 +306,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                           ? Image.network(
                               coverUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                              errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
                             )
-                          : _buildPlaceholder(),
+                          : _buildPlaceholder(theme),
                     ),
                   ),
                 ),
@@ -330,10 +322,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3436),
+                          color: theme.textPrimaryColor,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -341,9 +333,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                       const SizedBox(height: 6),
                       Text(
                         author,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF636E72),
+                          color: theme.textSecondaryColor,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -355,7 +347,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4ECDC4),
+                          color: theme.primaryColor,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -388,11 +380,11 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
+                      color: theme.errorColor.withValues(alpha: 0.15),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.bookmark_remove_rounded,
-                      color: Color(0xFFFF6B6B),
+                      color: theme.errorColor,
                       size: 20,
                     ),
                   ),
@@ -400,30 +392,30 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: Colors.white,
+                        backgroundColor: theme.cardColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        title: const Text(
+                        title: Text(
                           'Удалить закладку?',
                           style: TextStyle(
-                            color: Color(0xFF2D3436),
+                            color: theme.textPrimaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         content: Text(
                           'Вы уверены, что хотите удалить "$title" из закладок?',
-                          style: const TextStyle(
-                            color: Color(0xFF636E72),
+                          style: TextStyle(
+                            color: theme.textSecondaryColor,
                           ),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text(
+                            child: Text(
                               'Отмена',
                               style: TextStyle(
-                                color: Color(0xFF636E72),
+                                color: theme.textSecondaryColor,
                               ),
                             ),
                           ),
@@ -433,7 +425,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
                               _removeBookmark(bookId);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B6B),
+                              backgroundColor: theme.errorColor,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -455,16 +447,16 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(ThemeProvider theme) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF4ECDC4).withValues(alpha: 0.1),
+        color: theme.primaryColor.withValues(alpha: 0.1),
       ),
-      child: const Center(
+      child: Center(
         child: Icon(
           Icons.book_rounded,
           size: 40,
-          color: Color(0xFF4ECDC4),
+          color: theme.primaryColor,
         ),
       ),
     );

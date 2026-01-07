@@ -33,7 +33,7 @@ class BookmarkService {
     return set.contains(bookId);
   }
 
-  /// Прогресс: сохраняет последнюю открытую главу (id) для книги
+  /// Прогресс: сохраняет последнюю открытую главу (id) для новеллы
   static Future<void> setLastReadChapter(int bookId, int chapterId) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyProgress);
