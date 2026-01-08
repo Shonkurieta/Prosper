@@ -13,15 +13,10 @@ class UserService {
     try {
       print('=== GET PROFILE REQUEST ===');
       print('URL: $baseUrl/user/profile');
-      print('Token length: ${token.length}');
-      print('Token (first 50 chars): ${token.length > 50 ? token.substring(0, 50) : token}...');
       
-      // Проверка на двойной Bearer
-      if (token.startsWith('Bearer ')) {
-        print('⚠️ WARNING: Token already contains "Bearer " prefix!');
-        token = token.substring(7);
-        print('Fixed token (first 50 chars): ${token.length > 50 ? token.substring(0, 50) : token}...');
-      }
+      // Очистка токена от возможного дубля Bearer
+      token = token.replaceFirst('Bearer ', '').trim();
+      print('Token (first 30 chars): ${token.substring(0, token.length > 30 ? 30 : token.length)}...');
       
       final response = await http.get(
         Uri.parse('$baseUrl/user/profile'),
@@ -52,60 +47,45 @@ class UserService {
     }
   }
 
-  /// ✅ ИСПРАВЛЕНО: Обновить никнейм (правильный эндпоинт /user/nickname)
+  /// Обновить никнейм
   Future<Map<String, dynamic>> updateNickname(String token, String nickname) async {
-  final response = await http.put(
-    Uri.parse('$baseUrl/api/user/nickname'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: json.encode({'nickname': nickname}),
-  );
-
-  if (response.statusCode == 200) {
-    return json.decode(response.body); // ✅ Возвращаем весь ответ
-  } else {
-    throw Exception(json.decode(response.body)['message'] ?? 'Ошибка обновления никнейма');
-  }
-  }
-
-  /// Alias для совместимости со старым кодом
-  Future<Map<String, dynamic>> updateProfile(String token, String newNickname) async {
-    return updateNickname(token, newNickname);
-  }
-
-  /// ✅ НОВЫЙ МЕТОД: Обновить токен (используется после смены никнейма)
-  Future<Map<String, dynamic>> refreshToken(String token) async {
     try {
-      print('=== REFRESH TOKEN REQUEST ===');
-      print('URL: $baseUrl/auth/refresh');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/refresh'),
+      print('=== UPDATE NICKNAME REQUEST ===');
+      print('URL: $baseUrl/user/nickname');
+      
+      token = token.replaceFirst('Bearer ', '').trim();
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/user/nickname'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
+        body: json.encode({'nickname': nickname}),
       );
 
       print('Status code: ${response.statusCode}');
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          throw Exception('Сервер вернул пустой ответ');
-        }
         return json.decode(response.body);
+      } else if (response.statusCode == 400) {
+        final error = json.decode(response.body);
+        throw Exception(error['message'] ?? 'Ошибка обновления никнейма');
       } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
+        throw Exception('Сессия истекла');
       } else {
-        throw Exception('Ошибка обновления токена: ${response.statusCode}');
+        throw Exception('Ошибка обновления никнейма: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in refreshToken: $e');
+      print('Error in updateNickname: $e');
       rethrow;
     }
+  }
+
+  /// Alias для совместимости
+  Future<Map<String, dynamic>> updateProfile(String token, String newNickname) async {
+    return updateNickname(token, newNickname);
   }
 
   /// Изменить пароль
@@ -113,6 +93,8 @@ class UserService {
     try {
       print('=== CHANGE PASSWORD REQUEST ===');
       print('URL: $baseUrl/user/password');
+      
+      token = token.replaceFirst('Bearer ', '').trim();
 
       final response = await http.put(
         Uri.parse('$baseUrl/user/password'),
@@ -132,17 +114,12 @@ class UserService {
       if (response.statusCode == 200) {
         return;
       } else if (response.statusCode == 400) {
-        if (response.body.isEmpty) {
-          throw Exception('Неверный старый пароль');
-        }
         final error = json.decode(response.body);
-        throw Exception(error['message'] ?? 'Ошибка изменения пароля');
+        throw Exception(error['message'] ?? 'Неверный старый пароль');
       } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
-      } else if (response.statusCode == 403) {
-        throw Exception('Доступ запрещен');
+        throw Exception('Сессия истекла');
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        throw Exception('Ошибка изменения пароля: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in changePassword: $e');
@@ -151,83 +128,19 @@ class UserService {
   }
 
   // ========================================
-  // ЗАКЛАДКИ
+  // ADMIN ФУНКЦИИ
   // ========================================
 
-  /// Добавить книгу в закладки
-  Future<void> addBookmark(String token, int bookId) async {
+  /// Получить всех пользователей (для админа)
+  Future<List<dynamic>> getAllUsers(String token) async {
     try {
-      print('=== ADD BOOKMARK REQUEST ===');
-      print('URL: $baseUrl/user/books/$bookId/bookmark');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/user/books/$bookId/bookmark'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        return;
-      } else if (response.statusCode == 404) {
-        throw Exception('Новелла не найдена');
-      } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
-      } else if (response.statusCode == 403) {
-        throw Exception('Доступ запрещен');
-      } else {
-        throw Exception('Ошибка добавления в закладки: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in addBookmark: $e');
-      rethrow;
-    }
-  }
-
-  /// Удалить книгу из закладок
-  Future<void> removeBookmark(String token, int bookId) async {
-    try {
-      print('=== REMOVE BOOKMARK REQUEST ===');
-      print('URL: $baseUrl/user/books/$bookId/bookmark');
-
-      final response = await http.delete(
-        Uri.parse('$baseUrl/user/books/$bookId/bookmark'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        return;
-      } else if (response.statusCode == 404) {
-        throw Exception('Закладка не найдена');
-      } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
-      } else {
-        throw Exception('Ошибка удаления из закладок: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in removeBookmark: $e');
-      rethrow;
-    }
-  }
-
-  /// Получить все закладки пользователя
-  Future<List<dynamic>> getBookmarks(String token) async {
-    try {
-      print('=== GET BOOKMARKS REQUEST ===');
-      print('URL: $baseUrl/user/books/bookmarks');
+      print('=== GET ALL USERS REQUEST ===');
+      print('URL: $baseUrl/admin/users');
+      
+      token = token.replaceFirst('Bearer ', '').trim();
 
       final response = await http.get(
-        Uri.parse('$baseUrl/user/books/bookmarks'),
+        Uri.parse('$baseUrl/admin/users'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -244,117 +157,14 @@ class UserService {
         final data = json.decode(response.body);
         if (data is List) {
           return data;
-        }
-        return [];
-      } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Ошибка загрузки закладок: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in getBookmarks: $e');
-      return [];
-    }
-  }
-
-  /// Обновить прогресс чтения
-  Future<void> updateProgress(String token, int bookId, int chapter) async {
-    try {
-      print('=== UPDATE PROGRESS REQUEST ===');
-      print('URL: $baseUrl/user/books/$bookId/progress');
-
-      final response = await http.put(
-        Uri.parse('$baseUrl/user/books/$bookId/progress'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({
-          'chapter': chapter,
-        }),
-      );
-
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Ошибка сохранения прогресса: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in updateProgress: $e');
-      rethrow;
-    }
-  }
-
-  /// Получить прогресс чтения новеллы
-  Future<Map<String, dynamic>> getProgress(String token, int bookId) async {
-    try {
-      print('=== GET PROGRESS REQUEST ===');
-      print('URL: $baseUrl/user/books/$bookId/progress');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/user/books/$bookId/progress'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          return {'currentChapter': 1, 'isBookmarked': false};
-        }
-        return json.decode(response.body);
-      } else {
-        return {'currentChapter': 1, 'isBookmarked': false};
-      }
-    } catch (e) {
-      print('Error in getProgress: $e');
-      return {'currentChapter': 1, 'isBookmarked': false};
-    }
-  }
-
-  // ========================================
-  // ADMIN ФУНКЦИИ
-  // ========================================
-
-  /// Получить всех пользователей (для админа)
-  Future<List<dynamic>> getAllUsers(String token) async {
-    try {
-      print('=== GET ALL USERS REQUEST ===');
-      print('URL: $baseUrl/admin/users');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/admin/users'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          return [];
-        }
-        final data = json.decode(response.body);
-        if (data is List) {
-          return data;
         } else if (data is Map && data.containsKey('users')) {
           return data['users'];
         }
         return [];
       } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
+        throw Exception('Сессия истекла');
       } else if (response.statusCode == 403) {
-        throw Exception('Доступ запрещен. Требуются права администратора');
+        throw Exception('Требуются права администратора');
       } else {
         throw Exception('Ошибка загрузки пользователей: ${response.statusCode}');
       }
@@ -374,6 +184,8 @@ class UserService {
     try {
       print('=== DELETE USER REQUEST ===');
       print('URL: $baseUrl/admin/users/$userId');
+      
+      token = token.replaceFirst('Bearer ', '').trim();
 
       final response = await http.delete(
         Uri.parse('$baseUrl/admin/users/$userId'),
@@ -391,11 +203,11 @@ class UserService {
       } else if (response.statusCode == 404) {
         throw Exception('Пользователь не найден');
       } else if (response.statusCode == 401) {
-        throw Exception('Сессия истекла. Войдите заново');
+        throw Exception('Сессия истекла');
       } else if (response.statusCode == 403) {
         throw Exception('Доступ запрещен');
       } else {
-        throw Exception('Ошибка удаления пользователя: ${response.statusCode}');
+        throw Exception('Ошибка удаления: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in deleteUser: $e');

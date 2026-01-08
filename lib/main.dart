@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/providers/font_provider.dart';
 // Экраны
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -23,8 +24,11 @@ Future<void> main() async {
   }
   
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => FontProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -66,21 +70,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Consumer<ThemeProvider>(
-        builder: (context, theme, _) => MaterialApp(
-          home: Scaffold(
-            backgroundColor: theme.backgroundColor,
-            body: Center(
-              child: CircularProgressIndicator(
-                color: theme.primaryColor,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
     // Определяем стартовый экран
     Widget startScreen;
     if (token != null && role != null) {
@@ -98,6 +87,19 @@ class _MyAppState extends State<MyApp> {
 
     return Consumer<ThemeProvider>(
       builder: (context, theme, child) {
+        if (isLoading) {
+          return MaterialApp(
+            home: Scaffold(
+              backgroundColor: theme.backgroundColor,
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: theme.primaryColor,
+                ),
+              ),
+            ),
+          );
+        }
+
         return MaterialApp(
           title: 'Prosper',
           debugShowCheckedModeBanner: false,

@@ -16,9 +16,11 @@ com\example\prosper\repository\UserRepository.class
 com\example\prosper\service\UserService.class
 com\example\prosper\config\JwtAuthenticationFilter.class
 com\example\prosper\model\Chapter.class
+com\example\prosper\model\BookmarkStatus.class
 com\example\prosper\repository\ChapterRepository.class
 com\example\prosper\dto\ChapterDTO.class
 com\example\prosper\repository\UserBookRepository.class
+com\example\prosper\controller\BookmarkController.class
 com\example\prosper\config\JwtUtil.class
 com\example\prosper\config\WebConfig.class
 com\example\prosper\model\Book.class
