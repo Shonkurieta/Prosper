@@ -1,146 +1,151 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:prosper/constants/api_constants.dart';
+import '../constants/api_constants.dart';
 
 class BookmarkService {
-  // Убрали /api, так как он уже есть в ApiConstants.baseUrl
-  
-  Future<void> addBookmark(String token, int bookId) async {
-    try {
-      print('=== ADD BOOKMARK ===');
-      print('URL: ${ApiConstants.baseUrl}/user/books/$bookId/bookmark');
-      
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/user/books/$bookId/bookmark'),  // Убрали /api
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+  final String baseUrl = ApiConstants.baseUrl;
 
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
+  // Enum для статусов (синхронизирован с backend)
+  static const String READING = 'READING';
+  static const String COMPLETED = 'COMPLETED';
+  static const String FAVORITE = 'FAVORITE';
+  static const String DROPPED = 'DROPPED';
+  static const String PLANNED = 'PLANNED';
 
-      if (response.statusCode != 200) {
-        throw Exception('Ошибка добавления в закладки: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in addBookmark: $e');
-      rethrow;
+  // Получить все закладки или с фильтром по статусу
+  Future<List<dynamic>> getBookmarks(String token, {String? status}) async {
+    String url = '$baseUrl/bookmarks';
+    if (status != null) {
+      url += '?status=$status';
+    }
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } else {
+      throw Exception('Ошибка загрузки закладок: ${response.statusCode}');
     }
   }
 
-  Future<void> removeBookmark(String token, int bookId) async {
-    try {
-      print('=== REMOVE BOOKMARK ===');
-      print('URL: ${ApiConstants.baseUrl}/user/books/$bookId/bookmark');
-      
-      final response = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}/user/books/$bookId/bookmark'),  // Убрали /api
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Ошибка удаления из закладок: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in removeBookmark: $e');
-      rethrow;
-    }
-  }
-
-  Future<List<dynamic>> getBookmarks(String token) async {
-    try {
-      print('=== GET BOOKMARKS ===');
-      print('URL: ${ApiConstants.baseUrl}/user/books/bookmarks');
-      
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/user/books/bookmarks'),  // Убрали /api
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty || response.body == '[]') {
-          return [];
-        }
-        return json.decode(response.body);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Ошибка загрузки закладок: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in getBookmarks: $e');
-      return [];
-    }
-  }
-
-  Future<void> updateProgress(String token, int bookId, int chapter) async {
-    try {
-      print('=== UPDATE PROGRESS ===');
-      print('URL: ${ApiConstants.baseUrl}/user/books/$bookId/progress');
-      print('Chapter: $chapter');
-      
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/user/books/$bookId/progress'),  // Убрали /api
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({'chapter': chapter}),
-      );
-
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Ошибка сохранения прогресса: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in updateProgress: $e');
-      rethrow;
-    }
-  }
-
+  // Получить прогресс для конкретной книги
   Future<Map<String, dynamic>> getProgress(String token, int bookId) async {
-    try {
-      print('=== GET PROGRESS ===');
-      print('URL: ${ApiConstants.baseUrl}/user/books/$bookId/progress');
-      
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/user/books/$bookId/progress'),  // Убрали /api
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+    final response = await http.get(
+      Uri.parse('$baseUrl/bookmarks/progress/$bookId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } else {
+      throw Exception('Ошибка загрузки прогресса');
+    }
+  }
 
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          return {'currentChapter': 1, 'isBookmarked': false};
-        }
-        return json.decode(response.body);
-      } else {
-        return {'currentChapter': 1, 'isBookmarked': false};
-      }
-    } catch (e) {
-      print('Error in getProgress: $e');
-      return {'currentChapter': 1, 'isBookmarked': false};
+  // Добавить закладку
+  Future<void> addBookmark(String token, int bookId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/bookmarks/$bookId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка добавления закладки');
+    }
+  }
+
+  // Обновить статус закладки
+  Future<void> updateBookmarkStatus(String token, int bookmarkId, String status) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/bookmarks/$bookmarkId/status'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'status': status}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка обновления статуса');
+    }
+  }
+
+  // Обновить прогресс чтения
+  Future<void> updateProgress(String token, int bookId, int currentChapter) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/bookmarks/$bookId/progress'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'currentChapter': currentChapter}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка обновления прогресса');
+    }
+  }
+
+  // Удалить закладку
+  Future<void> removeBookmark(String token, int bookId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/bookmarks/$bookId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка удаления закладки');
+    }
+  }
+
+  // Получить отображаемое имя статуса
+  static String getStatusDisplayName(String status) {
+    switch (status) {
+      case READING:
+        return 'В процессе';
+      case COMPLETED:
+        return 'Прочитанное';
+      case FAVORITE:
+        return 'Любимое';
+      case DROPPED:
+        return 'Брошенное';
+      case PLANNED:
+        return 'В планах';
+      default:
+        return 'В процессе';
+    }
+  }
+
+  // Получить иконку для статуса
+  static String getStatusIcon(String status) {
+    switch (status) {
+      case READING:
+        return '📖';
+      case COMPLETED:
+        return '✅';
+      case FAVORITE:
+        return '❤️';
+      case DROPPED:
+        return '🚫';
+      case PLANNED:
+        return '📅';
+      default:
+        return '📖';
     }
   }
 }

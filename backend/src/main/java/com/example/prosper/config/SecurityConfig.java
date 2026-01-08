@@ -44,7 +44,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // ✅ Публичные эндпоинты (доступны БЕЗ авторизации)
                 .requestMatchers("/api/auth/**").permitAll()        // Регистрация, логин, refresh
-                .requestMatchers("/api/books/**").permitAll()       // новеллы доступны всем
+                .requestMatchers("/api/books/**").permitAll()       // Новеллы доступны всем
                 .requestMatchers("/api/genres/**").permitAll()      // Жанры доступны всем
                 .requestMatchers("/api/test/**").permitAll()        // Тестовые эндпоинты
                 
@@ -55,7 +55,8 @@ public class SecurityConfig {
                 
                 // ✅ Защищенные эндпоинты
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")  // Только админ
-                .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN") // Профиль, закладки
+                .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN") // Профиль
+                .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN") // Закладки - USER или ADMIN
                 
                 // Все остальное требует авторизации
                 .anyRequest().authenticated()
