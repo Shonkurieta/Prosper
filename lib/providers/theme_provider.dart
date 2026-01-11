@@ -22,66 +22,66 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Light theme colors
-  Color get backgroundColor => _isDarkMode ? const Color(0xFF0F0520) : const Color(0xFFF5F7FA);
-  Color get cardColor => _isDarkMode ? const Color(0xFF1A1F3A) : Colors.white;
-  Color get primaryColor => _isDarkMode ? const Color(0xFF14FFEC) : const Color(0xFF4ECDC4);
-  Color get secondaryColor => _isDarkMode ? const Color(0xFF0D7377) : const Color(0xFF44A08D);
-  Color get textPrimaryColor => _isDarkMode ? Colors.white : const Color(0xFF2D3436);
-  Color get textSecondaryColor => _isDarkMode ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF636E72);
-  Color get borderColor => _isDarkMode ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE0E5EC);
-  Color get errorColor => const Color(0xFFFF6B6B);
-  Color get successColor => _isDarkMode ? const Color(0xFF14FFEC) : const Color(0xFF4ECDC4);
-  Color get warningColor => const Color(0xFFFFE66D);
-  Color get inputBackgroundColor => _isDarkMode ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF5F7FA);
-  Color get shadowColor => _isDarkMode ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.04);
+  // Minimalist theme colors
+  Color get backgroundColor => _isDarkMode ? const Color(0xFF0A0A0A) : const Color(0xFFFAFAFA);
+  Color get cardColor => _isDarkMode ? const Color(0xFF141414) : const Color(0xFFFFFFFF);
+  Color get primaryColor => _isDarkMode ? const Color(0xFFE0E0E0) : const Color(0xFF1A1A1A);
+  Color get secondaryColor => _isDarkMode ? const Color(0xFF404040) : const Color(0xFF6B6B6B);
+  Color get accentColor => _isDarkMode ? const Color(0xFF3B82F6) : const Color(0xFF2563EB);
+  Color get textPrimaryColor => _isDarkMode ? const Color(0xFFE5E5E5) : const Color(0xFF1A1A1A);
+  Color get textSecondaryColor => _isDarkMode ? const Color(0xFF888888) : const Color(0xFF6B6B6B);
+  Color get borderColor => _isDarkMode ? const Color(0xFF252525) : const Color(0xFFE5E5E5);
+  Color get errorColor => _isDarkMode ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+  Color get successColor => _isDarkMode ? const Color(0xFF10B981) : const Color(0xFF059669);
+  Color get warningColor => _isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+  Color get inputBackgroundColor => _isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5);
+  Color get shadowColor => _isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.03);
   
-  // Decorative circle colors
+  // Subtle decorative elements
   Color get decorativeCircle1 => _isDarkMode 
-      ? const Color(0xFF9333EA).withValues(alpha: 0.4) 
-      : const Color(0xFF4ECDC4).withValues(alpha: 0.15);
+      ? const Color(0xFF3B82F6).withValues(alpha: 0.08) 
+      : const Color(0xFF2563EB).withValues(alpha: 0.04);
   Color get decorativeCircle2 => _isDarkMode 
-      ? const Color(0xFFEC4899).withValues(alpha: 0.3) 
-      : const Color(0xFFFFE66D).withValues(alpha: 0.2);
+      ? const Color(0xFF8B5CF6).withValues(alpha: 0.06) 
+      : const Color(0xFF7C3AED).withValues(alpha: 0.03);
   Color get decorativeCircle3 => _isDarkMode 
-      ? const Color(0xFFFF6B6B).withValues(alpha: 0.2) 
-      : const Color(0xFFFF6B6B).withValues(alpha: 0.12);
+      ? const Color(0xFF6366F1).withValues(alpha: 0.05) 
+      : const Color(0xFF4F46E5).withValues(alpha: 0.025);
 
-  // Gradients
+  // Minimal gradients
   List<Color> get primaryGradient => _isDarkMode
-      ? [const Color(0xFF14FFEC), const Color(0xFF0D7377)]
-      : [const Color(0xFF4ECDC4), const Color(0xFF44A08D)];
+      ? [const Color(0xFF1A1A1A), const Color(0xFF0A0A0A)]
+      : [const Color(0xFFFFFFFF), const Color(0xFFF5F5F5)];
 
   List<Color> get backgroundGradient => _isDarkMode
-      ? [
-          const Color(0xFF0F0520),
-          const Color(0xFF1A1F3A),
-          const Color(0xFF2D1B69).withValues(alpha: 0.3),
-        ]
-      : [const Color(0xFFF5F7FA), const Color(0xFFF5F7FA)];
+      ? [const Color(0xFF0A0A0A), const Color(0xFF0F0F0F)]
+      : [const Color(0xFFFAFAFA), const Color(0xFFFFFFFF)];
 
   BoxShadow get cardShadow => BoxShadow(
         color: shadowColor,
-        blurRadius: _isDarkMode ? 20 : 10,
-        offset: Offset(0, _isDarkMode ? 8 : 2),
+        blurRadius: _isDarkMode ? 24 : 8,
+        offset: Offset(0, _isDarkMode ? 4 : 1),
       );
 
   Color getIconColor(bool isActive) {
     if (isActive) {
-      return _isDarkMode ? const Color(0xFF14FFEC) : const Color(0xFF4ECDC4);
+      return accentColor;
     }
     return textSecondaryColor;
   }
 
   TextStyle get headingStyle => TextStyle(
         fontSize: 28,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         color: textPrimaryColor,
+        letterSpacing: -0.5,
       );
 
   TextStyle get bodyStyle => TextStyle(
         fontSize: 15,
+        fontWeight: FontWeight.w400,
         color: textSecondaryColor,
+        letterSpacing: 0.1,
       );
 
   InputDecoration getInputDecoration({
@@ -96,32 +96,30 @@ class ThemeProvider extends ChangeNotifier {
         fontWeight: FontWeight.w400,
       ),
       prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: primaryColor, size: 22)
+          ? Icon(prefixIcon, color: textSecondaryColor, size: 20)
           : null,
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: _isDarkMode
-            ? BorderSide(color: borderColor, width: 1.5)
-            : BorderSide.none,
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: primaryColor, width: 2),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: accentColor, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: errorColor, width: 2),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: errorColor, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: errorColor, width: 2),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: errorColor, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       filled: true,
       fillColor: inputBackgroundColor,
     );
@@ -129,12 +127,25 @@ class ThemeProvider extends ChangeNotifier {
 
   ButtonStyle getPrimaryButtonStyle() {
     return ElevatedButton.styleFrom(
-      backgroundColor: primaryColor,
-      foregroundColor: _isDarkMode ? Colors.white : Colors.white,
+      backgroundColor: _isDarkMode ? const Color(0xFFE5E5E5) : const Color(0xFF1A1A1A),
+      foregroundColor: _isDarkMode ? const Color(0xFF0A0A0A) : const Color(0xFFFFFFFF),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+    );
+  }
+
+  ButtonStyle getSecondaryButtonStyle() {
+    return OutlinedButton.styleFrom(
+      foregroundColor: textPrimaryColor,
+      side: BorderSide(color: borderColor, width: 1),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
     );
   }
 
@@ -142,9 +153,7 @@ class ThemeProvider extends ChangeNotifier {
     return BoxDecoration(
       color: cardColor,
       borderRadius: BorderRadius.circular(16),
-      border: _isDarkMode
-          ? Border.all(color: borderColor, width: 1.5)
-          : null,
+      border: Border.all(color: borderColor, width: 1),
       boxShadow: [cardShadow],
     );
   }

@@ -34,7 +34,7 @@ class BookmarkService {
     }
   }
 
-  // Получить прогресс для конкретной книги
+  // Получить прогресс для конкретной новеллы
   Future<Map<String, dynamic>> getProgress(String token, int bookId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/bookmarks/progress/$bookId'),

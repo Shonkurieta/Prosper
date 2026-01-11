@@ -37,7 +37,7 @@ class BookService {
       } else if (response.statusCode == 403) {
         throw Exception('Доступ запрещен');
       } else {
-        throw Exception('Ошибка загрузки книг: ${response.statusCode}');
+        throw Exception('Ошибка загрузки новелл: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in getAllBooks: $e');
@@ -78,7 +78,7 @@ class BookService {
       } else if (response.statusCode == 403) {
         throw Exception('Доступ запрещен. Требуются права администратора');
       } else {
-        throw Exception('Ошибка загрузки книг: ${response.statusCode}');
+        throw Exception('Ошибка загрузки новелл: ${response.statusCode}');
       }
     } catch (e) {
       print('Error in getAdminBooks: $e');
@@ -86,7 +86,7 @@ class BookService {
     }
   }
 
-  // Получить книгу по ID
+  // Получить новеллу по ID
   Future<Map<String, dynamic>> getBookById(String token, int bookId) async {
     try {
       print('=== GET BOOK BY ID REQUEST ===');
@@ -121,7 +121,7 @@ class BookService {
     }
   }
 
-  // Добавить книгу (для админа)
+  // Добавить новеллу (для админа)
   Future<Map<String, dynamic>> addBook(String token, Map<String, dynamic> bookData) async {
     try {
       print('=== ADD BOOK REQUEST ===');
@@ -161,7 +161,7 @@ class BookService {
     }
   }
 
-  // Обновить книгу (для админа)
+  // Обновить новеллу (для админа)
   Future<Map<String, dynamic>> updateBook(String token, int bookId, Map<String, dynamic> bookData) async {
     try {
       print('=== UPDATE BOOK REQUEST ===');
@@ -203,7 +203,7 @@ class BookService {
     }
   }
 
-  // Удалить книгу (для админа)
+  // Удалить новеллу (для админа)
   Future<void> deleteBook(String token, int bookId) async {
     try {
       print('=== DELETE BOOK REQUEST ===');
@@ -243,7 +243,7 @@ class BookService {
     return getAllBooks(token);
   }
 
-  // Поиск книг
+  // Поиск новелл
   Future<List<dynamic>> searchBooks(String token, String query) async {
     try {
       print('=== SEARCH BOOKS REQUEST ===');

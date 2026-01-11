@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/genres/**").permitAll()      // Жанры доступны всем
                 .requestMatchers("/api/test/**").permitAll()        // Тестовые эндпоинты
                 
-                // ✅ СТАТИЧЕСКИЕ ФАЙЛЫ - обложки книг (БЕЗ авторизации)
+                // ✅ СТАТИЧЕСКИЕ ФАЙЛЫ - обложки новелл (БЕЗ авторизации)
                 .requestMatchers("/covers/**").permitAll()          // Обложки через /covers/
                 .requestMatchers("/assets/**").permitAll()          // Обложки через /assets/
                 .requestMatchers("/assets/covers/**").permitAll()   // Обложки через /assets/covers/
