@@ -205,7 +205,7 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
 
                               // Title
                               Text(
-                                'Добавить книгу',
+                                'Добавить новеллу',
                                 style: TextStyle(
                                   fontSize: 44,
                                   fontWeight: FontWeight.w900,
@@ -217,7 +217,7 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
                               const SizedBox(height: 8),
 
                               Text(
-                                'Создайте новую книгу в библиотеке',
+                                'Создайте новую новеллу в библиотеке',
                                 style: TextStyle(
                                   fontSize: 17,
                                   color: theme.textSecondaryColor,
@@ -368,7 +368,7 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
                                           ),
                                         )
                                       : const Text(
-                                          'Сохранить книгу',
+                                          'Сохранить новеллу',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,

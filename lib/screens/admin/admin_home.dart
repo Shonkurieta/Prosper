@@ -84,7 +84,7 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
                     _buildNavItem(
                       theme: theme,
                       icon: Icons.menu_book_rounded,
-                      label: 'новеллы',
+                      label: 'Новеллы',
                       index: 0,
                     ),
                     _buildNavItem(

@@ -521,130 +521,132 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.borderColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.tune_rounded,
-                        color: theme.primaryColor,
-                        size: 24,
-                      ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.borderColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(width: 14),
-                    Text(
-                      'Настройки чтения',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: theme.textPrimaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 28),
-
-                // Font Size
-                _buildSettingItem(
-                  theme: theme,
-                  icon: Icons.format_size_rounded,
-                  title: 'Размер шрифта',
-                  value: fontProvider.fontSize,
-                  displayValue: '${fontProvider.fontSize.round()}',
-                  min: 12,
-                  max: 28,
-                  divisions: 8,
-                  color: theme.primaryColor,
-                  onChanged: (value) {
-                    fontProvider.setFontSize(value);
-                    setModalState(() {});
-                    setState(() {});
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Brightness
-                _buildSettingItem(
-                  theme: theme,
-                  icon: Icons.brightness_6_outlined,
-                  title: 'Яркость',
-                  value: _brightness,
-                  displayValue: '${(_brightness * 100).round()}%',
-                  min: 0.5,
-                  max: 1.0,
-                  color: theme.warningColor,
-                  onChanged: (value) {
-                    setState(() => _brightness = value);
-                    setModalState(() {});
-                  },
-                ),
-
-                const SizedBox(height: 28),
-
-                // Font Selection
-                Text(
-                  'Выбор шрифта',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: theme.textPrimaryColor,
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.tune_rounded,
+                          color: theme.primaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Text(
+                        'Настройки чтения',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: theme.textPrimaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 28),
 
-                const SizedBox(height: 16),
+                  // Font Size
+                  _buildSettingItem(
+                    theme: theme,
+                    icon: Icons.format_size_rounded,
+                    title: 'Размер шрифта',
+                    value: fontProvider.fontSize,
+                    displayValue: '${fontProvider.fontSize.round()}',
+                    min: 12,
+                    max: 28,
+                    divisions: 8,
+                    color: theme.primaryColor,
+                    onChanged: (value) {
+                      fontProvider.setFontSize(value);
+                      setModalState(() {});
+                      setState(() {});
+                    },
+                  ),
 
-                _buildFontOption(
-                  theme,
-                  fontProvider,
-                  FontProvider.defaultFont,
-                  setModalState,
-                ),
-                _buildFontOption(
-                  theme,
-                  fontProvider,
-                  FontProvider.timesNewRoman,
-                  setModalState,
-                ),
-                _buildFontOption(
-                  theme,
-                  fontProvider,
-                  FontProvider.montserrat,
-                  setModalState,
-                ),
-                _buildFontOption(
-                  theme,
-                  fontProvider,
-                  FontProvider.cormorantGaramond,
-                  setModalState,
-                ),
-                _buildFontOption(
-                  theme,
-                  fontProvider,
-                  FontProvider.merriweather,
-                  setModalState,
-                ),
+                  const SizedBox(height: 20),
 
-                const SizedBox(height: 24),
-              ],
+                  // Brightness
+                  _buildSettingItem(
+                    theme: theme,
+                    icon: Icons.brightness_6_outlined,
+                    title: 'Яркость',
+                    value: _brightness,
+                    displayValue: '${(_brightness * 100).round()}%',
+                    min: 0.5,
+                    max: 1.0,
+                    color: theme.warningColor,
+                    onChanged: (value) {
+                      setState(() => _brightness = value);
+                      setModalState(() {});
+                    },
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Font Selection
+                  Text(
+                    'Выбор шрифта',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: theme.textPrimaryColor,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _buildFontOption(
+                    theme,
+                    fontProvider,
+                    FontProvider.defaultFont,
+                    setModalState,
+                  ),
+                  _buildFontOption(
+                    theme,
+                    fontProvider,
+                    FontProvider.timesNewRoman,
+                    setModalState,
+                  ),
+                  _buildFontOption(
+                    theme,
+                    fontProvider,
+                    FontProvider.montserrat,
+                    setModalState,
+                  ),
+                  _buildFontOption(
+                    theme,
+                    fontProvider,
+                    FontProvider.cormorantGaramond,
+                    setModalState,
+                  ),
+                  _buildFontOption(
+                    theme,
+                    fontProvider,
+                    FontProvider.merriweather,
+                    setModalState,
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),

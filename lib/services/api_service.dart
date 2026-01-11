@@ -11,7 +11,7 @@ class ApiService {
       final List<dynamic> jsonList = jsonDecode(response.body);
       return jsonList.map((json) => Book.fromJson(json)).toList();
     } else {
-      throw Exception('Ошибка загрузки книг: ${response.statusCode}');
+      throw Exception('Ошибка загрузки новелл: ${response.statusCode}');
     }
   }
 }

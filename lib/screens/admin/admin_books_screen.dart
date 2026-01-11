@@ -80,7 +80,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
-          'Удалить книгу?',
+          'Удалить новеллу?',
           style: TextStyle(
             color: theme.textPrimaryColor,
             fontWeight: FontWeight.w700,
@@ -355,7 +355,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
           ),
           const SizedBox(height: 24),
           Text(
-            'Нет книг',
+            'Нет новелл',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -364,7 +364,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
           ),
           const SizedBox(height: 8),
           Text(
-            'Добавьте первую книгу в библиотеку',
+            'Добавьте первую новеллу в библиотеку',
             style: TextStyle(
               fontSize: 15,
               color: theme.textSecondaryColor,

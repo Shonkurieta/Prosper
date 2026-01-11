@@ -35,7 +35,7 @@ public class BookController {
         return ResponseEntity.ok(bookRepository.findAll());
     }
 
-    // Поиск книг по названию (параметр query теперь необязательный)
+    // Поиск новелл по названию (параметр query теперь необязательный)
     @GetMapping("/search")
     public ResponseEntity<List<Book>> searchBooks(
             @RequestParam(required = false, defaultValue = "") String query) {
@@ -45,7 +45,7 @@ public class BookController {
             return ResponseEntity.ok(bookRepository.findAll());
         }
 
-        // Поиск книг по названию или автору
+        // Поиск новелл по названию или автору
         List<Book> books = bookRepository.findAll().stream()
                 .filter(book -> 
                     book.getTitle().toLowerCase().contains(query.toLowerCase()) ||
@@ -55,7 +55,7 @@ public class BookController {
         return ResponseEntity.ok(books);
     }
 
-    // Получить книгу по ID с полной информацией
+    // Получить новеллу по ID с полной информацией
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable Long id) {
         return bookRepository.findById(id)

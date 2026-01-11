@@ -103,14 +103,14 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Удалить книгу?',
+          'Удалить новеллу?',
           style: TextStyle(
             color: theme.textPrimaryColor,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'Вы уверены, что хотите удалить книгу "$title"?',
+          'Вы уверены, что хотите удалить новеллу "$title"?',
           style: TextStyle(color: theme.textSecondaryColor),
         ),
         actions: [
@@ -210,7 +210,7 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
                               ),
                             ),
                             Text(
-                              'Библиотека книг',
+                              'Библиотека новелл',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: theme.textSecondaryColor,
@@ -242,7 +242,7 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
                   ),
                 ),
 
-                // Список книг
+                // Список новелл
                 Expanded(
                   child: FutureBuilder<List<dynamic>>(
                     future: _books,
@@ -303,7 +303,7 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
                               ),
                               const SizedBox(height: 24),
                               Text(
-                                'Нет книг',
+                                'Нет новелл',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -312,7 +312,7 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Добавьте первую книгу',
+                                'Добавьте первую новеллу',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: theme.textSecondaryColor,

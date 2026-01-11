@@ -33,11 +33,11 @@ class AdminService {
     } else if (res.statusCode == 403) {
       throw Exception('Нет прав доступа (403 Forbidden)');
     } else {
-      throw Exception('Ошибка загрузки книг: ${res.statusCode}');
+      throw Exception('Ошибка загрузки новелл: ${res.statusCode}');
     }
   }
 
-  /// === ➕ Добавить книгу (multipart) ===
+  /// === ➕ Добавить новеллу (multipart) ===
   Future<void> addBookMultipart({
     required String title,
     required String author,
@@ -101,7 +101,7 @@ class AdminService {
     }
   }
 
-  /// === 🗑 Удалить книгу ===
+  /// === 🗑 Удалить новеллу ===
   Future<void> deleteBook(int id) async {
     final url = Uri.parse('$baseUrl/books/$id');
     print('📡 [deleteBook] DELETE $url');
