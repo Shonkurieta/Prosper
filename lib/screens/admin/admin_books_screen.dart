@@ -18,8 +18,11 @@ class AdminBooksScreen extends StatefulWidget {
 class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerProviderStateMixin {
   late AdminService adminService;
   List<dynamic> books = [];
+  List<dynamic> filteredBooks = [];
   bool loading = true;
   late AnimationController _animController;
+  final TextEditingController _searchController = TextEditingController();
+  bool isSearching = false;
 
   @override
   void initState() {
@@ -29,13 +32,30 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
+    _searchController.addListener(_filterBooks);
     _loadBooks();
   }
 
   @override
   void dispose() {
     _animController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _filterBooks() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        filteredBooks = books;
+      } else {
+        filteredBooks = books.where((book) {
+          final title = (book['title'] ?? '').toString().toLowerCase();
+          final author = (book['author'] ?? '').toString().toLowerCase();
+          return title.contains(query) || author.contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _loadBooks() async {
@@ -44,6 +64,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
       final result = await adminService.getBooks();
       setState(() {
         books = result;
+        filteredBooks = result;
         loading = false;
       });
       _animController.forward(from: 0);
@@ -226,46 +247,91 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                       padding: const EdgeInsets.all(24),
                       child: Row(
                         children: [
+                          if (!isSearching) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.auto_stories_rounded,
+                                color: theme.primaryColor,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          Expanded(
+                            child: isSearching
+                                ? _buildSearchField(theme)
+                                : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Управление новеллами',
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w900,
+                                          color: theme.textPrimaryColor,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Всего ${books.length} новелл',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: theme.textSecondaryColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
                           Container(
-                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: theme.primaryColor.withValues(alpha: 0.1),
+                              color: isSearching
+                                  ? theme.primaryColor.withValues(alpha: 0.15)
+                                  : theme.cardColor,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(
-                              Icons.auto_stories_rounded,
-                              color: theme.primaryColor,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Управление новеллами',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    color: theme.textPrimaryColor,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                                Text(
-                                  'Всего ${books.length} новелл',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: theme.textSecondaryColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                            child: IconButton(
+                              icon: Icon(
+                                isSearching ? Icons.close : Icons.search,
+                                color: isSearching
+                                    ? theme.primaryColor
+                                    : theme.textSecondaryColor,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  isSearching = !isSearching;
+                                  if (!isSearching) {
+                                    _searchController.clear();
+                                  }
+                                });
+                              },
                             ),
                           ),
                         ],
                       ),
                     ),
+
+                    // Search results indicator
+                    if (isSearching && _searchController.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          'Найдено: ${filteredBooks.length}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: theme.textSecondaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 12),
 
                     // Content
                     Expanded(
@@ -276,7 +342,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : books.isEmpty
+                          : filteredBooks.isEmpty
                               ? _buildEmptyState(theme)
                               : RefreshIndicator(
                                   onRefresh: _loadBooks,
@@ -289,7 +355,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                                       crossAxisSpacing: 16,
                                       mainAxisSpacing: 16,
                                     ),
-                                    itemCount: books.length,
+                                    itemCount: filteredBooks.length,
                                     itemBuilder: (context, index) {
                                       return TweenAnimationBuilder(
                                         duration: Duration(milliseconds: 300 + (index * 50)),
@@ -299,7 +365,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                                             offset: Offset(0, 20 * (1 - value)),
                                             child: Opacity(
                                               opacity: value,
-                                              child: _buildBookCard(books[index], theme),
+                                              child: _buildBookCard(filteredBooks[index], theme),
                                             ),
                                           );
                                         },
@@ -336,7 +402,59 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
     );
   }
 
+  Widget _buildSearchField(ThemeProvider theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        style: TextStyle(
+          color: theme.textPrimaryColor,
+          fontSize: 16,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Поиск по названию или автору...',
+          hintStyle: TextStyle(
+            color: theme.textSecondaryColor.withValues(alpha: 0.5),
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: theme.textSecondaryColor,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear,
+                    color: theme.textSecondaryColor,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState(ThemeProvider theme) {
+    final isFiltering = _searchController.text.isNotEmpty;
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -348,14 +466,14 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
               color: theme.primaryColor.withValues(alpha: 0.1),
             ),
             child: Icon(
-              Icons.book_outlined,
+              isFiltering ? Icons.search_off : Icons.book_outlined,
               size: 80,
               color: theme.textSecondaryColor.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            'Нет новелл',
+            isFiltering ? 'Ничего не найдено' : 'Нет новелл',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -364,12 +482,27 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
           ),
           const SizedBox(height: 8),
           Text(
-            'Добавьте первую новеллу в библиотеку',
+            isFiltering
+                ? 'Попробуйте изменить запрос'
+                : 'Добавьте первую новеллу в библиотеку',
             style: TextStyle(
               fontSize: 15,
               color: theme.textSecondaryColor,
             ),
           ),
+          if (isFiltering) ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () {
+                _searchController.clear();
+              },
+              icon: Icon(Icons.clear, color: theme.primaryColor),
+              label: Text(
+                'Очистить поиск',
+                style: TextStyle(color: theme.primaryColor),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -311,7 +311,6 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
 
                               const SizedBox(height: 40),
 
-                              // Title field
                               _buildMinimalTextField(
                                 theme: theme,
                                 controller: _titleController,
@@ -323,7 +322,6 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
 
                               const SizedBox(height: 20),
 
-                              // Author field
                               _buildMinimalTextField(
                                 theme: theme,
                                 controller: _authorController,
@@ -335,7 +333,6 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
 
                               const SizedBox(height: 20),
 
-                              // Description field
                               _buildMinimalTextField(
                                 theme: theme,
                                 controller: _descController,
