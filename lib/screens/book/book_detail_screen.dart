@@ -192,6 +192,9 @@ class _BookDetailScreenState extends State<BookDetailScreen>
           );
         }
 
+        // Проверяем, есть ли главы
+        final hasChapters = _chapters.isNotEmpty;
+
         return Scaffold(
           backgroundColor: theme.backgroundColor,
           extendBodyBehindAppBar: true,
@@ -320,16 +323,32 @@ class _BookDetailScreenState extends State<BookDetailScreen>
                       children: [
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () => _openReader(_currentChapter),
-                            icon: const Icon(Icons.play_arrow_rounded),
-                            label: Text(_currentChapter > 1
-                                ? 'Продолжить (гл. $_currentChapter)'
-                                : 'Начать читать'),
-                            style: theme.getPrimaryButtonStyle().copyWith(
-                              padding: const WidgetStatePropertyAll(
-                                EdgeInsets.symmetric(vertical: 16),
-                              ),
+                            onPressed: hasChapters ? () => _openReader(_currentChapter) : null,
+                            icon: Icon(
+                              hasChapters ? Icons.play_arrow_rounded : Icons.menu_book_outlined,
                             ),
+                            label: Text(
+                              hasChapters
+                                  ? (_currentChapter > 1
+                                      ? 'Продолжить (гл. $_currentChapter)'
+                                      : 'Начать читать')
+                                  : 'Нет глав',
+                            ),
+                            style: hasChapters
+                                ? theme.getPrimaryButtonStyle().copyWith(
+                                    padding: const WidgetStatePropertyAll(
+                                      EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                  )
+                                : ElevatedButton.styleFrom(
+                                    backgroundColor: theme.textSecondaryColor.withOpacity(0.3),
+                                    foregroundColor: theme.textSecondaryColor,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -392,13 +411,17 @@ class _BookDetailScreenState extends State<BookDetailScreen>
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: theme.primaryColor.withValues(alpha: 0.15),
+                                color: hasChapters
+                                    ? theme.primaryColor.withValues(alpha: 0.15)
+                                    : theme.textSecondaryColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${_chapters.length} глав',
+                                hasChapters ? '${_chapters.length} глав' : 'Нет глав',
                                 style: TextStyle(
-                                  color: theme.primaryColor,
+                                  color: hasChapters
+                                      ? theme.primaryColor
+                                      : theme.textSecondaryColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -411,78 +434,130 @@ class _BookDetailScreenState extends State<BookDetailScreen>
                   ),
                 ),
 
-                // Chapters list
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final chapter = _chapters[index];
-                      final chapterNum = chapter['chapterOrder'];
-                      final isCurrent = chapterNum == _currentChapter;
+                // Chapters list or empty state
+                hasChapters
+                    ? SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final chapter = _chapters[index];
+                            final chapterNum = chapter['chapterOrder'];
+                            final isCurrent = chapterNum == _currentChapter;
 
-                      return Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isCurrent ? theme.primaryColor : theme.cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: theme.isDarkMode && !isCurrent
-                              ? Border.all(color: theme.borderColor, width: 1.5)
-                              : null,
-                          boxShadow: [theme.cardShadow],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isCurrent
-                                  ? Colors.white.withValues(alpha: 0.3)
-                                  : theme.primaryColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '$chapterNum',
-                                style: TextStyle(
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isCurrent ? theme.primaryColor : theme.cardColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: theme.isDarkMode && !isCurrent
+                                    ? Border.all(color: theme.borderColor, width: 1.5)
+                                    : null,
+                                boxShadow: [theme.cardShadow],
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isCurrent
+                                        ? Colors.white.withValues(alpha: 0.3)
+                                        : theme.primaryColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$chapterNum',
+                                      style: TextStyle(
+                                        color: isCurrent
+                                            ? Colors.white
+                                            : theme.primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  chapter['title'] ?? 'Глава $chapterNum',
+                                  style: TextStyle(
+                                    color: isCurrent
+                                        ? Colors.white
+                                        : theme.textPrimaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  isCurrent
+                                      ? Icons.play_circle_filled_rounded
+                                      : Icons.arrow_forward_ios_rounded,
                                   color: isCurrent
                                       ? Colors.white
-                                      : theme.primaryColor,
-                                  fontWeight: FontWeight.bold,
+                                      : theme.textSecondaryColor,
+                                  size: isCurrent ? 24 : 16,
                                 ),
+                                onTap: () => _openReader(chapterNum),
+                              ),
+                            );
+                          },
+                          childCount: _chapters.length,
+                        ),
+                      )
+                    : SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                          child: Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: theme.borderColor,
+                                width: 1.5,
                               ),
                             ),
-                          ),
-                          title: Text(
-                            chapter['title'] ?? 'Глава $chapterNum',
-                            style: TextStyle(
-                              color: isCurrent
-                                  ? Colors.white
-                                  : theme.textPrimaryColor,
-                              fontWeight: FontWeight.w600,
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: theme.primaryColor.withValues(alpha: 0.1),
+                                  ),
+                                  child: Icon(
+                                    Icons.menu_book_outlined,
+                                    size: 60,
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Главы отсутствуют',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.textPrimaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Эта новелла пока не содержит глав для чтения',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: theme.textSecondaryColor,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          trailing: Icon(
-                            isCurrent
-                                ? Icons.play_circle_filled_rounded
-                                : Icons.arrow_forward_ios_rounded,
-                            color: isCurrent
-                                ? Colors.white
-                                : theme.textSecondaryColor,
-                            size: isCurrent ? 24 : 16,
-                          ),
-                          onTap: () => _openReader(chapterNum),
                         ),
-                      );
-                    },
-                    childCount: _chapters.length,
-                  ),
-                ),
+                      ),
 
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 40),
