@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:prosper/screens/home/home_screen.dart';
 import 'package:prosper/screens/library/library_screen.dart';
 import 'package:prosper/screens/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +14,7 @@ class UserHome extends StatefulWidget {
 }
 
 class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin {
-  int _selectedIndex = 0;
+  int _selectedIndex = 1;
   late AnimationController _animController;
 
   @override
@@ -37,6 +38,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     return Consumer<ThemeProvider>(
       builder: (context, theme, child) {
         final List<Widget> screens = [
+          HomeScreen(token: widget.token),
           LibraryScreen(token: widget.token),
           ProfileScreen(token: widget.token),
         ];
@@ -111,16 +113,28 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildModernNavItem(
                         theme: theme,
-                        icon: Icons.library_books_outlined,
-                        activeIcon: Icons.library_books_rounded,
+                        icon: Icons.menu_book,
+                        activeIcon: Icons.menu_book,
                         label: 'Каталог',
                         index: 0,
+                      ),
+                      Container(
+                        width: 1,
+                        height: 35,
+                        color: theme.textSecondaryColor.withValues(alpha: 0.1),
+                      ),
+                      _buildModernNavItem(
+                        theme: theme,
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_outlined,
+                        label: 'Главная',
+                        index: 1,
                       ),
                       Container(
                         width: 1,
@@ -132,7 +146,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
                         icon: Icons.person_outline_rounded,
                         activeIcon: Icons.person_rounded,
                         label: 'Профиль',
-                        index: 1,
+                        index: 2,
                       ),
                     ],
                   ),
@@ -164,7 +178,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
           decoration: BoxDecoration(
             gradient: isSelected
                 ? LinearGradient(
@@ -193,13 +207,13 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Flexible(
                 child: AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected 
                         ? theme.textPrimaryColor
