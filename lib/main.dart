@@ -7,7 +7,7 @@ import 'package:prosper/providers/font_provider.dart';
 // Экраны
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'screens/library/library_screen.dart';
 import 'screens/admin/admin_main_screen.dart';
 import 'screens/bookmarks/bookmarks_screen.dart';
 import 'screens/user/user_home.dart';
@@ -115,7 +115,7 @@ class _MyAppState extends State<MyApp> {
           routes: {
             '/login': (_) => const LoginScreen(),
             '/register': (_) => const RegisterScreen(),
-            '/home': (_) => HomeScreen(token: token ?? ''),
+            '/home': (_) => LibraryScreen(token: token ?? ''),
             '/admin': (_) => AdminMainScreen(token: token ?? ''),
             '/bookmarks': (_) => BookmarksScreen(token: token ?? ''),
           },

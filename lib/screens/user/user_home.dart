@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:prosper/screens/home/home_screen.dart';
+import 'package:prosper/screens/library/library_screen.dart';
 import 'package:prosper/screens/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -37,7 +37,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     return Consumer<ThemeProvider>(
       builder: (context, theme, child) {
         final List<Widget> screens = [
-          HomeScreen(token: widget.token),
+          LibraryScreen(token: widget.token),
           ProfileScreen(token: widget.token),
         ];
 
