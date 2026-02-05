@@ -135,17 +135,17 @@ class BookmarkService {
   static String getStatusIcon(String status) {
     switch (status) {
       case READING:
-        return '📖';
+        return '';
       case COMPLETED:
-        return '✅';
+        return '';
       case FAVORITE:
-        return '❤️';
+        return '';
       case DROPPED:
-        return '🚫';
+        return '';
       case PLANNED:
-        return '📅';
+        return '';
       default:
-        return '📖';
+        return '';
     }
   }
 }

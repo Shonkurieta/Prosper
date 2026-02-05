@@ -5,16 +5,15 @@ import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class LibraryScreen extends StatefulWidget {
   final String token;
 
-  const HomeScreen({super.key, required this.token});
-
+  const LibraryScreen({super.key, required this.token});
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _LibraryScreenState extends State<LibraryScreen> with TickerProviderStateMixin {
   final BookService _bookService = BookService();
   final TextEditingController _searchController = TextEditingController();
   

@@ -6,19 +6,16 @@ import 'package:path/path.dart' as p;
 import '../constants/api_constants.dart';
 
 class AdminService {
-  /// Базовый URL - БЕЗ dotenv чтобы избежать NotInitializedError
   static final String baseUrl = ApiConstants.adminUrl;
 
   final String token;
 
   AdminService(this.token);
 
-  /// Общие заголовки
   Map<String, String> get headers => {
         'Authorization': 'Bearer $token',
       };
 
-  /// === 📚 Получить все новеллы ===
   Future<List<dynamic>> getBooks() async {
     final url = Uri.parse('$baseUrl/books');
     print('📡 [getBooks] GET $url');
@@ -37,7 +34,6 @@ class AdminService {
     }
   }
 
-  /// === ➕ Добавить новеллу (multipart) ===
   Future<void> addBookMultipart({
     required String title,
     required String author,
@@ -50,7 +46,6 @@ class AdminService {
     final request = http.MultipartRequest('POST', uri);
     request.headers.addAll(headers);
 
-    // Отправляем поля отдельно (НЕ как JSON!)
     request.fields['title'] = title;
     request.fields['author'] = author;
     if (description != null && description.isNotEmpty) {
@@ -59,12 +54,10 @@ class AdminService {
 
     print('📝 Fields: ${request.fields}');
 
-    // если выбрана обложка
     if (coverFile != null) {
       final length = await coverFile.length();
       final stream = http.ByteStream(coverFile.openRead());
       
-      // Определяем MIME тип по расширению
       String ext = p.extension(coverFile.path).toLowerCase();
       MediaType contentType = MediaType('image', 'jpeg'); // default
       
@@ -101,7 +94,6 @@ class AdminService {
     }
   }
 
-  /// === 🗑 Удалить новеллу ===
   Future<void> deleteBook(int id) async {
     final url = Uri.parse('$baseUrl/books/$id');
     print('📡 [deleteBook] DELETE $url');
@@ -112,7 +104,6 @@ class AdminService {
     }
   }
 
-  /// === 👥 Получить всех пользователей ===
   Future<List<dynamic>> getUsers() async {
     final url = Uri.parse('$baseUrl/users');
     print('📡 [getUsers] GET $url');
@@ -129,7 +120,6 @@ class AdminService {
     }
   }
 
-  /// === ❌ Удалить пользователя ===
   Future<void> deleteUser(int id) async {
     final url = Uri.parse('$baseUrl/users/$id');
     print('📡 [deleteUser] DELETE $url');
@@ -140,7 +130,6 @@ class AdminService {
     }
   }
 
-  /// === 🔄 Изменить роль пользователя ===
   Future<void> changeUserRole(int id, String newRole) async {
     final url = Uri.parse('$baseUrl/users/$id/role?role=$newRole');
     print('📡 [changeUserRole] PUT $url');

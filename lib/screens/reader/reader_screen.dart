@@ -92,7 +92,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
         _totalChapters = chapters.length;
       });
 
-      // Проверяем, есть ли главы вообще
       if (chapters.isEmpty) {
         setState(() {
           _chapter = null;
@@ -101,7 +100,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
         return;
       }
 
-      // Проверяем, существует ли запрашиваемая глава
       final chapterExists = chapters.any((ch) => ch['chapterOrder'] == _currentChapter);
       
       if (!chapterExists) {
@@ -334,7 +332,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    // Progress indicator
                                     Row(
                                       children: [
                                         Expanded(
@@ -387,7 +384,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                     
                                     const SizedBox(height: 32),
 
-                                    // Chapter title
                                     Text(
                                       _chapter?['title'] ?? 'Без названия',
                                       style: TextStyle(
@@ -417,7 +413,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                                     const SizedBox(height: 32),
 
-                                    // Content with custom font and alignment
                                     _enableIndent 
                                         ? _buildTextWithIndent(fontProvider, theme)
                                         : Text(
@@ -430,7 +425,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                     
                                     const SizedBox(height: 48),
 
-                                    // End of chapter navigation
                                     Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
@@ -462,7 +456,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                           const SizedBox(height: 20),
                                           Row(
                                             children: [
-                                              // Previous chapter button
                                               if (_currentChapter > 1)
                                                 Expanded(
                                                   child: Material(
@@ -501,7 +494,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                               if (_currentChapter > 1 && _currentChapter < _totalChapters)
                                                 const SizedBox(width: 12),
 
-                                              // Next chapter button
                                               if (_currentChapter < _totalChapters)
                                                 Expanded(
                                                   child: Material(
@@ -550,7 +542,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                               ),
                             ),
 
-                            // Bottom navigation
                             Positioned(
                               bottom: 0,
                               left: 0,
@@ -587,7 +578,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                           top: false,
                                           child: Row(
                                             children: [
-                                              // Previous button
                                               Expanded(
                                                 child: Material(
                                                   color: _currentChapter > 1
@@ -630,7 +620,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                                               const SizedBox(width: 12),
 
-                                              // Settings button
                                               Material(
                                                 color: (_customTextColor ?? theme.primaryColor).withValues(alpha: 0.15),
                                                 borderRadius: BorderRadius.circular(14),
@@ -652,7 +641,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                                               const SizedBox(width: 12),
 
-                                              // Next button
                                               Expanded(
                                                 child: Material(
                                                   color: _currentChapter < _totalChapters
@@ -747,7 +735,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                   
                   Row(
                     children: [
-                      // Back button
                       Container(
                         margin: const EdgeInsets.only(right: 8),
                         child: Material(
@@ -795,7 +782,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                   
                   const SizedBox(height: 28),
 
-                  // Font Size
                   _buildSettingItem(
                     theme: theme,
                     icon: Icons.format_size_rounded,
@@ -815,7 +801,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 28),
 
-                  // Color Themes Section
                   Text(
                     'Цветовая тема',
                     style: TextStyle(
@@ -827,7 +812,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 16),
 
-                  // Preset color themes - all in one row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -920,7 +904,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 28),
 
-                  // Custom Colors Section
                   Text(
                     'Свои цвета',
                     style: TextStyle(
@@ -932,7 +915,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 16),
 
-                  // Text Color
                   _buildColorPicker(
                     theme: theme,
                     icon: Icons.format_color_text_rounded,
@@ -952,7 +934,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 20),
 
-                  // Background Color
                   _buildColorPicker(
                     theme: theme,
                     icon: Icons.format_color_fill_rounded,
@@ -972,7 +953,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 28),
 
-                  // Font Selection
                   Text(
                     'Выбор шрифта',
                     style: TextStyle(
@@ -1017,7 +997,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 28),
 
-                  // Text Alignment
                   Text(
                     'Выравнивание текста',
                     style: TextStyle(
@@ -1063,7 +1042,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                   const SizedBox(height: 20),
 
-                  // Paragraph Indent Toggle
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -1197,9 +1175,8 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
       textAlign: _textAlign,
       text: TextSpan(
         children: [
-          // Добавляем отступ в начале текста
           TextSpan(
-            text: '        ', // 8 пробелов для красной строки
+            text: '        ',
             style: baseStyle,
           ),
           TextSpan(
@@ -1499,7 +1476,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                     ),
                     const SizedBox(height: 24),
 
-                    // Цветовая панель с градиентом
                     SizedBox(
                       height: 250,
                       width: double.infinity,
@@ -1568,7 +1544,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                     const SizedBox(height: 20),
 
-                    // Слайдер оттенка (Hue) с радужным градиентом
                     SizedBox(
                       height: 40,
                       width: double.infinity,
@@ -1598,13 +1573,13 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                                 borderRadius: BorderRadius.circular(12),
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xFFFF0000), // Red
-                                    Color(0xFFFFFF00), // Yellow
-                                    Color(0xFF00FF00), // Green
-                                    Color(0xFF00FFFF), // Cyan
-                                    Color(0xFF0000FF), // Blue
-                                    Color(0xFFFF00FF), // Magenta
-                                    Color(0xFFFF0000), // Red
+                                    Color(0xFFFF0000), 
+                                    Color(0xFFFFFF00), 
+                                    Color(0xFF00FF00), 
+                                    Color(0xFF00FFFF), 
+                                    Color(0xFF0000FF), 
+                                    Color(0xFFFF00FF), 
+                                    Color(0xFFFF0000), 
                                   ],
                                 ),
                               ),
@@ -1620,7 +1595,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                     const SizedBox(height: 24),
 
-                    // Превью выбранного цвета
                     Container(
                       height: 60,
                       decoration: BoxDecoration(
@@ -1647,7 +1621,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
 
                     const SizedBox(height: 24),
 
-                    // Кнопки
                     Row(
                       children: [
                         Expanded(
@@ -1711,7 +1684,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
   }
 }
 
-// Custom painter для индикатора на цветовой панели
 class _ColorPickerIndicator extends CustomPainter {
   final double saturation;
   final double value;
@@ -1744,7 +1716,6 @@ class _ColorPickerIndicator extends CustomPainter {
   }
 }
 
-// Custom painter для индикатора на слайдере оттенка
 class _HueSliderIndicator extends CustomPainter {
   final double hue;
 
