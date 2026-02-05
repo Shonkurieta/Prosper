@@ -365,7 +365,7 @@ class _AddBookScreenState extends State<AddBookScreen> with SingleTickerProvider
                                           ),
                                         )
                                       : const Text(
-                                          'Сохранить новеллу',
+                                          'Добавить новеллу',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,

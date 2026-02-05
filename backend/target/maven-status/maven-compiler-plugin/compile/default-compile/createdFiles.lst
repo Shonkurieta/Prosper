@@ -8,7 +8,6 @@ com\example\prosper\controller\AuthController.class
 com\example\prosper\controller\AdminController.class
 com\example\prosper\config\JwtFilter.class
 com\example\prosper\model\User.class
-com\example\prosper\controller\UserBookController.class
 com\example\prosper\util\TestEncoder.class
 com\example\prosper\controller\TestController.class
 com\example\prosper\repository\BookRepository.class

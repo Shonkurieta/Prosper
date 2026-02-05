@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/bookmark_service.dart';
+import 'package:prosper/services/reading_progress_service.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/font_provider.dart';
@@ -25,6 +26,7 @@ class ReaderScreen extends StatefulWidget {
 class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMixin {
   final BookService _bookService = BookService();
   final BookmarkService _bookmarkService = BookmarkService();
+  final ReadingProgressService _progressService = ReadingProgressService();
   final ScrollController _scrollController = ScrollController();
 
   Map<String, dynamic>? _chapter;
@@ -135,10 +137,22 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
         _currentChapter,
       );
       
+      // Получаем информацию о книге для сохранения прогресса
+      final book = await _bookService.getBookById(widget.token, widget.bookId);
+      
+      // Сохраняем прогресс в bookmark_service (существующий функционал)
       await _bookmarkService.updateProgress(
         widget.token,
         widget.bookId,
         _currentChapter,
+      );
+      
+      // Сохраняем прогресс чтения в ReadingProgressService
+      await _progressService.saveProgress(
+        bookId: widget.bookId,
+        chapterOrder: _currentChapter,
+        bookTitle: book['title'] ?? 'Без названия',
+        coverUrl: book['coverUrl'],
       );
 
       setState(() {
