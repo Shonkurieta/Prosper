@@ -64,10 +64,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       final profile = await _userService.getProfile(widget.token);
       final bookmarks = await _bookmarkService.getBookmarks(widget.token);
       
-      // Count books in progress (not completed)
+      // Count only books with READING status
       int inProgress = 0;
       for (var bookmark in bookmarks) {
-        if (bookmark['currentChapter'] != null && bookmark['currentChapter'] > 1) {
+        final status = bookmark['status'] as String?;
+        if (status == BookmarkService.READING) {
           inProgress++;
         }
       }
@@ -400,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                       MaterialPageRoute(
                                         builder: (_) => BookmarksScreen(token: widget.token),
                                       ),
-                                    );
+                                    ).then((_) => _loadData()); // Обновляем при возврате
                                   },
                                 ),
 

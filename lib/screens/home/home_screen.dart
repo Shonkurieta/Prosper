@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/book_service.dart';
+import 'package:prosper/services/bookmark_service.dart';
 import 'package:prosper/screens/book/book_detail_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
@@ -16,10 +17,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final BookService _bookService = BookService();
+  final BookmarkService _bookmarkService = BookmarkService();
   final TextEditingController _searchController = TextEditingController();
   
   List<dynamic> _allBooks = [];
   List<dynamic> _filteredBooks = [];
+  Map<int, Map<String, dynamic>> _bookmarksByBookId = {};
   bool _isLoading = true;
   bool _isSearching = false;
   
@@ -55,10 +58,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
     try {
       final books = await _bookService.getAllBooks(widget.token);
+      final bookmarks = await _bookmarkService.getBookmarks(widget.token);
+      
+      // Создаем Map для быстрого доступа к закладкам по bookId
+      final bookmarksMap = <int, Map<String, dynamic>>{};
+      for (var bookmark in bookmarks) {
+        final bookId = bookmark['book']?['id'] as int?;
+        if (bookId != null) {
+          bookmarksMap[bookId] = bookmark;
+        }
+      }
       
       setState(() {
         _allBooks = books;
         _filteredBooks = books;
+        _bookmarksByBookId = bookmarksMap;
         _isLoading = false;
       });
       
@@ -129,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           bookId: bookId,
         ),
       ),
-    );
+    ).then((_) => _loadData()); // Обновляем данные при возврате
   }
 
   @override
@@ -318,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           sliver: SliverGrid(
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
-                              childAspectRatio: 0.52,
+                              childAspectRatio: 0.56,
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 16,
                             ),
@@ -436,6 +450,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildBookCard(Map<String, dynamic> book, ThemeProvider theme) {
     final bookId = book['id'] as int;
+    final bookmark = _bookmarksByBookId[bookId];
+    final bookmarkStatus = bookmark?['status'] as String?;
     
     return GestureDetector(
       onTap: () => _openBookDetail(bookId),
@@ -457,98 +473,131 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover image
+            // Cover image with bookmark badge
             Expanded(
-              flex: 6,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
-                    ? Image.network(
-                        ApiConstants.getCoverUrl(book['coverUrl']),
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: theme.primaryColor.withValues(alpha: 0.05),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded / 
-                                      loadingProgress.expectedTotalBytes!
-                                    : null,
-                                color: theme.primaryColor,
-                                strokeWidth: 2,
-                              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
+                        ? Image.network(
+                            ApiConstants.getCoverUrl(book['coverUrl']),
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: theme.primaryColor.withValues(alpha: 0.05),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded / 
+                                          loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: theme.primaryColor,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
+                          )
+                        : _buildPlaceholder(theme),
+                  ),
+                  
+                  // Bookmark badge
+                  if (bookmarkStatus != null)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(bookmarkStatus, theme),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
-                      )
-                    : _buildPlaceholder(theme),
+                          ],
+                        ),
+                        child: Text(
+                          BookmarkService.getStatusDisplayName(bookmarkStatus),
+                          style: TextStyle(
+                            fontSize: 8,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
             // Book info
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        book['title'] ?? 'Без названия',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: theme.textPrimaryColor,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book['title'] ?? 'Без названия',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: theme.textPrimaryColor,
+                      height: 1.3,
                     ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.play_arrow_rounded,
-                            size: 11,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.play_arrow_rounded,
+                          size: 12,
+                          color: theme.isDarkMode 
+                              ? theme.backgroundColor 
+                              : Colors.white,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Читать',
+                          style: TextStyle(
+                            fontSize: 10,
                             color: theme.isDarkMode 
                                 ? theme.backgroundColor 
                                 : Colors.white,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 2),
-                          Text(
-                            'Читать',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: theme.isDarkMode 
-                                  ? theme.backgroundColor 
-                                  : Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -568,5 +617,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status, ThemeProvider theme) {
+    switch (status) {
+      case BookmarkService.READING:
+        return Colors.blue;
+      case BookmarkService.COMPLETED:
+        return Colors.green;
+      case BookmarkService.FAVORITE:
+        return Colors.pink;
+      case BookmarkService.DROPPED:
+        return Colors.red;
+      case BookmarkService.PLANNED:
+        return Colors.orange;
+      default:
+        return theme.primaryColor;
+    }
   }
 }
