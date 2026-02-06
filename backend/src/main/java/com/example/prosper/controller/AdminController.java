@@ -94,29 +94,12 @@ public class AdminController {
             newBook.setDescription(description != null ? description : "");
 
             if (cover != null && !cover.isEmpty()) {
-                try {
-                    Path uploadPath = Paths.get("assets/covers");
-                    if (!Files.exists(uploadPath)) {
-                        Files.createDirectories(uploadPath);
-                        System.out.println("   📁 Created directory: " + uploadPath.toAbsolutePath());
-                    }
-
-                    String fileName = System.currentTimeMillis() + "_" + cover.getOriginalFilename();
-                    Path filePath = uploadPath.resolve(fileName);
-
-                    Files.copy(cover.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-                    String coverUrl = "assets/covers/" + fileName;
-                    newBook.setCoverUrl(coverUrl);
-
-                    System.out.println("   🖼 Cover saved: " + filePath.toAbsolutePath());
-                    System.out.println("   📝 Cover URL in DB: " + coverUrl);
-
-                } catch (IOException e) {
-                    System.err.println("   ❌ Error saving cover: " + e.getMessage());
+                String coverUrl = saveCoverFile(cover);
+                if (coverUrl == null) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(createError("Ошибка сохранения обложки: " + e.getMessage()));
+                            .body(createError("Ошибка сохранения обложки"));
                 }
+                newBook.setCoverUrl(coverUrl);
             }
 
             Book savedBook = bookRepository.save(newBook);
@@ -124,7 +107,7 @@ public class AdminController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             System.err.println("   ❌ Error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createError("Ошибка при создании новеллы: " + e.getMessage()));
@@ -167,38 +150,16 @@ public class AdminController {
 
             // Обработка новой обложки
             if (cover != null && !cover.isEmpty()) {
-                try {
-                    // Удаляем старую обложку если есть
-                    if (existingBook.getCoverUrl() != null && !existingBook.getCoverUrl().isEmpty()) {
-                        try {
-                            Path oldCoverPath = Paths.get(existingBook.getCoverUrl());
-                            Files.deleteIfExists(oldCoverPath);
-                            System.out.println("   🗑️ Old cover deleted: " + oldCoverPath);
-                        } catch (IOException e) {
-                            System.err.println("   ⚠️ Could not delete old cover: " + e.getMessage());
-                        }
-                    }
-
-                    Path uploadPath = Paths.get("assets/covers");
-                    if (!Files.exists(uploadPath)) {
-                        Files.createDirectories(uploadPath);
-                    }
-
-                    String fileName = System.currentTimeMillis() + "_" + cover.getOriginalFilename();
-                    Path filePath = uploadPath.resolve(fileName);
-
-                    Files.copy(cover.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-                    String coverUrl = "assets/covers/" + fileName;
-                    existingBook.setCoverUrl(coverUrl);
-
-                    System.out.println("   🖼 New cover saved: " + filePath.toAbsolutePath());
-                    System.out.println("   📝 New cover URL: " + coverUrl);
-                } catch (IOException e) {
-                    System.err.println("   ❌ Error saving cover: " + e.getMessage());
+                // Удаляем старую обложку если есть
+                deleteOldCover(existingBook.getCoverUrl());
+                
+                // Сохраняем новую обложку
+                String coverUrl = saveCoverFile(cover);
+                if (coverUrl == null) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(createError("Ошибка сохранения обложки: " + e.getMessage()));
+                            .body(createError("Ошибка сохранения обложки"));
                 }
+                existingBook.setCoverUrl(coverUrl);
             }
 
             Book updatedBook = bookRepository.save(existingBook);
@@ -206,9 +167,8 @@ public class AdminController {
 
             return ResponseEntity.ok(updatedBook);
 
-        } catch (Exception e) {
-            System.err.println("   ❌ Error: " + e.getMessage());
-            e.printStackTrace();
+        } catch (RuntimeException e) {
+            System.err.println("   ❌ Error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createError("Ошибка при обновлении новеллы: " + e.getMessage()));
         }
@@ -221,17 +181,7 @@ public class AdminController {
         return bookRepository.findById(id)
                 .map(book -> {
                     chapterRepository.deleteAll(chapterRepository.findByBookIdOrderByChapterOrderAsc(id));
-
-                    if (book.getCoverUrl() != null && !book.getCoverUrl().isEmpty()) {
-                        try {
-                            Path coverPath = Paths.get(book.getCoverUrl());
-                            Files.deleteIfExists(coverPath);
-                            System.out.println("   🗑️ Cover file deleted: " + coverPath);
-                        } catch (IOException e) {
-                            System.err.println("   ⚠️ Could not delete cover file: " + e.getMessage());
-                        }
-                    }
-
+                    deleteOldCover(book.getCoverUrl());
                     bookRepository.delete(book);
                     System.out.println("   ✅ Book deleted: " + id);
                     return ResponseEntity.ok(createSuccess("Новелла удалена"));
@@ -259,8 +209,14 @@ public class AdminController {
                 System.out.println("   ❌ Cover not found: " + filePath);
                 return ResponseEntity.notFound().build();
             }
-        } catch (Exception e) {
-            System.err.println("   ❌ Error loading cover: " + e.getMessage());
+        } catch (IOException e) {
+            System.err.println("   ❌ Error loading cover (IOException): " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (IllegalArgumentException e) {
+            System.err.println("   ❌ Error loading cover (IllegalArgumentException): " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (RuntimeException e) {
+            System.err.println("   ❌ Error loading cover: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -356,7 +312,43 @@ public class AdminController {
                         .body(createError("Пользователь не найден")));
     }
 
-    // === HELPER ===
+    // === HELPER METHODS ===
+
+    private String saveCoverFile(MultipartFile cover) {
+        try {
+            Path uploadPath = Paths.get("assets/covers");
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+                System.out.println("   📁 Created directory: " + uploadPath.toAbsolutePath());
+            }
+
+            String fileName = System.currentTimeMillis() + "_" + cover.getOriginalFilename();
+            Path filePath = uploadPath.resolve(fileName);
+
+            Files.copy(cover.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            String coverUrl = "assets/covers/" + fileName;
+            System.out.println("   🖼 Cover saved: " + filePath.toAbsolutePath());
+            System.out.println("   📝 Cover URL in DB: " + coverUrl);
+
+            return coverUrl;
+        } catch (IOException e) {
+            System.err.println("   ❌ Error saving cover: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private void deleteOldCover(String coverUrl) {
+        if (coverUrl != null && !coverUrl.isEmpty()) {
+            try {
+                Path oldCoverPath = Paths.get(coverUrl);
+                Files.deleteIfExists(oldCoverPath);
+                System.out.println("   🗑️ Old cover deleted: " + oldCoverPath);
+            } catch (IOException e) {
+                System.err.println("   ⚠️ Could not delete old cover: " + e.getMessage());
+            }
+        }
+    }
 
     private Map<String, String> createError(String message) {
         Map<String, String> map = new HashMap<>();
