@@ -51,7 +51,7 @@ public class AdminController {
     @Autowired
     private UserRepository userRepository;
 
-    // === УПРАВЛЕНИЕ НовеллаМИ ===
+    // === УПРАВЛЕНИЕ НОВЕЛЛАМИ ===
 
     @GetMapping("/books")
     public ResponseEntity<List<Book>> getAllBooks() {
@@ -131,19 +131,74 @@ public class AdminController {
         }
     }
 
-    @PutMapping(value = "/books/{id}")
-    public ResponseEntity<?> updateBook(@PathVariable Long id, @RequestBody Book bookDetails) {
+    @PutMapping(value = "/books/{id}", consumes = "multipart/form-data")
+    public ResponseEntity<?> updateBook(
+            @PathVariable Long id,
+            @RequestPart(value = "title", required = false) String title,
+            @RequestPart(value = "author", required = false) String author,
+            @RequestPart(value = "description", required = false) String description,
+            @RequestPart(value = "cover", required = false) MultipartFile cover
+    ) {
         System.out.println("✏️ [AdminController] PUT /api/admin/books/" + id);
+        System.out.println("   Title: " + title);
+        System.out.println("   Author: " + author);
+        System.out.println("   Description: " + description);
+        System.out.println("   Cover: " + (cover != null ? cover.getOriginalFilename() : "null"));
 
         try {
             Book existingBook = bookRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Новелла не найдена"));
 
-            existingBook.setTitle(bookDetails.getTitle());
-            existingBook.setAuthor(bookDetails.getAuthor());
-            existingBook.setDescription(bookDetails.getDescription());
-            if (bookDetails.getCoverUrl() != null) {
-                existingBook.setCoverUrl(bookDetails.getCoverUrl());
+            // Обновляем поля, если они переданы
+            if (title != null && !title.trim().isEmpty()) {
+                existingBook.setTitle(title);
+                System.out.println("   ✏️ Title updated: " + title);
+            }
+            
+            if (author != null && !author.trim().isEmpty()) {
+                existingBook.setAuthor(author);
+                System.out.println("   ✏️ Author updated: " + author);
+            }
+            
+            if (description != null) {
+                existingBook.setDescription(description);
+                System.out.println("   ✏️ Description updated");
+            }
+
+            // Обработка новой обложки
+            if (cover != null && !cover.isEmpty()) {
+                try {
+                    // Удаляем старую обложку если есть
+                    if (existingBook.getCoverUrl() != null && !existingBook.getCoverUrl().isEmpty()) {
+                        try {
+                            Path oldCoverPath = Paths.get(existingBook.getCoverUrl());
+                            Files.deleteIfExists(oldCoverPath);
+                            System.out.println("   🗑️ Old cover deleted: " + oldCoverPath);
+                        } catch (IOException e) {
+                            System.err.println("   ⚠️ Could not delete old cover: " + e.getMessage());
+                        }
+                    }
+
+                    Path uploadPath = Paths.get("assets/covers");
+                    if (!Files.exists(uploadPath)) {
+                        Files.createDirectories(uploadPath);
+                    }
+
+                    String fileName = System.currentTimeMillis() + "_" + cover.getOriginalFilename();
+                    Path filePath = uploadPath.resolve(fileName);
+
+                    Files.copy(cover.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+                    String coverUrl = "assets/covers/" + fileName;
+                    existingBook.setCoverUrl(coverUrl);
+
+                    System.out.println("   🖼 New cover saved: " + filePath.toAbsolutePath());
+                    System.out.println("   📝 New cover URL: " + coverUrl);
+                } catch (IOException e) {
+                    System.err.println("   ❌ Error saving cover: " + e.getMessage());
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(createError("Ошибка сохранения обложки: " + e.getMessage()));
+                }
             }
 
             Book updatedBook = bookRepository.save(existingBook);
@@ -153,6 +208,7 @@ public class AdminController {
 
         } catch (Exception e) {
             System.err.println("   ❌ Error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createError("Ошибка при обновлении новеллы: " + e.getMessage()));
         }

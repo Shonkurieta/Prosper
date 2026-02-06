@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
 import '../../constants/api_constants.dart';
 import 'add_book_screen.dart';
+import 'edit_book_screen.dart';
 import 'manage_chapters_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -182,6 +183,39 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
     if (added == true) _loadBooks();
   }
 
+  Future<void> _goToEditBook(dynamic book) async {
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditBookScreen(
+          token: widget.token,
+          book: book,
+        ),
+      ),
+    );
+    if (updated == true) {
+      _loadBooks();
+      if (mounted) {
+        final theme = context.read<ThemeProvider>();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Новелла обновлена'),
+              ],
+            ),
+            backgroundColor: theme.successColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
+          ),
+        );
+      }
+    }
+  }
+
   void _openChapters(dynamic book) {
     Navigator.push(
       context,
@@ -190,6 +224,161 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
           token: widget.token,
           bookId: book['id'],
           bookTitle: book['title'],
+        ),
+      ),
+    );
+  }
+
+  void _showBookOptions(dynamic book) {
+    final theme = context.read<ThemeProvider>();
+    final title = book['title'] ?? 'Без названия';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: theme.textSecondaryColor.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textPrimaryColor,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            const Divider(),
+
+            // Chapters
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.getActionColor('chapters').withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.menu_book_rounded,
+                  color: theme.getActionColor('chapters'),
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                'Управление главами',
+                style: TextStyle(
+                  color: theme.textPrimaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Добавить, редактировать, удалить главы',
+                style: TextStyle(
+                  color: theme.textSecondaryColor,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _openChapters(book);
+              },
+            ),
+
+            // Edit
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.getActionColor('edit').withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.edit_outlined,
+                  color: theme.getActionColor('edit'),
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                'Редактировать новеллу',
+                style: TextStyle(
+                  color: theme.textPrimaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Изменить название, автора, обложку',
+                style: TextStyle(
+                  color: theme.textSecondaryColor,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _goToEditBook(book);
+              },
+            ),
+
+            // Delete
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.errorColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.delete_outline,
+                  color: theme.errorColor,
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                'Удалить новеллу',
+                style: TextStyle(
+                  color: theme.errorColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Безвозвратно удалить новеллу и все главы',
+                style: TextStyle(
+                  color: theme.textSecondaryColor,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteBook(book['id'], title);
+              },
+            ),
+
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -351,7 +540,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
                                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                       crossAxisCount: 2,
-                                      childAspectRatio: 0.65,
+                                      childAspectRatio: 0.62,
                                       crossAxisSpacing: 16,
                                       mainAxisSpacing: 16,
                                     ),
@@ -514,7 +703,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
     final author = book['author'] ?? 'Неизвестный автор';
 
     return GestureDetector(
-      onTap: () => _openChapters(book),
+      onTap: () => _showBookOptions(book),
       child: Container(
         decoration: theme.getCardDecoration(),
         child: Column(
@@ -522,7 +711,6 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
           children: [
             // Cover image
             Expanded(
-              flex: 3,
               child: Container(
                 margin: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -567,7 +755,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontSize: 14,
                       color: theme.textPrimaryColor,
                       height: 1.2,
                     ),
@@ -584,48 +772,48 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   
-                  // Action buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                  // Action button with adaptive colors
+                  SizedBox(
+                    width: double.infinity,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: theme.getManagementButtonGradient(),
                         ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.menu_book_rounded,
-                            color: theme.primaryColor,
-                            size: 20,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _showBookOptions(book),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.more_horiz_rounded,
+                                  color: theme.getManagementButtonTextColor(),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Управление',
+                                  style: TextStyle(
+                                    color: theme.getManagementButtonTextColor(),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          onPressed: () => _openChapters(book),
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Главы',
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.errorColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.delete_rounded,
-                            color: theme.errorColor,
-                            size: 20,
-                          ),
-                          onPressed: () => _deleteBook(book['id'], title),
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Удалить',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/book_service.dart';
 import 'package:prosper/screens/admin/add_book_screen.dart';
+import 'package:prosper/screens/admin/edit_book_screen.dart';
 import 'package:prosper/screens/admin/manage_chapters_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -165,6 +166,24 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
       await _refreshBooks();
       if (mounted) {
         _showSnackBar('Новелла успешно добавлена');
+      }
+    }
+  }
+
+  void _openEditBook(dynamic book) async {
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditBookScreen(
+          token: widget.token,
+          book: book,
+        ),
+      ),
+    );
+    if (updated == true) {
+      await _refreshBooks();
+      if (mounted) {
+        _showSnackBar('Новелла успешно обновлена');
       }
     }
   }
@@ -427,6 +446,22 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
+                                              color: Colors.blue.withValues(alpha: 0.15),
+                                            ),
+                                            child: const Icon(
+                                              Icons.edit_outlined,
+                                              color: Colors.blue,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          onPressed: () => _openEditBook(book),
+                                          tooltip: 'Редактировать',
+                                        ),
+                                        IconButton(
+                                          icon: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
                                               color: theme.errorColor.withValues(alpha: 0.15),
                                             ),
                                             child: Icon(
@@ -471,4 +506,4 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> with SingleTicker
       },
     );
   }
-}
+} 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class BookService {
@@ -121,7 +122,64 @@ class BookService {
     }
   }
 
-  // Добавить новеллу (для админа)
+  // Добавить новеллу (для админа) - используя multipart/form-data
+  Future<Map<String, dynamic>> addBookWithCover(
+    String token,
+    String title,
+    String author,
+    String description,
+    File? coverImage,
+  ) async {
+    try {
+      print('=== ADD BOOK WITH COVER REQUEST ===');
+      print('URL: $baseUrl/admin/books');
+      print('Title: $title');
+      print('Author: $author');
+      print('Cover: ${coverImage?.path}');
+
+      final uri = Uri.parse('$baseUrl/admin/books');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      request.fields['title'] = title;
+      request.fields['author'] = author;
+      request.fields['description'] = description;
+      
+      if (coverImage != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('cover', coverImage.path),
+        );
+      }
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.body.isEmpty) {
+          return {'success': true, 'message': 'Новелла добавлена'};
+        }
+        return json.decode(response.body);
+      } else if (response.statusCode == 400) {
+        final error = json.decode(response.body);
+        throw Exception(error['error'] ?? error['message'] ?? 'Неверные данные новеллы');
+      } else if (response.statusCode == 401) {
+        throw Exception('Сессия истекла. Войдите заново');
+      } else if (response.statusCode == 403) {
+        throw Exception('Доступ запрещен. Требуются права администратора');
+      } else {
+        throw Exception('Ошибка добавления новеллы: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error in addBookWithCover: $e');
+      rethrow;
+    }
+  }
+
+  // Добавить новеллу (для админа) - JSON версия
   Future<Map<String, dynamic>> addBook(String token, Map<String, dynamic> bookData) async {
     try {
       print('=== ADD BOOK REQUEST ===');
@@ -161,10 +219,72 @@ class BookService {
     }
   }
 
-  // Обновить новеллу (для админа)
-  Future<Map<String, dynamic>> updateBook(String token, int bookId, Map<String, dynamic> bookData) async {
+  // Обновить новеллу (для админа) - универсальный метод
+  Future<Map<String, dynamic>> updateBook(
+  String token,
+  int bookId,
+  String title,
+  String author,
+  String description,
+  File? coverImage,
+) async {
+  try {
+    print('=== UPDATE BOOK REQUEST ===');
+    print('URL: $baseUrl/admin/books/$bookId');
+    print('Title: $title');
+    print('Author: $author');
+    print('Cover: ${coverImage?.path ?? "no new cover"}');
+
+    final uri = Uri.parse('$baseUrl/admin/books/$bookId');
+    final request = http.MultipartRequest('PUT', uri);
+    
+    request.headers['Authorization'] = 'Bearer $token';
+    
+    // ВСЕГДА отправляем все поля через multipart
+    request.fields['title'] = title;
+    request.fields['author'] = author;
+    request.fields['description'] = description;
+    
+    // Добавляем обложку только если она есть
+    if (coverImage != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('cover', coverImage.path),
+      );
+    }
+    
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    print('Status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      if (response.body.isEmpty) {
+        return {'success': true, 'message': 'Новелла обновлена'};
+      }
+      return json.decode(response.body);
+    } else if (response.statusCode == 404) {
+      throw Exception('Новелла не найдена');
+    } else if (response.statusCode == 400) {
+      final error = json.decode(response.body);
+      throw Exception(error['error'] ?? error['message'] ?? 'Неверные данные новеллы');
+    } else if (response.statusCode == 401) {
+      throw Exception('Сессия истекла. Войдите заново');
+    } else if (response.statusCode == 403) {
+      throw Exception('Доступ запрещен');
+    } else {
+      throw Exception('Ошибка обновления новеллы: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Error in updateBook: $e');
+    rethrow;
+  }
+}
+
+  // Обновить новеллу (JSON версия для совместимости)
+  Future<Map<String, dynamic>> updateBookJson(String token, int bookId, Map<String, dynamic> bookData) async {
     try {
-      print('=== UPDATE BOOK REQUEST ===');
+      print('=== UPDATE BOOK JSON REQUEST ===');
       print('URL: $baseUrl/admin/books/$bookId');
       print('Book data: $bookData');
 
@@ -198,7 +318,7 @@ class BookService {
         throw Exception('Ошибка обновления новеллы: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in updateBook: $e');
+      print('Error in updateBookJson: $e');
       rethrow;
     }
   }

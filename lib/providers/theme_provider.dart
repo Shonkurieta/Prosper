@@ -48,6 +48,31 @@ class ThemeProvider extends ChangeNotifier {
       ? const Color(0xFF6366F1).withValues(alpha: 0.05) 
       : const Color(0xFF4F46E5).withValues(alpha: 0.025);
 
+  // Action colors for management screens - balanced and theme-aware
+  Color getActionColor(String action) {
+    switch (action) {
+      case 'chapters':
+        return _isDarkMode ? const Color(0xFF3B82F6) : const Color(0xFF2563EB); // Blue
+      case 'edit':
+        return _isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED); // Purple
+      case 'delete':
+        return errorColor;
+      default:
+        return accentColor;
+    }
+  }
+
+  // Management button colors - subtle and balanced
+  List<Color> getManagementButtonGradient() {
+    return _isDarkMode
+        ? [const Color(0xFF2A2A2A), const Color(0xFF1F1F1F)]
+        : [const Color(0xFF1A1A1A), const Color(0xFF0F0F0F)];
+  }
+
+  Color getManagementButtonTextColor() {
+    return _isDarkMode ? const Color(0xFFE5E5E5) : const Color(0xFFFFFFFF);
+  }
+
   // Minimal gradients
   List<Color> get primaryGradient => _isDarkMode
       ? [const Color(0xFF1A1A1A), const Color(0xFF0A0A0A)]
