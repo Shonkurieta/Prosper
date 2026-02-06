@@ -5,10 +5,12 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.prosper.config.JwtUtil;
 import com.example.prosper.model.User;
 import com.example.prosper.repository.UserRepository;
+
+import io.jsonwebtoken.JwtException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -90,8 +94,17 @@ public class AuthController {
 
             return ResponseEntity.ok(response);
             
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
+        } catch (DataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Ошибка базы данных при регистрации"));
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Ошибка создания пользователя"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Некорректные данные: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Ошибка регистрации: " + e.getMessage()));
         }
     }
@@ -119,14 +132,14 @@ public class AuthController {
             }
             
             if (userOpt.isEmpty()) {
-                return ResponseEntity.status(401)
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "Неверное имя пользователя или пароль"));
             }
 
             User user = userOpt.get();
 
             if (!passwordEncoder.matches(password, user.getPassword())) {
-                return ResponseEntity.status(401)
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "Неверное имя пользователя или пароль"));
             }
 
@@ -141,8 +154,17 @@ public class AuthController {
 
             return ResponseEntity.ok(response);
             
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
+        } catch (DataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Ошибка базы данных при входе"));
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Пользователь не найден"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Некорректные данные: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Ошибка входа: " + e.getMessage()));
         }
     }
@@ -177,8 +199,20 @@ public class AuthController {
             
             return ResponseEntity.ok(response);
             
-        } catch (Exception e) {
+        } catch (JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Невалидный токен"));
+        } catch (DataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Ошибка базы данных"));
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Пользователь не найден"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Некорректный токен"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Ошибка обновления токена: " + e.getMessage()));
         }
     }

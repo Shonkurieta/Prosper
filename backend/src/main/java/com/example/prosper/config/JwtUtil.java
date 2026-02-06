@@ -12,9 +12,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 
 @Component
 public class JwtUtil {
@@ -68,18 +71,38 @@ public class JwtUtil {
         try {
             Claims claims = extractAllClaims(token);
             Object userIdObj = claims.get("userId");
-            Long userId = null;
             
-            if (userIdObj instanceof Integer) {
-                userId = ((Integer) userIdObj).longValue();
-            } else if (userIdObj instanceof Long) {
-                userId = (Long) userIdObj;
+            if (userIdObj == null) {
+                System.err.println("❌ userId is null in token");
+                return null;
+            }
+            
+            Long userId;
+            if (userIdObj instanceof Integer intValue) {
+                userId = intValue.longValue();
+            } else if (userIdObj instanceof Long longValue) {
+                userId = longValue;
+            } else {
+                System.err.println("❌ Unexpected userId type: " + userIdObj.getClass());
+                return null;
             }
             
             System.out.println("🔹 Extracted userId from token: " + userId);
             return userId;
-        } catch (Exception e) {
-            System.err.println("❌ Error extracting userId: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ Token expired while extracting userId: " + e.getMessage());
+            throw e;
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed token while extracting userId: " + e.getMessage());
+            throw e;
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid signature while extracting userId: " + e.getMessage());
+            throw e;
+        } catch (IllegalArgumentException e) {
+            System.err.println("❌ Invalid argument while extracting userId: " + e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error extracting userId: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             throw e;
         }
     }
@@ -100,8 +123,20 @@ public class JwtUtil {
             String authorities = claims.get("authorities", String.class);
             System.out.println("🔹 Extracted authorities from token: " + authorities);
             return authorities;
-        } catch (Exception e) {
-            System.err.println("❌ Error extracting authorities: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ Token expired while extracting authorities: " + e.getMessage());
+            return null;
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed token while extracting authorities: " + e.getMessage());
+            return null;
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid signature while extracting authorities: " + e.getMessage());
+            return null;
+        } catch (IllegalArgumentException e) {
+            System.err.println("❌ Invalid argument while extracting authorities: " + e.getMessage());
+            return null;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error extracting authorities: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return null;
         }
     }
@@ -118,9 +153,20 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-        } catch (Exception e) {
-            System.err.println("❌ Error parsing token: " + e.getClass().getName());
-            System.err.println("   Message: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ Token expired: " + e.getMessage());
+            throw e;
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed token: " + e.getMessage());
+            throw e;
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid signature: " + e.getMessage());
+            throw e;
+        } catch (IllegalArgumentException e) {
+            System.err.println("❌ Invalid argument: " + e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error parsing token: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             throw e;
         }
     }
@@ -138,8 +184,17 @@ public class JwtUtil {
             System.out.println("   Is expired: " + expired);
             
             return expired;
-        } catch (Exception e) {
-            System.err.println("❌ Error checking expiration: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ Token already expired: " + e.getMessage());
+            return true;
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed token during expiration check: " + e.getMessage());
+            return true;
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid signature during expiration check: " + e.getMessage());
+            return true;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error checking expiration: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return true;
         }
     }
@@ -154,7 +209,7 @@ public class JwtUtil {
             System.out.println("   Token userId: " + tokenUserId);
             System.out.println("   Expected userId: " + userId);
             
-            boolean userIdMatches = tokenUserId.equals(userId);
+            boolean userIdMatches = tokenUserId != null && tokenUserId.equals(userId);
             System.out.println("   UserId matches: " + userIdMatches);
             
             boolean expired = isTokenExpired(token);
@@ -164,9 +219,20 @@ public class JwtUtil {
             System.out.println("   Final result: " + (valid ? "✅ VALID" : "❌ INVALID"));
             
             return valid;
-        } catch (Exception e) {
-            System.err.println("❌ Token validation error: " + e.getMessage());
-            e.printStackTrace();
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ Token expired during validation: " + e.getMessage());
+            return false;
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed token during validation: " + e.getMessage());
+            return false;
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid signature during validation: " + e.getMessage());
+            return false;
+        } catch (NullPointerException e) {
+            System.err.println("❌ Null value during validation: " + e.getMessage());
+            return false;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Token validation error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return false;
         }
     }
@@ -175,8 +241,17 @@ public class JwtUtil {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
             return !isTokenExpired(token);
-        } catch (Exception e) {
-            System.err.println("❌ Token validation error: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ Token expired: " + e.getMessage());
+            return false;
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed token: " + e.getMessage());
+            return false;
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid signature: " + e.getMessage());
+            return false;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Token validation error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return false;
         }
     }

@@ -5,12 +5,16 @@ import java.io.IOException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.prosper.service.CustomUserDetailsService;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,8 +50,8 @@ public class JwtFilter extends OncePerRequestFilter {
             path.startsWith("/api/books") || 
             path.startsWith("/api/genres") ||
             path.startsWith("/api/test/") ||
-            path.startsWith("/covers/") ||           // ← ДОБАВЛЕНО
-            path.startsWith("/assets/")) {           // ← ДОБАВЛЕНО
+            path.startsWith("/covers/") ||
+            path.startsWith("/assets/")) {
             
             System.out.println("✅ Публичный ресурс - пропуск JWT фильтра");
             System.out.println("═══════════════════════════════════════\n");
@@ -70,14 +74,12 @@ public class JwtFilter extends OncePerRequestFilter {
             final String jwtToken = authHeader.substring(7);
             System.out.println("Token extracted (first 20 chars): " + jwtToken.substring(0, Math.min(20, jwtToken.length())) + "...");
             
-            // ✅ ИЗМЕНЕНО: Извлекаем userId вместо nickname
             final Long userId = jwtUtil.extractUserId(jwtToken);
-            System.out.println("User ID from token: " + userId);
+            System.out.println("🔹 Extracted userId from token: " + userId);
             
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 System.out.println("🔍 Loading user details for ID: " + userId);
                 
-                // ✅ ИЗМЕНЕНО: Загружаем пользователя по ID
                 UserDetails userDetails = userDetailsService.loadUserById(userId);
                 System.out.println("✅ User details loaded");
                 System.out.println("   Username (nickname): " + userDetails.getUsername());
@@ -87,7 +89,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 System.out.println("   Credentials non-expired: " + userDetails.isCredentialsNonExpired());
                 System.out.println("   Enabled: " + userDetails.isEnabled());
                 
-                // ✅ ИЗМЕНЕНО: Проверка токена по userId
                 System.out.println("🔍 Validating token...");
                 if (jwtUtil.isTokenValid(jwtToken, userId)) {
                     System.out.println("✅ Token is VALID");
@@ -115,10 +116,18 @@ public class JwtFilter extends OncePerRequestFilter {
                     System.out.println("ℹ️ Authentication already set");
                 }
             }
-        } catch (Exception e) {
-            System.err.println("❌ ERROR in JWT Filter: " + e.getClass().getName());
-            System.err.println("   Message: " + e.getMessage());
-            e.printStackTrace();
+        } catch (ExpiredJwtException e) {
+            System.err.println("❌ JWT token expired: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            System.err.println("❌ Malformed JWT token: " + e.getMessage());
+        } catch (SignatureException e) {
+            System.err.println("❌ Invalid JWT signature: " + e.getMessage());
+        } catch (UsernameNotFoundException e) {
+            System.err.println("❌ User not found: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.err.println("❌ Invalid JWT argument: " + e.getMessage());
+        } catch (RuntimeException e) {
+            System.err.println("❌ JWT Filter error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
         
         System.out.println("═══════════════════════════════════════\n");
