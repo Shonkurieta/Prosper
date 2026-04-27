@@ -5,7 +5,6 @@ class FontProvider extends ChangeNotifier {
   static const String _fontFamilyKey = 'reader_font_family';
   static const String _fontSizeKey = 'reader_font_size';
   
-  // Доступные шрифты
   static const String defaultFont = 'System';
   static const String timesNewRoman = 'TimesNewRoman';
   static const String montserrat = 'Montserrat';
@@ -22,7 +21,6 @@ class FontProvider extends ChangeNotifier {
     _loadSettings();
   }
 
-  // Загрузить настройки из SharedPreferences
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _fontFamily = prefs.getString(_fontFamilyKey) ?? defaultFont;
@@ -30,7 +28,6 @@ class FontProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Изменить шрифт
   Future<void> setFontFamily(String family) async {
     _fontFamily = family;
     final prefs = await SharedPreferences.getInstance();
@@ -38,7 +35,6 @@ class FontProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Изменить размер шрифта
   Future<void> setFontSize(double size) async {
     _fontSize = size.clamp(12.0, 28.0);
     final prefs = await SharedPreferences.getInstance();
@@ -46,17 +42,14 @@ class FontProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Увеличить размер шрифта
   Future<void> increaseFontSize() async {
     await setFontSize(_fontSize + 2.0);
   }
 
-  // Уменьшить размер шрифта
   Future<void> decreaseFontSize() async {
     await setFontSize(_fontSize - 2.0);
   }
 
-  // Сбросить настройки
   Future<void> resetSettings() async {
     _fontFamily = defaultFont;
     _fontSize = 16.0;
@@ -66,7 +59,6 @@ class FontProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Получить отображаемое имя шрифта
   static String getFontDisplayName(String family) {
     switch (family) {
       case timesNewRoman:
@@ -83,7 +75,6 @@ class FontProvider extends ChangeNotifier {
     }
   }
 
-  // Получить TextStyle с текущими настройками
   TextStyle getTextStyle({Color? color}) {
     return TextStyle(
       fontFamily: _fontFamily == defaultFont ? null : _fontFamily,
