@@ -6,6 +6,7 @@ import 'edit_book_screen.dart';
 import 'manage_chapters_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/models/book.dart';
 
 class AdminBooksScreen extends StatefulWidget {
   final String token;
@@ -189,7 +190,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
       MaterialPageRoute(
         builder: (_) => EditBookScreen(
           token: widget.token,
-          book: book,
+          book: Book.fromJson(book as Map<String, dynamic>),
         ),
       ),
     );

@@ -6,8 +6,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -31,9 +33,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.prosper.dto.ChapterDTO;
 import com.example.prosper.model.Book;
 import com.example.prosper.model.Chapter;
+import com.example.prosper.model.Genre;
 import com.example.prosper.model.User;
 import com.example.prosper.repository.BookRepository;
 import com.example.prosper.repository.ChapterRepository;
+import com.example.prosper.repository.GenreRepository;
 import com.example.prosper.repository.UserRepository;
 
 @RestController
@@ -50,6 +54,9 @@ public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private GenreRepository genreRepository;
 
     // === УПРАВЛЕНИЕ НОВЕЛЛАМИ ===
 
@@ -72,6 +79,7 @@ public class AdminController {
             @RequestPart("title") String title,
             @RequestPart("author") String author,
             @RequestPart(value = "description", required = false) String description,
+            @RequestPart(value = "genres", required = false) String genresJson,
             @RequestPart(value = "cover", required = false) MultipartFile cover
     ) {
         System.out.println("➕ [AdminController] POST /api/admin/books");
@@ -92,6 +100,15 @@ public class AdminController {
             newBook.setTitle(title);
             newBook.setAuthor(author);
             newBook.setDescription(description != null ? description : "");
+
+            if (genresJson != null && !genresJson.isEmpty()) {
+                Set<Genre> genres = new HashSet<>();
+                for (String genreName : genresJson.split(",")) {
+                    genreRepository.findByName(genreName.trim())
+                        .ifPresent(genres::add);
+                }
+                newBook.setGenres(genres);
+            }
 
             if (cover != null && !cover.isEmpty()) {
                 String coverUrl = saveCoverFile(cover);
@@ -120,6 +137,7 @@ public class AdminController {
             @RequestPart(value = "title", required = false) String title,
             @RequestPart(value = "author", required = false) String author,
             @RequestPart(value = "description", required = false) String description,
+            @RequestPart(value = "genres", required = false) String genresJson,
             @RequestPart(value = "cover", required = false) MultipartFile cover
     ) {
         System.out.println("✏️ [AdminController] PUT /api/admin/books/" + id);
@@ -146,6 +164,16 @@ public class AdminController {
             if (description != null) {
                 existingBook.setDescription(description);
                 System.out.println("   ✏️ Description updated");
+            }
+
+            if (genresJson != null) {
+                Set<Genre> genres = new HashSet<>();
+                for (String genreName : genresJson.split(",")) {
+                    genreRepository.findByName(genreName.trim())
+                        .ifPresent(genres::add);
+                }
+                existingBook.setGenres(genres);
+                System.out.println("   ✏️ Genres updated");
             }
 
             // Обработка новой обложки
@@ -282,6 +310,12 @@ public class AdminController {
     public ResponseEntity<List<User>> getAllUsers() {
         System.out.println("👥 [AdminController] GET /api/admin/users");
         return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @GetMapping("/genres")
+    public ResponseEntity<List<Genre>> getAllGenres() {
+        System.out.println("🏷️ [AdminController] GET /api/admin/genres");
+        return ResponseEntity.ok(genreRepository.findAll());
     }
 
     @DeleteMapping("/users/{id}")
