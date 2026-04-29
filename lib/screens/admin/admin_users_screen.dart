@@ -12,11 +12,15 @@ class AdminUsersScreen extends StatefulWidget {
   State<AdminUsersScreen> createState() => _AdminUsersScreenState();
 }
 
-class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerProviderStateMixin {
+class _AdminUsersScreenState extends State<AdminUsersScreen>
+    with SingleTickerProviderStateMixin {
   late AdminService adminService;
   List<dynamic> users = [];
+  List<dynamic> filteredUsers = [];
   bool loading = true;
+  bool isSearching = false;
   late AnimationController _animController;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -26,13 +30,31 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
+    _searchController.addListener(_filterUsers);
     _loadUsers();
   }
 
   @override
   void dispose() {
     _animController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  // ✅ Фильтрует filteredUsers, оригинальный users не трогает
+  void _filterUsers() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        filteredUsers = users;
+      } else {
+        filteredUsers = users.where((user) {
+          final email = (user['email'] ?? '').toLowerCase();
+          final role = (user['role'] ?? '').toLowerCase();
+          return email.contains(query) || role.contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _loadUsers() async {
@@ -41,6 +63,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
       final result = await adminService.getUsers();
       setState(() {
         users = result;
+        filteredUsers = result;
         loading = false;
       });
       _animController.forward(from: 0);
@@ -54,12 +77,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
               children: [
                 const Icon(Icons.error_outline, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Ошибка: $e')),
+                Expanded(child: Text('Ошибка загрузки: $e')),
               ],
             ),
             backgroundColor: theme.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
           ),
         );
@@ -117,6 +141,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
       await adminService.deleteUser(userId);
       _loadUsers();
       if (mounted) {
+        final theme = context.read<ThemeProvider>();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Row(
@@ -128,19 +153,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
             ),
             backgroundColor: theme.successColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final theme = context.read<ThemeProvider>();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Ошибка: $e'),
+            content: Text('Ошибка удаления: $e'),
             backgroundColor: theme.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
           ),
         );
@@ -154,9 +182,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
   }
 
   Color _getRoleColor(String? role, ThemeProvider theme) {
-    if (role == 'ADMIN') {
-      return theme.warningColor;
-    }
+    if (role == 'ADMIN') return theme.warningColor;
     return theme.primaryColor;
   }
 
@@ -175,45 +201,93 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
                   padding: const EdgeInsets.all(24),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(14),
+                      // ✅ Иконка скрывается во время поиска, как в AdminBooksScreen
+                      if (!isSearching) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            Icons.people_outline,
+                            color: theme.primaryColor,
+                            size: 28,
+                          ),
                         ),
-                        child: Icon(
-                          Icons.people_outline,
-                          color: theme.primaryColor,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
+                        const SizedBox(width: 16),
+                      ],
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Пользователи',
-                              style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w900,
-                                color: theme.textPrimaryColor,
-                                letterSpacing: 0.5,
+                        // ✅ Переключаемся между полем поиска и заголовком
+                        child: isSearching
+                            ? _buildSearchField(theme)
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Пользователи',
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      color: theme.textPrimaryColor,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Всего ${users.length} пользователей',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: theme.textSecondaryColor,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            Text(
-                              '${users.length} пользователей',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: theme.textSecondaryColor,
-                              ),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(width: 12),
+                      // ✅ Кнопка toggle поиска
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isSearching
+                              ? theme.primaryColor.withValues(alpha: 0.15)
+                              : theme.cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            isSearching ? Icons.close : Icons.search,
+                            color: isSearching
+                                ? theme.primaryColor
+                                : theme.textSecondaryColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isSearching = !isSearching;
+                              if (!isSearching) {
+                                _searchController.clear();
+                              }
+                            });
+                          },
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                // ✅ Счётчик результатов поиска, как в AdminBooksScreen
+                if (isSearching && _searchController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Найдено: ${filteredUsers.length}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: theme.textSecondaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 8),
 
                 // Content
                 Expanded(
@@ -224,25 +298,30 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
                             strokeWidth: 2.5,
                           ),
                         )
-                      : users.isEmpty
+                      // ✅ filteredUsers вместо users
+                      : filteredUsers.isEmpty
                           ? _buildEmptyState(theme)
                           : RefreshIndicator(
                               onRefresh: _loadUsers,
                               color: theme.primaryColor,
                               backgroundColor: theme.cardColor,
                               child: ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                                itemCount: users.length,
+                                padding:
+                                    const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                                itemCount: filteredUsers.length,
                                 itemBuilder: (context, index) {
                                   return TweenAnimationBuilder(
-                                    duration: Duration(milliseconds: 300 + (index * 50)),
+                                    duration: Duration(
+                                        milliseconds: 300 + (index * 50)),
                                     tween: Tween<double>(begin: 0, end: 1),
-                                    builder: (context, double value, child) {
+                                    builder:
+                                        (context, double value, child) {
                                       return Transform.translate(
                                         offset: Offset(0, 20 * (1 - value)),
                                         child: Opacity(
                                           opacity: value,
-                                          child: _buildUserCard(users[index], theme),
+                                          child: _buildUserCard(
+                                              filteredUsers[index], theme),
                                         ),
                                       );
                                     },
@@ -259,7 +338,58 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
     );
   }
 
+  // ✅ Вынесен в отдельный метод, как в AdminBooksScreen
+  Widget _buildSearchField(ThemeProvider theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        style: TextStyle(
+          color: theme.textPrimaryColor,
+          fontSize: 16,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Поиск по email или роли...',
+          hintStyle: TextStyle(
+            color: theme.textSecondaryColor.withValues(alpha: 0.5),
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: theme.textSecondaryColor,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear,
+                    color: theme.textSecondaryColor,
+                  ),
+                  onPressed: () => _searchController.clear(),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState(ThemeProvider theme) {
+    final isFiltering = _searchController.text.isNotEmpty;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -271,20 +401,42 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
               color: theme.primaryColor.withValues(alpha: 0.1),
             ),
             child: Icon(
-              Icons.people_outline,
+              isFiltering ? Icons.search_off : Icons.people_outline,
               size: 80,
-              color: theme.primaryColor,
+              color: theme.textSecondaryColor.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            'Нет пользователей',
+            isFiltering ? 'Ничего не найдено' : 'Нет пользователей',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: theme.textPrimaryColor,
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            isFiltering
+                ? 'Попробуйте изменить запрос'
+                : 'Пользователи появятся здесь',
+            style: TextStyle(
+              fontSize: 15,
+              color: theme.textSecondaryColor,
+            ),
+          ),
+          // ✅ Кнопка сброса поиска, как в AdminBooksScreen
+          if (isFiltering) ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () => _searchController.clear(),
+              icon: Icon(Icons.clear, color: theme.primaryColor),
+              label: Text(
+                'Очистить поиск',
+                style: TextStyle(color: theme.primaryColor),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -346,15 +498,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _getRoleColor(role, theme).withValues(alpha: 0.15),
+                      color:
+                          _getRoleColor(role, theme).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isAdmin 
-                              ? Icons.admin_panel_settings_rounded 
+                          isAdmin
+                              ? Icons.admin_panel_settings_rounded
                               : Icons.person_rounded,
                           size: 14,
                           color: _getRoleColor(role, theme),
