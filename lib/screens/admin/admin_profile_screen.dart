@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/services/admin_service.dart';
 import 'package:prosper/screens/admin/add_book_screen.dart';
+import 'package:prosper/screens/user/user_home.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   final String token;
+  final String role;
 
-  const AdminProfileScreen({super.key, required this.token});
+  const AdminProfileScreen({super.key, required this.token, required this.role});
 
   @override
   State<AdminProfileScreen> createState() => _AdminProfileScreenState();
@@ -56,18 +58,20 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _username = prefs.getString('username') ?? 'Администратор';
+      _username = prefs.getString('username') ?? 'Пользователь';
       _email = prefs.getString('email') ?? '';
     });
 
     try {
       final adminService = AdminService(widget.token);
       final books = await adminService.getBooks();
-      final users = await adminService.getUsers();
+      if (widget.role == 'ADMIN') {
+        final users = await adminService.getUsers();
+        _usersCount = users.length;
+      }
       
       setState(() {
         _booksCount = books.length;
-        _usersCount = users.length;
         _isLoading = false;
       });
     } catch (e) {
@@ -105,7 +109,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              if (context.mounted) {
+              if (mounted) {
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   '/login',
                   (route) => false,
@@ -165,7 +169,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                                   color: theme.primaryColor.withValues(alpha: 0.15),
                                 ),
                                 child: Icon(
-                                  Icons.admin_panel_settings_rounded,
+                                  widget.role == 'ADMIN' ? Icons.admin_panel_settings_rounded : Icons.verified_user,
                                   size: 70,
                                   color: theme.primaryColor,
                                 ),
@@ -181,10 +185,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: theme.errorColor.withValues(alpha: 0.1),
+                                color: (widget.role == 'ADMIN' ? theme.errorColor : theme.primaryColor).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: theme.errorColor.withValues(alpha: 0.3),
+                                  color: (widget.role == 'ADMIN' ? theme.errorColor : theme.primaryColor).withValues(alpha: 0.3),
                                   width: 1.5,
                                 ),
                               ),
@@ -193,14 +197,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
                                 children: [
                                   Icon(
                                     Icons.verified_user,
-                                    color: theme.errorColor,
+                                    color: widget.role == 'ADMIN' ? theme.errorColor : theme.primaryColor,
                                     size: 18,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'АДМИНИСТРАТОР',
+                                    widget.role == 'ADMIN' ? 'АДМИНИСТРАТОР' : 'МОДЕРАТОР',
                                     style: TextStyle(
-                                      color: theme.errorColor,
+                                      color: widget.role == 'ADMIN' ? theme.errorColor : theme.primaryColor,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                       letterSpacing: 1.2,
@@ -272,131 +276,17 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
 
                             const SizedBox(height: 24),
 
-                            // Статистика
-                            Text(
-                              'Статистика системы',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: theme.textPrimaryColor,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Карточки статистики в сетке
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildStatCard(
-                                    theme: theme,
-                                    icon: Icons.menu_book_rounded,
-                                    title: 'Новеллы',
-                                    value: '$_booksCount',
-                                    color: theme.primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildStatCard(
-                                    theme: theme,
-                                    icon: Icons.people_outline,
-                                    title: 'Пользователи',
-                                    value: '$_usersCount',
-                                    color: const Color(0xFF6C5CE7),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Быстрые действия
-                            Text(
-                              'Быстрые действия',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: theme.textPrimaryColor,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            _buildActionCard(
+                            // Режим читателя
+                            _buildMenuItem(
                               theme: theme,
-                              icon: Icons.library_add_rounded,
-                              title: 'Добавить новеллу',
-                              description: 'Создать новую новеллу в библиотеке',
-                              color: theme.primaryColor,
-                              onTap: () async {
-                                // Navigate to add book screen
-                                final result = await Navigator.push(
-                                  context,
+                              icon: Icons.book_outlined,
+                              title: 'Режим читателя',
+                              description: 'Просматривать новеллы как обычный пользователь',
+                              color: theme.successColor,
+                              onTap: () {
+                                Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => AddBookScreen(token: widget.token),
-                                  ),
-                                );
-                                
-                                // Reload data if book was added
-                                if (result == true) {
-                                  setState(() => _isLoading = true);
-                                  await _loadData();
-                                  
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Row(
-                                          children: [
-                                            Icon(Icons.check_circle, color: Colors.white),
-                                            SizedBox(width: 12),
-                                            Text('Новелла успешно добавлена'),
-                                          ],
-                                        ),
-                                        backgroundColor: theme.successColor,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        margin: const EdgeInsets.all(20),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            _buildActionCard(
-                              theme: theme,
-                              icon: Icons.refresh_rounded,
-                              title: 'Обновить данные',
-                              description: 'Перезагрузить статистику',
-                              color: theme.warningColor,
-                              onTap: () {
-                                setState(() => _isLoading = true);
-                                _loadData();
-                              },
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            _buildActionCard(
-                              theme: theme,
-                              icon: Icons.analytics_outlined,
-                              title: 'Аналитика',
-                              description: 'Просмотр статистики и отчетов',
-                              color: const Color(0xFF00B894),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Функция в разработке'),
-                                    backgroundColor: theme.primaryColor,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                    builder: (_) => UserHome(token: widget.token),
                                   ),
                                 );
                               },
@@ -404,40 +294,86 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> with SingleTick
 
                             const SizedBox(height: 40),
 
-                            // Кнопка выхода
-                            SizedBox(
-                              width: double.infinity,
-                              height: 60,
-                              child: ElevatedButton(
-                                onPressed: _logout,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.errorColor,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.logout_rounded, size: 22),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'Выйти из системы',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            // Статистика
+                            Text(
+                              'Статистика',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: theme.textPrimaryColor,
                               ),
                             ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStatCard(
+                                    theme: theme,
+                                    icon: Icons.menu_book_rounded,
+                                    title: 'Новеллы',
+                                    value: _booksCount.toString(),
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                if (widget.role == 'ADMIN')
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      theme: theme,
+                                      icon: Icons.people_outline,
+                                      title: 'Пользователи',
+                                      value: _usersCount.toString(),
+                                      color: theme.accentColor,
+                                    ),
+                                  ),
+                              ],
+                            ),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 40),
+
+                            // Быстрые действия
+                            Text(
+                              'Быстрые действия',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: theme.textPrimaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            _buildActionCard(
+                              theme: theme,
+                              icon: Icons.add_box_outlined,
+                              title: 'Добавить новеллу',
+                              description: 'Загрузить новую новеллу в систему',
+                              color: theme.primaryColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AddBookScreen(token: widget.token),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            _buildActionCard(
+                              theme: theme,
+                              icon: Icons.refresh,
+                              title: 'Обновить данные',
+                              description: 'Обновить статистику и информацию',
+                              color: theme.accentColor,
+                              onTap: _loadData,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildActionCard(
+                              theme: theme,
+                              icon: Icons.logout,
+                              title: 'Выйти',
+                              description: 'Завершить текущую сессию',
+                              color: theme.errorColor,
+                              onTap: _logout,
+                            ),
                           ],
                         ),
                       ),

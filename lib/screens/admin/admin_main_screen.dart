@@ -7,8 +7,9 @@ import 'package:prosper/providers/theme_provider.dart';
 
 class AdminMainScreen extends StatefulWidget {
   final String token;
+  final String role;
 
-  const AdminMainScreen({super.key, required this.token});
+  const AdminMainScreen({super.key, required this.token, required this.role});
 
   @override
   State<AdminMainScreen> createState() => _AdminMainScreenState();
@@ -27,9 +28,9 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
       vsync: this,
     );
     _screens = [
-      AdminBooksScreen(token: widget.token),
-      AdminUsersScreen(token: widget.token),
-      AdminProfileScreen(token: widget.token),
+      AdminBooksScreen(token: widget.token, role: widget.role),
+      if (widget.role == 'ADMIN') AdminUsersScreen(token: widget.token),
+      AdminProfileScreen(token: widget.token, role: widget.role),
     ];
     _animController.forward();
   }
@@ -88,17 +89,18 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
                       label: 'Новеллы',
                       index: 0,
                     ),
-                    _buildNavItem(
-                      theme: theme,
-                      icon: Icons.people_outline,
-                      label: 'Пользователи',
-                      index: 1,
-                    ),
+                    if (widget.role == 'ADMIN')
+                      _buildNavItem(
+                        theme: theme,
+                        icon: Icons.people_outline,
+                        label: 'Пользователи',
+                        index: 1,
+                      ),
                     _buildNavItem(
                       theme: theme,
                       icon: Icons.person_outline,
                       label: 'Профиль',
-                      index: 2,
+                      index: widget.role == 'ADMIN' ? 2 : 1,
                     ),
                   ],
                 ),

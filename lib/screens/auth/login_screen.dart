@@ -124,8 +124,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
       );
 
-      Widget LibraryScreen = role == 'ADMIN' 
-          ? AdminMainScreen(token: token)
+      Widget LibraryScreen = (role == 'ADMIN' || role == 'MODERATOR')
+          ? AdminMainScreen(token: token, role: role)
           : UserHome(token: token);
 
       Navigator.of(context).pushAndRemoveUntil(

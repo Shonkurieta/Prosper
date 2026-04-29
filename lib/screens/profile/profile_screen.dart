@@ -4,6 +4,7 @@ import 'package:prosper/services/storage_service.dart';
 import 'package:prosper/services/bookmark_service.dart';
 import 'package:prosper/screens/bookmarks/bookmarks_screen.dart';
 import 'package:prosper/screens/auth/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
@@ -187,6 +188,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       builder: (context, theme, child) {
         return Scaffold(
           backgroundColor: theme.backgroundColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            toolbarHeight: 0, // Скрываем саму панель, но отключаем стрелку
+          ),
           body: Stack(
             children: [
               // Decorative background shapes
@@ -245,6 +252,76 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             child: Column(
                               children: [
                                 const SizedBox(height: 20),
+                                
+                                // Кнопка возврата в админку (если пользователь админ/модер)
+                                FutureBuilder<SharedPreferences>(
+                                  future: SharedPreferences.getInstance(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      final role = snapshot.data!.getString('role');
+                                      if (role == 'ADMIN' || role == 'MODERATOR') {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 24),
+                                          child: Container(
+                                            decoration: theme.getCardDecoration(),
+                                            child: InkWell(
+                                              onTap: () => Navigator.of(context).pop(),
+                                              borderRadius: BorderRadius.circular(16),
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(16),
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.all(10),
+                                                      decoration: BoxDecoration(
+                                                        shape: BoxShape.circle,
+                                                        color: theme.accentColor.withValues(alpha: 0.15),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.admin_panel_settings_outlined,
+                                                        color: theme.accentColor,
+                                                        size: 24,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 16),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            'Вернуться в управление',
+                                                            style: TextStyle(
+                                                              color: theme.textPrimaryColor,
+                                                              fontSize: 16,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            'Выйти из режима читателя',
+                                                            style: TextStyle(
+                                                              color: theme.textSecondaryColor,
+                                                              fontSize: 13,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      Icons.arrow_forward_ios_rounded,
+                                                      color: theme.textSecondaryColor,
+                                                      size: 16,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
 
                                 // Profile Avatar
                                 TweenAnimationBuilder(
