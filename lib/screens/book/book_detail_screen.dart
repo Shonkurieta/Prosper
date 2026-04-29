@@ -194,6 +194,9 @@ class _BookDetailScreenState extends State<BookDetailScreen>
 
         // Проверяем, есть ли главы
         final hasChapters = _chapters.isNotEmpty;
+        
+        // Извлекаем жанры
+        final List<dynamic> genres = _book!['genres'] ?? [];
 
         return Scaffold(
           backgroundColor: theme.backgroundColor,
@@ -393,6 +396,47 @@ class _BookDetailScreenState extends State<BookDetailScreen>
                             height: 1.6,
                           ),
                         ),
+                        
+                        // Блок жанров (теперь после описания)
+                        if (genres.isNotEmpty) ...[
+                          const SizedBox(height: 32),
+                          Text(
+                            'Жанры',
+                            style: TextStyle(
+                              color: theme.textPrimaryColor,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: genres.map((genre) {
+                              final String genreName = genre is Map ? (genre['name'] ?? '') : genre.toString();
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: theme.primaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.primaryColor.withValues(alpha: 0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  genreName,
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+
                         const SizedBox(height: 32),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
