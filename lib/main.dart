@@ -73,9 +73,9 @@ class _MyAppState extends State<MyApp> {
     // Определяем стартовый экран
     Widget startScreen;
     if (token != null && role != null) {
-      if (role == 'ADMIN') {
-        print('🔐 Авторизован как ADMIN');
-        startScreen = AdminMainScreen(token: token!);
+      if (role == 'ADMIN' || role == 'MODERATOR') {
+        print('🔐 Авторизован как $role');
+        startScreen = AdminMainScreen(token: token!, role: role!);
       } else {
         print('🔐 Авторизован как USER');
         startScreen = UserHome(token: token!);
@@ -116,7 +116,7 @@ class _MyAppState extends State<MyApp> {
             '/login': (_) => const LoginScreen(),
             '/register': (_) => const RegisterScreen(),
             '/home': (_) => LibraryScreen(token: token ?? ''),
-            '/admin': (_) => AdminMainScreen(token: token ?? ''),
+            '/admin': (_) => AdminMainScreen(token: token ?? '', role: role ?? 'USER'),
             '/bookmarks': (_) => BookmarksScreen(token: token ?? ''),
           },
         );

@@ -225,6 +225,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   elevation: 0,
                   expandedHeight: 140,
                   collapsedHeight: 140,
+                  automaticallyImplyLeading: false, // Отключаем стрелку назад
                   flexibleSpace: FlexibleSpaceBar(
                     background: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 50, 20, 16),

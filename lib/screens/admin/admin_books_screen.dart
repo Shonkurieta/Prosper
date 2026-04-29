@@ -10,8 +10,9 @@ import 'package:prosper/models/book.dart';
 
 class AdminBooksScreen extends StatefulWidget {
   final String token;
+  final String role;
 
-  const AdminBooksScreen({super.key, required this.token});
+  const AdminBooksScreen({super.key, required this.token, required this.role});
 
   @override
   State<AdminBooksScreen> createState() => _AdminBooksScreenState();

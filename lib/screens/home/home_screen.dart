@@ -152,6 +152,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, theme, child) {
         return Scaffold(
           backgroundColor: theme.backgroundColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            toolbarHeight: 0,
+          ),
           body: RefreshIndicator(
             onRefresh: _loadData,
             color: theme.primaryColor,
