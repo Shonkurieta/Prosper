@@ -1,3 +1,4 @@
+
 import 'package:prosper/screens/admin/admin_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:prosper/services/auth_service.dart';
@@ -96,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       final role = response['role']?.toString() ?? 'USER';
       final usernameFromServer = response['username']?.toString() ?? '';
       final email = response['email']?.toString() ?? '';
+      final id = response['id'] as int? ?? -1;
 
       if (token.isEmpty) throw Exception('Токен не получен от сервера');
 
@@ -104,6 +106,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       await prefs.setString('role', role);
       await prefs.setString('username', usernameFromServer);
       await prefs.setString('email', email);
+      await prefs.setInt('id', id);
 
       if (!mounted) return;
 
@@ -124,12 +127,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
       );
 
-      Widget LibraryScreen = (role == 'ADMIN' || role == 'MODERATOR')
+      Widget libraryScreen = (role == 'ADMIN' || role == 'MODERATOR')
           ? AdminMainScreen(token: token, role: role)
           : UserHome(token: token);
 
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => LibraryScreen),
+        MaterialPageRoute(builder: (_) => libraryScreen),
         (route) => false,
       );
     } catch (e) {
@@ -285,22 +288,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 style: TextStyle(
                                   fontSize: 17,
                                   color: theme.textSecondaryColor,
-                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
 
-                              const SizedBox(height: 48),
+                              const SizedBox(height: 40),
 
-                              // Username field
-                              _buildMinimalTextField(
-                                theme: theme,
+                              // Username/Email field
+                              TextFormField(
                                 controller: _usernameController,
-                                label: 'Email или имя пользователя',
-                                hint: 'Введите ваш email',
-                                icon: Icons.alternate_email,
+                                keyboardType: TextInputType.emailAddress,
+                                style: TextStyle(color: theme.textPrimaryColor),
+                                decoration: InputDecoration(
+                                  labelText: 'Имя пользователя или Email',
+                                  labelStyle: TextStyle(color: theme.textSecondaryColor),
+                                  hintText: 'Введите имя пользователя или email',
+                                  hintStyle: TextStyle(color: theme.textSecondaryColor.withOpacity(0.6)),
+                                  prefixIcon: Icon(Icons.person_outline, color: theme.primaryColor),
+                                  filled: true,
+                                  fillColor: theme.cardColor,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
                                 validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Введите email или имя пользователя';
+                                  if (value == null || value.isEmpty) {
+                                    return 'Пожалуйста, введите имя пользователя или email';
                                   }
                                   return null;
                                 },
@@ -309,90 +322,103 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               const SizedBox(height: 20),
 
                               // Password field
-                              _buildMinimalTextField(
-                                theme: theme,
+                              TextFormField(
                                 controller: _passwordController,
-                                label: 'Пароль',
-                                hint: 'Введите ваш пароль',
-                                icon: Icons.lock_open,
                                 obscureText: _obscurePassword,
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword 
-                                        ? Icons.visibility_off_outlined 
-                                        : Icons.visibility_outlined,
-                                    color: theme.textSecondaryColor,
-                                    size: 22,
+                                style: TextStyle(color: theme.textPrimaryColor),
+                                decoration: InputDecoration(
+                                  labelText: 'Пароль',
+                                  labelStyle: TextStyle(color: theme.textSecondaryColor),
+                                  hintText: 'Введите ваш пароль',
+                                  hintStyle: TextStyle(color: theme.textSecondaryColor.withOpacity(0.6)),
+                                  prefixIcon: Icon(Icons.lock_outline, color: theme.primaryColor),
+                                  filled: true,
+                                  fillColor: theme.cardColor,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
                                   ),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                      color: theme.textSecondaryColor,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
                                 ),
                                 validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Введите пароль';
+                                  if (value == null || value.isEmpty) {
+                                    return 'Пожалуйста, введите пароль';
                                   }
                                   return null;
                                 },
                               ),
 
-                              const SizedBox(height: 40),
+                              const SizedBox(height: 30),
 
                               // Login button
                               SizedBox(
                                 width: double.infinity,
-                                height: 60,
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _login,
-                                  style: theme.getPrimaryButtonStyle().copyWith(
-                                    padding: const WidgetStatePropertyAll(
-                                      EdgeInsets.symmetric(vertical: 18),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
+                                    elevation: 3,
                                   ),
                                   child: _isLoading
                                       ? const SizedBox(
-                                          height: 24,
                                           width: 24,
+                                          height: 24,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
                                             color: Colors.white,
+                                            strokeWidth: 2,
                                           ),
                                         )
                                       : const Text(
                                           'Войти',
                                           style: TextStyle(
                                             fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.3,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                 ),
                               ),
 
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 20),
 
-                              // Register link
-                              Center(
-                                child: TextButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                                    );
-                                  },
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              // Register prompt
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Нет аккаунта?',
+                                    style: TextStyle(color: theme.textSecondaryColor),
                                   ),
-                                  child: Text(
-                                    'Нет аккаунта? Зарегистрироваться',
-                                    style: TextStyle(
-                                      color: theme.textSecondaryColor,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                      );
+                                    },
+                                    child: Text(
+                                      'Зарегистрироваться',
+                                      style: TextStyle(
+                                        color: theme.primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                              
-                              const SizedBox(height: 20),
                             ],
                           ),
                         ),
@@ -405,59 +431,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         );
       },
-    );
-  }
-
-  Widget _buildMinimalTextField({
-    required ThemeProvider theme,
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: theme.textPrimaryColor,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(14),
-            border: theme.isDarkMode 
-                ? Border.all(color: theme.borderColor, width: 1.5)
-                : null,
-            boxShadow: [theme.cardShadow],
-          ),
-          child: TextFormField(
-            controller: controller,
-            obscureText: obscureText,
-            style: TextStyle(
-              color: theme.textPrimaryColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: theme.getInputDecoration(
-              hintText: hint,
-              prefixIcon: icon,
-              suffixIcon: suffixIcon,
-            ),
-            validator: validator,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -3,10 +3,13 @@ import '../../services/admin_service.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AdminUsersScreen extends StatefulWidget {
   final String token;
-
-  const AdminUsersScreen({super.key, required this.token});
+  final String currentAdminEmail;
+  final int currentAdminId;
+  const AdminUsersScreen({super.key, required this.token, required this.currentAdminEmail, required this.currentAdminId});
 
   @override
   State<AdminUsersScreen> createState() => _AdminUsersScreenState();
@@ -19,6 +22,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
   List<dynamic> filteredUsers = [];
   bool loading = true;
   bool isSearching = false;
+  String _currentAdminRole = 'USER'; // Default to USER
+  String _currentAdminEmail = '';
+  int _currentAdminId = -1;
   late AnimationController _animController;
   final TextEditingController _searchController = TextEditingController();
 
@@ -31,6 +37,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
       vsync: this,
     );
     _searchController.addListener(_filterUsers);
+    _loadCurrentAdminData();
     _loadUsers();
   }
 
@@ -54,6 +61,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
           return email.contains(query) || role.contains(query);
         }).toList();
       }
+    });
+  }
+
+  Future<void> _loadCurrentAdminData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentAdminEmail = prefs.getString('email') ?? '';
+      _currentAdminRole = prefs.getString('role') ?? 'USER';
+      _currentAdminId = prefs.getInt('id') ?? -1; // Assuming 'id' is stored in SharedPreferences
     });
   }
 
@@ -84,6 +100,69 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _changeUserRole(int userId, String currentRole, String newRole) async {
+    if (userId == widget.currentAdminId) {
+      if (mounted) {
+        final theme = context.read<ThemeProvider>();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.white),
+                SizedBox(width: 12),
+                Text("Вы не можете изменить свою собственную роль."),
+              ],
+            ),
+            backgroundColor: theme.errorColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (currentRole == newRole) return; // No change needed
+
+    try {
+      await adminService.updateUserRole(userId, newRole);
+      _loadUsers();
+      if (mounted) {
+        final theme = context.read<ThemeProvider>();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Text("Роль пользователя обновлена до $newRole"),
+              ],
+            ),
+            backgroundColor: theme.successColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(20),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final theme = context.read<ThemeProvider>();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Ошибка обновления роли: $e"),
+            backgroundColor: theme.errorColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
           ),
         );
@@ -528,6 +607,43 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
               ),
             ),
 
+            // Role dropdown
+            if (user['id'] != widget.currentAdminId)
+              DropdownButton<String>(
+                value: role,
+                items: <String>['USER', 'MODERATOR', 'ADMIN'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value, style: TextStyle(color: theme.textPrimaryColor)),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    _changeUserRole(user['id'], role, newValue);
+                  }
+                },
+                dropdownColor: theme.cardColor,
+                style: TextStyle(color: theme.textPrimaryColor),
+                underline: Container(),
+                icon: Icon(Icons.arrow_drop_down, color: theme.textSecondaryColor),
+              )
+            else
+              // Display current role for the logged-in admin
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getRoleColor(role, theme).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  role,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _getRoleColor(role, theme),
+                  ),
+                ),
+              ),
             // Delete button
             IconButton(
               icon: Container(

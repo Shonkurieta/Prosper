@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'admin_books_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_profile_screen.dart';
@@ -18,7 +20,9 @@ class AdminMainScreen extends StatefulWidget {
 class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _animController;
-  late List<Widget> _screens;
+  late List<Widget> _screens = []; // Initialize with an empty list
+  String _currentAdminEmail = '';
+  int _currentAdminId = -1;
 
   @override
   void initState() {
@@ -27,18 +31,30 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _screens = [
-      AdminBooksScreen(token: widget.token, role: widget.role),
-      if (widget.role == 'ADMIN') AdminUsersScreen(token: widget.token),
-      AdminProfileScreen(token: widget.token, role: widget.role),
-    ];
-    _animController.forward();
+    _loadCurrentAdminData().then((_) {
+      setState(() {
+        _screens = [
+          AdminBooksScreen(token: widget.token, role: widget.role),
+          if (widget.role == 'ADMIN') AdminUsersScreen(token: widget.token, currentAdminEmail: _currentAdminEmail, currentAdminId: _currentAdminId),
+          AdminProfileScreen(token: widget.token, role: widget.role),
+        ];
+      });
+      _animController.forward();
+    });
   }
 
   @override
   void dispose() {
     _animController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentAdminData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentAdminEmail = prefs.getString('email') ?? '';
+      _currentAdminId = prefs.getInt('id') ?? -1;
+    });
   }
 
   void _onItemTapped(int index) {
@@ -57,7 +73,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
           backgroundColor: theme.backgroundColor,
           body: FadeTransition(
             opacity: _animController,
-            child: _screens[_selectedIndex],
+            child: _screens.isNotEmpty ? _screens[_selectedIndex] : const Center(child: CircularProgressIndicator()), // Handle empty _screens initially
           ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(

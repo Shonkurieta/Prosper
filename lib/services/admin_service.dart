@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -207,6 +208,23 @@ class AdminService {
     final res = await http.delete(url, headers: headers);
     if (res.statusCode != 200) {
       throw Exception('Ошибка удаления пользователя: ${res.statusCode}');
+    }
+  }
+
+  Future<void> updateUserRole(int userId, String newRole) async {
+    final url = Uri.parse('$baseUrl/users/$userId/role');
+    final res = await http.put(
+      url,
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'role': newRole,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Ошибка обновления роли пользователя: ${res.statusCode}');
     }
   }
 }
