@@ -460,21 +460,25 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Управление новеллами',
+                                        'Новеллы',
                                         style: TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.w900,
                                           color: theme.textPrimaryColor,
-                                          letterSpacing: 0.3,
+                                          letterSpacing: 0.5,
                                         ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                       Text(
-                                        'Всего ${books.length} новелл',
+                                        'Управление библиотекой',
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: theme.textSecondaryColor,
                                           fontWeight: FontWeight.w500,
                                         ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
@@ -802,12 +806,16 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                                   size: 18,
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Управление',
-                                  style: TextStyle(
-                                    color: theme.getManagementButtonTextColor(),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                Flexible(
+                                  child: Text(
+                                    'Управление',
+                                    style: TextStyle(
+                                      color: theme.getManagementButtonTextColor(),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

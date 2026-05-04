@@ -43,7 +43,7 @@ import com.example.prosper.repository.UserRepository;
 @RestController
 @RequestMapping("/api/admin")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
 public class AdminController {
 
     @Autowired
@@ -341,6 +341,27 @@ public class AdminController {
                     userRepository.delete(user);
                     System.out.println("   ✅ User deleted: " + id);
                     return ResponseEntity.ok(createSuccess("Пользователь удалён"));
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createError("Пользователь не найден")));
+    }
+
+    // ✅ Эндпоинт для обновления роли пользователя
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        System.out.println("✏️ [AdminController] PUT /api/admin/users/" + id + "/role");
+        String newRole = body.get("role");
+        
+        if (newRole == null || newRole.isEmpty()) {
+            return ResponseEntity.badRequest().body(createError("Роль не указана"));
+        }
+
+        return userRepository.findById(id)
+                .map(user -> {
+                    user.setRole(newRole);
+                    userRepository.save(user);
+                    System.out.println("   ✅ User role updated to: " + newRole);
+                    return ResponseEntity.ok(createSuccess("Роль пользователя обновлена до " + newRole));
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(createError("Пользователь не найден")));
