@@ -329,35 +329,37 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
                                             ),
                                           ),
                                           const SizedBox(height: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: role == 'ADMIN'
-                                                  ? const Color(0xFFFF6B6B).withValues(alpha: 0.15)
-                                                  : const Color(0xFF4ECDC4).withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
                                                 color: role == 'ADMIN'
-                                                    ? const Color(0xFFFF6B6B).withValues(alpha: 0.3)
-                                                    : const Color(0xFF4ECDC4).withValues(alpha: 0.3),
-                                                width: 1,
+                                                    ? const Color(0xFFFF6B6B).withValues(alpha: 0.15)
+                                                    : const Color(0xFF4ECDC4).withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: role == 'ADMIN'
+                                                      ? const Color(0xFFFF6B6B).withValues(alpha: 0.3)
+                                                      : const Color(0xFF4ECDC4).withValues(alpha: 0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                role,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: role == 'ADMIN'
+                                                      ? const Color(0xFFFF6B6B)
+                                                      : const Color(0xFF4ECDC4),
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            child: Text(
-                                              role,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: role == 'ADMIN'
-                                                    ? const Color(0xFFFF6B6B)
-                                                    : const Color(0xFF4ECDC4),
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ),
                                         ],
                                       ),
                                       trailing: role != 'ADMIN'

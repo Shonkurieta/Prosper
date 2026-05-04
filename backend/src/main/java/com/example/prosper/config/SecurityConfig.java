@@ -42,23 +42,23 @@ public class SecurityConfig {
             }))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // ✅ Публичные эндпоинты (доступны БЕЗ авторизации)
-                .requestMatchers("/api/auth/**").permitAll()        // Регистрация, логин, refresh
-                .requestMatchers("/api/books/**").permitAll()       // Новеллы доступны всем
-                .requestMatchers("/api/genres/**").permitAll()      // Жанры доступны всем
-                .requestMatchers("/api/test/**").permitAll()        // Тестовые эндпоинты
+                // ✅ Публичные эндпоинты
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/books/**").permitAll()
+                .requestMatchers("/api/genres/**").permitAll()
+                .requestMatchers("/api/test/**").permitAll()
                 
-                // ✅ СТАТИЧЕСКИЕ ФАЙЛЫ - обложки новелл (БЕЗ авторизации)
-                .requestMatchers("/covers/**").permitAll()          // Обложки через /covers/
-                .requestMatchers("/assets/**").permitAll()          // Обложки через /assets/
-                .requestMatchers("/assets/covers/**").permitAll()   // Обложки через /assets/covers/
+                // ✅ Статические файлы
+                .requestMatchers("/covers/**").permitAll()
+                .requestMatchers("/assets/**").permitAll()
+                .requestMatchers("/assets/covers/**").permitAll()
                 
                 // ✅ Защищенные эндпоинты
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")  // Только админ
-                .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN") // Профиль
-                .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN") // Закладки - USER или ADMIN
+                // В логах видно "Authorities: [ROLE_ADMIN]", поэтому используем hasAnyRole или hasAnyAuthority с ROLE_
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MODERATOR")
+                .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
+                .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 
-                // Все остальное требует авторизации
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

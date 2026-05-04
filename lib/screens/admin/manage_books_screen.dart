@@ -78,28 +78,46 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> {
                 color: theme.cardColor,
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  title: Text(book.title, style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold)),
-                  subtitle: Text(book.author, style: TextStyle(color: theme.textSecondaryColor)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.list_alt, color: Colors.blue),
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManageChaptersScreen(token: widget.token, bookId: book.id, bookTitle: book.title))),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.orange),
-                        onPressed: () async {
-                          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditBookScreen(token: widget.token, book: book)));
-                          if (result == true) _refreshBooks();
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _showDeleteDialog(book.id, book.title),
-                      ),
-                    ],
-                  ),
+	                  title: Text(
+	                    book.title,
+	                    style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold),
+	                    maxLines: 1,
+	                    overflow: TextOverflow.ellipsis,
+	                  ),
+	                  subtitle: Text(
+	                    book.author,
+	                    style: TextStyle(color: theme.textSecondaryColor),
+	                    maxLines: 1,
+	                    overflow: TextOverflow.ellipsis,
+	                  ),
+	                  trailing: Row(
+	                    mainAxisSize: MainAxisSize.min,
+	                    children: [
+	                      IconButton(
+	                        padding: EdgeInsets.zero,
+	                        constraints: const BoxConstraints(),
+	                        icon: const Icon(Icons.list_alt, color: Colors.blue, size: 20),
+	                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManageChaptersScreen(token: widget.token, bookId: book.id, bookTitle: book.title))),
+	                      ),
+	                      const SizedBox(width: 8),
+	                      IconButton(
+	                        padding: EdgeInsets.zero,
+	                        constraints: const BoxConstraints(),
+	                        icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+	                        onPressed: () async {
+	                          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditBookScreen(token: widget.token, book: book)));
+	                          if (result == true) _refreshBooks();
+	                        },
+	                      ),
+	                      const SizedBox(width: 8),
+	                      IconButton(
+	                        padding: EdgeInsets.zero,
+	                        constraints: const BoxConstraints(),
+	                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+	                        onPressed: () => _showDeleteDialog(book.id, book.title),
+	                      ),
+	                    ],
+	                  ),
                 ),
               );
             },

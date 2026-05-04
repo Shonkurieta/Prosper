@@ -525,18 +525,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     final email = user['email'] ?? '';
     final role = user['role'] ?? 'USER';
     final isAdmin = role == 'ADMIN';
+    final isCurrentUser = user['id'] == widget.currentAdminId;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: theme.getCardDecoration(),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             // Avatar
             Container(
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _getRoleColor(role, theme).withValues(alpha: 0.15),
@@ -545,7 +546,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                 child: Text(
                   _getInitial(email),
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _getRoleColor(role, theme),
                   ),
@@ -553,7 +554,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
               ),
             ),
 
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
 
             // User info
             Expanded(
@@ -563,104 +564,113 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                   Text(
                     email,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: theme.textPrimaryColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          _getRoleColor(role, theme).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isAdmin
-                              ? Icons.admin_panel_settings_rounded
-                              : Icons.person_rounded,
-                          size: 14,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        isAdmin
+                            ? Icons.admin_panel_settings_rounded
+                            : Icons.person_rounded,
+                        size: 12,
+                        color: _getRoleColor(role, theme),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isAdmin ? 'Админ' : 'Юзер',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                           color: _getRoleColor(role, theme),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isAdmin ? 'Администратор' : 'Пользователь',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _getRoleColor(role, theme),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
+            const SizedBox(width: 8),
+
             // Role dropdown
-            if (user['id'] != widget.currentAdminId)
-              DropdownButton<String>(
-                value: role,
-                items: <String>['USER', 'MODERATOR', 'ADMIN'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value, style: TextStyle(color: theme.textPrimaryColor)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    _changeUserRole(user['id'], role, newValue);
-                  }
-                },
-                dropdownColor: theme.cardColor,
-                style: TextStyle(color: theme.textPrimaryColor),
-                underline: Container(),
-                icon: Icon(Icons.arrow_drop_down, color: theme.textSecondaryColor),
+            if (!isCurrentUser)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: theme.backgroundColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: role,
+                    isDense: true,
+                    items: <String>['USER', 'MODERATOR', 'ADMIN'].map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          value, 
+                          style: TextStyle(
+                            color: theme.textPrimaryColor,
+                            fontSize: 12,
+                          )
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        _changeUserRole(user['id'], role, newValue);
+                      }
+                    },
+                    dropdownColor: theme.cardColor,
+                    icon: Icon(Icons.arrow_drop_down, size: 18, color: theme.textSecondaryColor),
+                  ),
+                ),
               )
             else
-              // Display current role for the logged-in admin
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getRoleColor(role, theme).withValues(alpha: 0.15),
+                  color: _getRoleColor(role, theme).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  role,
+                  'ВЫ',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                     color: _getRoleColor(role, theme),
                   ),
                 ),
               ),
+
+            const SizedBox(width: 4),
+
             // Delete button
-            IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.errorColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+            if (!isCurrentUser)
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: theme.errorColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: theme.errorColor,
+                    size: 18,
+                  ),
                 ),
-                child: Icon(
-                  Icons.delete_outline,
-                  color: theme.errorColor,
-                  size: 20,
-                ),
+                tooltip: 'Удалить',
+                onPressed: () => _deleteUser(user['id'], email),
               ),
-              tooltip: 'Удалить пользователя',
-              onPressed: () => _deleteUser(user['id'], email),
-            ),
           ],
         ),
       ),

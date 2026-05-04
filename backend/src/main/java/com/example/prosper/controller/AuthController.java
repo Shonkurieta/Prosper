@@ -86,11 +86,12 @@ public class AuthController {
             UserDetails userDetails = userDetailsService.loadUserByUsername(nickname);
             String token = jwtUtil.generateToken(savedUser.getId(), userDetails);
 
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("username", user.getNickname());
             response.put("email", user.getEmail());
             response.put("role", user.getRole());
+            response.put("id", user.getId());
 
             return ResponseEntity.ok(response);
             
@@ -146,11 +147,12 @@ public class AuthController {
             UserDetails userDetails = userDetailsService.loadUserByUsername(user.getNickname());
             String token = jwtUtil.generateToken(user.getId(), userDetails);
 
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("username", user.getNickname());
             response.put("email", user.getEmail());
             response.put("role", user.getRole());
+            response.put("id", user.getId());
 
             return ResponseEntity.ok(response);
             
@@ -196,6 +198,7 @@ public class AuthController {
             response.put("username", user.getNickname());
             response.put("email", user.getEmail());
             response.put("role", user.getRole());
+            response.put("id", user.getId());
             
             return ResponseEntity.ok(response);
             
