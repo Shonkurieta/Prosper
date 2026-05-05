@@ -262,6 +262,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
 
   Color _getRoleColor(String? role, ThemeProvider theme) {
     if (role == 'ADMIN') return theme.warningColor;
+    if (role == 'MODERATOR') return Colors.orange;
     return theme.primaryColor;
   }
 
@@ -525,6 +526,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     final email = user['email'] ?? '';
     final role = user['role'] ?? 'USER';
     final isAdmin = role == 'ADMIN';
+    final isModerator = role == 'MODERATOR';
     final isCurrentUser = user['id'] == widget.currentAdminId;
 
     return Container(
@@ -577,13 +579,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                       Icon(
                         isAdmin
                             ? Icons.admin_panel_settings_rounded
-                            : Icons.person_rounded,
+                            : (isModerator ? Icons.verified_user_rounded : Icons.person_rounded),
                         size: 12,
                         color: _getRoleColor(role, theme),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isAdmin ? 'Admin' : 'User',
+                        isAdmin ? 'Admin' : (isModerator ? 'Moderator' : 'User'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
