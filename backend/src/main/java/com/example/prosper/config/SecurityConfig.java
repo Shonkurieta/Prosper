@@ -2,6 +2,7 @@ package com.example.prosper.config;
 
 import java.util.List;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,6 +29,20 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Отключаем авто-регистрацию JwtFilter как обычного сервлет-фильтра.
+     * Без этого Spring Boot регистрирует @Component-фильтры дважды:
+     * один раз как сервлет-фильтр (вне SecurityFilterChain) и один раз
+     * через addFilterBefore внутри SecurityFilterChain.
+     * Двойная регистрация приводит к непредсказуемому поведению авторизации.
+     */
+    @Bean
+    public FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtFilter filter) {
+        FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -46,15 +61,16 @@ public class SecurityConfig {
                 .requestMatchers("/api/books/**").permitAll()
                 .requestMatchers("/api/genres/**").permitAll()
                 .requestMatchers("/api/test/**").permitAll()
-                
+
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
                 .requestMatchers("/assets/covers/**").permitAll()
-                
+
+                // Только ADMIN и MODERATOR могут управлять пользователями, книгами и т.д.
                 .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MODERATOR")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
-                
+
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
