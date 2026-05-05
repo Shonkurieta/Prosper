@@ -144,7 +144,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 12),
-                Text("Роль пользователя обновлена до $newRole"),
+                Expanded(
+                  child: Text(
+                    "Роль пользователя обновлена до $newRole",
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             backgroundColor: theme.successColor,
@@ -584,12 +589,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                         color: _getRoleColor(role, theme),
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        isAdmin ? 'Admin' : (isModerator ? 'Moderator' : 'User'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _getRoleColor(role, theme),
+                      Flexible(
+                        child: Text(
+                          isAdmin ? 'Admin' : (isModerator ? 'Moderator' : 'User'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _getRoleColor(role, theme),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
