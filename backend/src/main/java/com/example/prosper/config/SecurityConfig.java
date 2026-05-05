@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .requestMatchers("/assets/**").permitAll()
                 .requestMatchers("/assets/covers/**").permitAll()
                 
-                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR")
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MODERATOR")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 
