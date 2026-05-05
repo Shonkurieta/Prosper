@@ -20,7 +20,6 @@ public interface UserBookRepository extends JpaRepository<UserBook, Long> {
     
     List<UserBook> findByUserIdAndStatusAndBookmarkedTrue(Long userId, BookmarkStatus status);
     
-    // Для совместимости со старым кодом
     Optional<UserBook> findByUserAndBook(User user, Book book);
     
     List<UserBook> findByUserAndBookmarkedTrue(User user);

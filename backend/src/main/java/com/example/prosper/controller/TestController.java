@@ -17,7 +17,7 @@ public class TestController {
 
     @GetMapping("/public")
     public Map<String, Object> testPublic() {
-        System.out.println("✅ TEST: Public endpoint accessed");
+        System.out.println("TEST: Public endpoint accessed");
         return Map.of(
             "status", "success",
             "message", "Public endpoint works",
@@ -28,18 +28,18 @@ public class TestController {
     @GetMapping("/protected")
     public Map<String, Object> testProtected(@RequestHeader("Authorization") String authHeader) {
         System.out.println("═══════════════════════════════════════");
-        System.out.println("✅ TEST: Protected endpoint accessed");
+        System.out.println("TEST: Protected endpoint accessed");
         System.out.println("Authorization header: " + authHeader);
         
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
         if (auth != null) {
-            System.out.println("✅ Authentication found:");
+            System.out.println("Authentication found:");
             System.out.println("   Principal: " + auth.getPrincipal());
             System.out.println("   Authorities: " + auth.getAuthorities());
             System.out.println("   Is authenticated: " + auth.isAuthenticated());
         } else {
-            System.out.println("❌ NO Authentication in SecurityContext!");
+            System.out.println("NO Authentication in SecurityContext!");
         }
         System.out.println("═══════════════════════════════════════");
         

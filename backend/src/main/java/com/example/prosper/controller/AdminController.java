@@ -58,17 +58,15 @@ public class AdminController {
     @Autowired
     private GenreRepository genreRepository;
 
-    // === УПРАВЛЕНИЕ НОВЕЛЛАМИ ===
-
     @GetMapping("/books")
     public ResponseEntity<List<Book>> getAllBooks() {
-        System.out.println("📚 [AdminController] GET /api/admin/books");
+        System.out.println("[AdminController] GET /api/admin/books");
         return ResponseEntity.ok(bookRepository.findAll());
     }
 
     @GetMapping("/books/{id}")
     public ResponseEntity<Book> getBook(@PathVariable Long id) {
-        System.out.println("📖 [AdminController] GET /api/admin/books/" + id);
+        System.out.println("[AdminController] GET /api/admin/books/" + id);
         return bookRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -82,7 +80,7 @@ public class AdminController {
             @RequestPart(value = "genres", required = false) String genresJson,
             @RequestPart(value = "cover", required = false) MultipartFile cover
     ) {
-        System.out.println("➕ [AdminController] POST /api/admin/books");
+        System.out.println("[AdminController] POST /api/admin/books");
         System.out.println("   Title: " + title);
         System.out.println("   Author: " + author);
         System.out.println("   Cover: " + (cover != null ? cover.getOriginalFilename() : "null"));
@@ -120,12 +118,12 @@ public class AdminController {
             }
 
             Book savedBook = bookRepository.save(newBook);
-            System.out.println("   ✅ Book created with ID: " + savedBook.getId());
+            System.out.println("Book created with ID: " + savedBook.getId());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
 
         } catch (RuntimeException e) {
-            System.err.println("   ❌ Error: " + e.getMessage());
+            System.err.println("Error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createError("Ошибка при создании новеллы: " + e.getMessage()));
         }
@@ -140,30 +138,29 @@ public class AdminController {
             @RequestPart(value = "genres", required = false) String genresJson,
             @RequestPart(value = "cover", required = false) MultipartFile cover
     ) {
-        System.out.println("✏️ [AdminController] PUT /api/admin/books/" + id);
-        System.out.println("   Title: " + title);
-        System.out.println("   Author: " + author);
-        System.out.println("   Description: " + description);
-        System.out.println("   Cover: " + (cover != null ? cover.getOriginalFilename() : "null"));
+        System.out.println("[AdminController] PUT /api/admin/books/" + id);
+        System.out.println("Title: " + title);
+        System.out.println("Author: " + author);
+        System.out.println("Description: " + description);
+        System.out.println("Cover: " + (cover != null ? cover.getOriginalFilename() : "null"));
 
         try {
             Book existingBook = bookRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Новелла не найдена"));
 
-            // Обновляем поля, если они переданы
             if (title != null && !title.trim().isEmpty()) {
                 existingBook.setTitle(title);
-                System.out.println("   ✏️ Title updated: " + title);
+                System.out.println("Title updated: " + title);
             }
             
             if (author != null && !author.trim().isEmpty()) {
                 existingBook.setAuthor(author);
-                System.out.println("   ✏️ Author updated: " + author);
+                System.out.println("Author updated: " + author);
             }
             
             if (description != null) {
                 existingBook.setDescription(description);
-                System.out.println("   ✏️ Description updated");
+                System.out.println("Description updated");
             }
 
             if (genresJson != null) {
@@ -173,15 +170,12 @@ public class AdminController {
                         .ifPresent(genres::add);
                 }
                 existingBook.setGenres(genres);
-                System.out.println("   ✏️ Genres updated");
+                System.out.println("Genres updated");
             }
 
-            // Обработка новой обложки
             if (cover != null && !cover.isEmpty()) {
-                // Удаляем старую обложку если есть
                 deleteOldCover(existingBook.getCoverUrl());
                 
-                // Сохраняем новую обложку
                 String coverUrl = saveCoverFile(cover);
                 if (coverUrl == null) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -191,12 +185,12 @@ public class AdminController {
             }
 
             Book updatedBook = bookRepository.save(existingBook);
-            System.out.println("   ✅ Book updated: " + updatedBook.getId());
+            System.out.println("Book updated: " + updatedBook.getId());
 
             return ResponseEntity.ok(updatedBook);
 
         } catch (RuntimeException e) {
-            System.err.println("   ❌ Error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            System.err.println("Error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createError("Ошибка при обновлении новеллы: " + e.getMessage()));
         }
@@ -211,7 +205,7 @@ public class AdminController {
                     chapterRepository.deleteAll(chapterRepository.findByBookIdOrderByChapterOrderAsc(id));
                     deleteOldCover(book.getCoverUrl());
                     bookRepository.delete(book);
-                    System.out.println("   ✅ Book deleted: " + id);
+                    System.out.println("Book deleted: " + id);
                     return ResponseEntity.ok(createSuccess("Новелла удалена"));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -219,7 +213,7 @@ public class AdminController {
 
     @GetMapping("/covers/{filename}")
     public ResponseEntity<Resource> getCover(@PathVariable String filename) {
-        System.out.println("🖼 [AdminController] GET /api/admin/covers/" + filename);
+        System.out.println("[AdminController] GET /api/admin/covers/" + filename);
 
         try {
             Path filePath = Paths.get("assets/covers").resolve(filename);
@@ -229,37 +223,35 @@ public class AdminController {
                 String contentType = Files.probeContentType(filePath);
                 if (contentType == null) contentType = "image/jpeg";
 
-                System.out.println("   ✅ Cover found: " + filePath);
+                System.out.println("Cover found: " + filePath);
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
                         .body(resource);
             } else {
-                System.out.println("   ❌ Cover not found: " + filePath);
+                System.out.println("Cover not found: " + filePath);
                 return ResponseEntity.notFound().build();
             }
         } catch (IOException e) {
-            System.err.println("   ❌ Error loading cover (IOException): " + e.getMessage());
+            System.err.println("Error loading cover (IOException): " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (IllegalArgumentException e) {
-            System.err.println("   ❌ Error loading cover (IllegalArgumentException): " + e.getMessage());
+            System.err.println("Error loading cover (IllegalArgumentException): " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (RuntimeException e) {
-            System.err.println("   ❌ Error loading cover: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            System.err.println("Error loading cover: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    // === ГЛАВЫ ===
-
     @GetMapping("/books/{bookId}/chapters")
     public ResponseEntity<List<Chapter>> getChapters(@PathVariable Long bookId) {
-        System.out.println("📑 [AdminController] GET /api/admin/books/" + bookId + "/chapters");
+        System.out.println("[AdminController] GET /api/admin/books/" + bookId + "/chapters");
         return ResponseEntity.ok(chapterRepository.findByBookIdOrderByChapterOrderAsc(bookId));
     }
 
     @PostMapping("/books/{bookId}/chapters")
     public ResponseEntity<?> createChapter(@PathVariable Long bookId, @RequestBody ChapterDTO dto) {
-        System.out.println("➕ [AdminController] POST /api/admin/books/" + bookId + "/chapters");
+        System.out.println("[AdminController] POST /api/admin/books/" + bookId + "/chapters");
         return bookRepository.findById(bookId)
                 .map(book -> {
                     Chapter chapter = new Chapter();
@@ -268,7 +260,7 @@ public class AdminController {
                     chapter.setTitle(dto.getTitle());
                     chapter.setContent(dto.getContent());
                     Chapter saved = chapterRepository.save(chapter);
-                    System.out.println("   ✅ Chapter created: " + saved.getId());
+                    System.out.println("Chapter created: " + saved.getId());
                     return ResponseEntity.ok(saved);
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -279,14 +271,14 @@ public class AdminController {
             @PathVariable Long bookId,
             @PathVariable Long chapterId,
             @RequestBody ChapterDTO dto) {
-        System.out.println("✏️ [AdminController] PUT /api/admin/books/" + bookId + "/chapters/" + chapterId);
+        System.out.println("[AdminController] PUT /api/admin/books/" + bookId + "/chapters/" + chapterId);
         return chapterRepository.findById(chapterId)
                 .map(chapter -> {
                     if (dto.getChapterOrder() != null) chapter.setchapterOrder(dto.getChapterOrder());
                     if (dto.getTitle() != null) chapter.setTitle(dto.getTitle());
                     if (dto.getContent() != null) chapter.setContent(dto.getContent());
                     Chapter updated = chapterRepository.save(chapter);
-                    System.out.println("   ✅ Chapter updated: " + updated.getId());
+                    System.out.println("Chapter updated: " + updated.getId());
                     return ResponseEntity.ok(updated);
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -298,33 +290,31 @@ public class AdminController {
         return chapterRepository.findById(chapterId)
                 .map(chapter -> {
                     chapterRepository.delete(chapter);
-                    System.out.println("   ✅ Chapter deleted: " + chapterId);
+                    System.out.println("Chapter deleted: " + chapterId);
                     return ResponseEntity.ok(createSuccess("Глава удалена"));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // === ПОЛЬЗОВАТЕЛИ ===
-
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers() {
-        System.out.println("👥 [AdminController] GET /api/admin/users");
+        System.out.println("[AdminController] GET /api/admin/users");
         return ResponseEntity.ok(userRepository.findAll());
     }
 
     @GetMapping("/genres")
     public ResponseEntity<List<Genre>> getAllGenres() {
-        System.out.println("🏷️ [AdminController] GET /api/admin/genres");
+        System.out.println("[AdminController] GET /api/admin/genres");
         return ResponseEntity.ok(genreRepository.findAll());
     }
 
     @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        System.out.println("🗑 [AdminController] DELETE /api/admin/users/" + id);
+        System.out.println("[AdminController] DELETE /api/admin/users/" + id);
 
         return userRepository.findById(id)
                 .map(user -> {
-                    System.out.println("   🔎 User role: " + user.getRole());
+                    System.out.println("User role: " + user.getRole());
 
                     if ("ADMIN".equals(user.getRole())) {
                         long adminCount = userRepository.findAll().stream()
@@ -332,21 +322,20 @@ public class AdminController {
                                 .count();
 
                         if (adminCount <= 1) {
-                            System.out.println("   ❌ Нельзя удалить последнего администратора");
+                            System.out.println("Нельзя удалить последнего администратора");
                             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                     .body(createError("Нельзя удалить последнего администратора"));
                         }
                     }
 
                     userRepository.delete(user);
-                    System.out.println("   ✅ User deleted: " + id);
+                    System.out.println("User deleted: " + id);
                     return ResponseEntity.ok(createSuccess("Пользователь удалён"));
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(createError("Пользователь не найден")));
     }
 
-    // ✅ Эндпоинт для обновления роли пользователя
     @PutMapping("/users/{id}/role")
     public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
         System.out.println("✏️ [AdminController] PUT /api/admin/users/" + id + "/role");
@@ -360,21 +349,19 @@ public class AdminController {
                 .map(user -> {
                     user.setRole(newRole);
                     userRepository.save(user);
-                    System.out.println("   ✅ User role updated to: " + newRole);
+                    System.out.println("User role updated to: " + newRole);
                     return ResponseEntity.ok(createSuccess("Роль пользователя обновлена до " + newRole));
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(createError("Пользователь не найден")));
     }
 
-    // === HELPER METHODS ===
-
     private String saveCoverFile(MultipartFile cover) {
         try {
             Path uploadPath = Paths.get("assets/covers");
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
-                System.out.println("   📁 Created directory: " + uploadPath.toAbsolutePath());
+                System.out.println("Created directory: " + uploadPath.toAbsolutePath());
             }
 
             String fileName = System.currentTimeMillis() + "_" + cover.getOriginalFilename();
@@ -383,12 +370,12 @@ public class AdminController {
             Files.copy(cover.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
             String coverUrl = "assets/covers/" + fileName;
-            System.out.println("   🖼 Cover saved: " + filePath.toAbsolutePath());
-            System.out.println("   📝 Cover URL in DB: " + coverUrl);
+            System.out.println("Cover saved: " + filePath.toAbsolutePath());
+            System.out.println("Cover URL in DB: " + coverUrl);
 
             return coverUrl;
         } catch (IOException e) {
-            System.err.println("   ❌ Error saving cover: " + e.getMessage());
+            System.err.println("Error saving cover: " + e.getMessage());
             return null;
         }
     }
@@ -398,9 +385,9 @@ public class AdminController {
             try {
                 Path oldCoverPath = Paths.get(coverUrl);
                 Files.deleteIfExists(oldCoverPath);
-                System.out.println("   🗑️ Old cover deleted: " + oldCoverPath);
+                System.out.println("Old cover deleted: " + oldCoverPath);
             } catch (IOException e) {
-                System.err.println("   ⚠️ Could not delete old cover: " + e.getMessage());
+                System.err.println("Could not delete old cover: " + e.getMessage());
             }
         }
     }

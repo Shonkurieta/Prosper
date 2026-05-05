@@ -40,12 +40,11 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         
         System.out.println("\n═══════════════════════════════════════");
-        System.out.println("🔹 JWT FILTER - REQUEST");
+        System.out.println("JWT FILTER - REQUEST");
         System.out.println("═══════════════════════════════════════");
         System.out.println("URI: " + path);
         System.out.println("Method: " + request.getMethod());
         
-        // 🔹 Пропускаем JWT фильтр для публичных эндпоинтов и статических файлов
         if (path.startsWith("/api/auth/") || 
             path.startsWith("/api/books") || 
             path.startsWith("/api/genres") ||
@@ -53,7 +52,7 @@ public class JwtFilter extends OncePerRequestFilter {
             path.startsWith("/covers/") ||
             path.startsWith("/assets/")) {
             
-            System.out.println("✅ Публичный ресурс - пропуск JWT фильтра");
+            System.out.println("Публичный ресурс - пропуск JWT фильтра");
             System.out.println("═══════════════════════════════════════\n");
             filterChain.doFilter(request, response);
             return;
@@ -62,9 +61,8 @@ public class JwtFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         System.out.println("Authorization header: " + (authHeader != null ? authHeader.substring(0, Math.min(30, authHeader.length())) + "..." : "NULL"));
         
-        // 🔹 Если нет заголовка Authorization
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("⚠️ Нет валидного Authorization заголовка");
+            System.out.println("Нет валидного Authorization заголовка");
             System.out.println("═══════════════════════════════════════\n");
             filterChain.doFilter(request, response);
             return;
@@ -75,23 +73,23 @@ public class JwtFilter extends OncePerRequestFilter {
             System.out.println("Token extracted (first 20 chars): " + jwtToken.substring(0, Math.min(20, jwtToken.length())) + "...");
             
             final Long userId = jwtUtil.extractUserId(jwtToken);
-            System.out.println("🔹 Extracted userId from token: " + userId);
+            System.out.println("Extracted userId from token: " + userId);
             
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                System.out.println("🔍 Loading user details for ID: " + userId);
+                System.out.println("Loading user details for ID: " + userId);
                 
                 UserDetails userDetails = userDetailsService.loadUserById(userId);
-                System.out.println("✅ User details loaded");
-                System.out.println("   Username (nickname): " + userDetails.getUsername());
-                System.out.println("   Authorities: " + userDetails.getAuthorities());
-                System.out.println("   Account non-expired: " + userDetails.isAccountNonExpired());
-                System.out.println("   Account non-locked: " + userDetails.isAccountNonLocked());
-                System.out.println("   Credentials non-expired: " + userDetails.isCredentialsNonExpired());
-                System.out.println("   Enabled: " + userDetails.isEnabled());
+                System.out.println("User details loaded");
+                System.out.println("Username (nickname): " + userDetails.getUsername());
+                System.out.println("Authorities: " + userDetails.getAuthorities());
+                System.out.println("Account non-expired: " + userDetails.isAccountNonExpired());
+                System.out.println("Account non-locked: " + userDetails.isAccountNonLocked());
+                System.out.println("Credentials non-expired: " + userDetails.isCredentialsNonExpired());
+                System.out.println("Enabled: " + userDetails.isEnabled());
                 
-                System.out.println("🔍 Validating token...");
+                System.out.println("Validating token...");
                 if (jwtUtil.isTokenValid(jwtToken, userId)) {
-                    System.out.println("✅ Token is VALID");
+                    System.out.println("Token is VALID");
                     
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
@@ -102,32 +100,32 @@ public class JwtFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                     
-                    System.out.println("✅ Authentication set in SecurityContext");
-                    System.out.println("   Principal: " + userDetails.getUsername());
-                    System.out.println("   Authorities: " + authToken.getAuthorities());
+                    System.out.println("Authentication set in SecurityContext");
+                    System.out.println("Principal: " + userDetails.getUsername());
+                    System.out.println("Authorities: " + authToken.getAuthorities());
                 } else {
-                    System.out.println("❌ Token is INVALID");
+                    System.out.println("Token is INVALID");
                 }
             } else {
                 if (userId == null) {
-                    System.out.println("❌ User ID is NULL");
+                    System.out.println("User ID is NULL");
                 }
                 if (SecurityContextHolder.getContext().getAuthentication() != null) {
-                    System.out.println("ℹ️ Authentication already set");
+                    System.out.println("Authentication already set");
                 }
             }
         } catch (ExpiredJwtException e) {
-            System.err.println("❌ JWT token expired: " + e.getMessage());
+            System.err.println("JWT token expired: " + e.getMessage());
         } catch (MalformedJwtException e) {
-            System.err.println("❌ Malformed JWT token: " + e.getMessage());
+            System.err.println("Malformed JWT token: " + e.getMessage());
         } catch (SignatureException e) {
-            System.err.println("❌ Invalid JWT signature: " + e.getMessage());
+            System.err.println("Invalid JWT signature: " + e.getMessage());
         } catch (UsernameNotFoundException e) {
-            System.err.println("❌ User not found: " + e.getMessage());
+            System.err.println("User not found: " + e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("❌ Invalid JWT argument: " + e.getMessage());
+            System.err.println("Invalid JWT argument: " + e.getMessage());
         } catch (RuntimeException e) {
-            System.err.println("❌ JWT Filter error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            System.err.println("JWT Filter error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
         
         System.out.println("═══════════════════════════════════════\n");
