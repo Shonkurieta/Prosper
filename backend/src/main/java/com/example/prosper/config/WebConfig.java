@@ -17,22 +17,19 @@ public class WebConfig implements WebMvcConfigurer {
     
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        System.out.println("🔧 [WebConfig] Configuring static resource handlers");
+        System.out.println("[WebConfig] Configuring static resource handlers");
         
-        // ✅ ИСПРАВЛЕНО: Убрали "backend/" из пути
-        // Раздача статических файлов обложек
         registry.addResourceHandler("/covers/**")
                 .addResourceLocations("file:assets/covers/")
                 .setCachePeriod(3600);
         
-        System.out.println("   ✅ Mapped /covers/** -> file:assets/covers/");
-        
-        // Дополнительно для всех assets
+        System.out.println("Mapped /covers/** -> file:assets/covers/");
+
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("file:assets/")
                 .setCachePeriod(3600);
         
-        System.out.println("   ✅ Mapped /assets/** -> file:assets/");
+        System.out.println("Mapped /assets/** -> file:assets/");
     }
     
     @Override

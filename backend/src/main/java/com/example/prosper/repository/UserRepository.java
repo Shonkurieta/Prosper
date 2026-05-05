@@ -10,12 +10,9 @@ import com.example.prosper.model.User;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     
-    // Поиск по nickname
     Optional<User> findByNickname(String nickname);
     
-    // Поиск по email
     Optional<User> findByEmail(String email);
     
-    // Поиск по ID (наследуется от JpaRepository, но можно указать явно)
     Optional<User> findById(Long id);
 }

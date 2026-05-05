@@ -22,7 +22,6 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Minimalist theme colors
   Color get backgroundColor => _isDarkMode ? const Color(0xFF0A0A0A) : const Color(0xFFFAFAFA);
   Color get cardColor => _isDarkMode ? const Color(0xFF141414) : const Color(0xFFFFFFFF);
   Color get primaryColor => _isDarkMode ? const Color(0xFFE0E0E0) : const Color(0xFF1A1A1A);
@@ -37,7 +36,6 @@ class ThemeProvider extends ChangeNotifier {
   Color get inputBackgroundColor => _isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5);
   Color get shadowColor => _isDarkMode ? Colors.black.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.03);
   
-  // Subtle decorative elements
   Color get decorativeCircle1 => _isDarkMode 
       ? const Color(0xFF3B82F6).withValues(alpha: 0.08) 
       : const Color(0xFF2563EB).withValues(alpha: 0.04);
@@ -48,13 +46,12 @@ class ThemeProvider extends ChangeNotifier {
       ? const Color(0xFF6366F1).withValues(alpha: 0.05) 
       : const Color(0xFF4F46E5).withValues(alpha: 0.025);
 
-  // Action colors for management screens - balanced and theme-aware
   Color getActionColor(String action) {
     switch (action) {
       case 'chapters':
-        return _isDarkMode ? const Color(0xFF3B82F6) : const Color(0xFF2563EB); // Blue
+        return _isDarkMode ? const Color(0xFF3B82F6) : const Color(0xFF2563EB);
       case 'edit':
-        return _isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED); // Purple
+        return _isDarkMode ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED);
       case 'delete':
         return errorColor;
       default:
@@ -62,7 +59,6 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  // Management button colors - subtle and balanced
   List<Color> getManagementButtonGradient() {
     return _isDarkMode
         ? [const Color(0xFF2A2A2A), const Color(0xFF1F1F1F)]
@@ -73,7 +69,6 @@ class ThemeProvider extends ChangeNotifier {
     return _isDarkMode ? const Color(0xFFE5E5E5) : const Color(0xFFFFFFFF);
   }
 
-  // Minimal gradients
   List<Color> get primaryGradient => _isDarkMode
       ? [const Color(0xFF1A1A1A), const Color(0xFF0A0A0A)]
       : [const Color(0xFFFFFFFF), const Color(0xFFF5F5F5)];

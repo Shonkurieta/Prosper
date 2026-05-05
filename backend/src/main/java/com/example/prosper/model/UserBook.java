@@ -39,11 +39,9 @@ public class UserBook {
     @Column(name = "status", length = 20)
     private BookmarkStatus status = BookmarkStatus.READING;
 
-    // Constructors
     public UserBook() {
     }
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }

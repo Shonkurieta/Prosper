@@ -6,11 +6,9 @@ public class ChapterDTO {
     private String title;
     private String content;
 
-    // Конструктор без параметров
     public ChapterDTO() {
     }
 
-    // Конструктор со всеми параметрами
     public ChapterDTO(Long id, Integer chapterOrder, String title, String content) {
         this.id = id;
         this.chapterOrder = chapterOrder;
@@ -18,7 +16,6 @@ public class ChapterDTO {
         this.content = content;
     }
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }

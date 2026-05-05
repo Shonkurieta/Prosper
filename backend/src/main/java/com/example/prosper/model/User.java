@@ -33,12 +33,10 @@ public class User {
     @Column(nullable = false)
     private String role = "USER";
 
-    // 🔹 Добавлено: связь с user_books
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore // ❗ предотвращает рекурсивную сериализацию
+    @JsonIgnore
     private List<UserBook> userBooks;
 
-    // Constructors
     public User() {}
 
     public User(String nickname, String email, String password, String role) {
@@ -48,7 +46,6 @@ public class User {
         this.role = role;
     }
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }

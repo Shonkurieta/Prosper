@@ -39,9 +39,6 @@ public class BookmarkController {
     @Autowired
     private BookRepository bookRepository;
 
-    /**
-     * Get all bookmarks for current user
-     */
     @GetMapping
     public ResponseEntity<List<UserBook>> getBookmarks(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -56,9 +53,6 @@ public class BookmarkController {
         return ResponseEntity.ok(userBookRepository.findByUserAndBookmarkedTrue(user));
     }
 
-    /**
-     * Get bookmark progress for specific book
-     */
     @GetMapping("/progress/{bookId}")
     public ResponseEntity<Map<String, Object>> getProgress(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -84,9 +78,6 @@ public class BookmarkController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Add or update bookmark
-     */
     @PostMapping("/{bookId}")
     public ResponseEntity<UserBook> addBookmark(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -111,9 +102,6 @@ public class BookmarkController {
         return ResponseEntity.ok(userBookRepository.save(userBook));
     }
 
-    /**
-     * Update bookmark status (READING, COMPLETED, FAVORITE, DROPPED, PLANNED)
-     */
     @PutMapping("/{bookmarkId}/status")
     public ResponseEntity<UserBook> updateStatus(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -137,9 +125,6 @@ public class BookmarkController {
         return ResponseEntity.ok(userBookRepository.save(userBook));
     }
 
-    /**
-     * Update reading progress (создаёт закладку автоматически, если её нет)
-     */
     @PutMapping("/{bookId}/progress")
     public ResponseEntity<UserBook> updateProgress(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -151,39 +136,34 @@ public class BookmarkController {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("Book not found"));
 
-        // Получить существующую закладку или создать новую
         UserBook userBook = userBookRepository.findByUserAndBook(user, book)
                 .orElseGet(() -> {
-                    System.out.println("📚 Creating new bookmark for user: " + user.getNickname() + ", book: " + book.getTitle());
+                    System.out.println("Creating new bookmark for user: " + user.getNickname() + ", book: " + book.getTitle());
                     UserBook newUserBook = new UserBook();
                     newUserBook.setUser(user);
                     newUserBook.setBook(book);
-                    newUserBook.setBookmarked(true);  // Автоматически добавляем в закладки
+                    newUserBook.setBookmarked(true);
                     newUserBook.setStatus(BookmarkStatus.READING);
                     newUserBook.setCurrentChapter(1);
                     return newUserBook;
                 });
 
-        // Обновить главу, если передана в запросе
         if (request != null && request.containsKey("currentChapter")) {
             Integer currentChapter = request.get("currentChapter");
             if (currentChapter != null && currentChapter > 0) {
-                System.out.println("📖 Updating progress: chapter " + currentChapter);
+                System.out.println("Updating progress: chapter " + currentChapter);
                 userBook.setCurrentChapter(currentChapter);
             }
         } else {
-            System.out.println("⚠️ Warning: No currentChapter in request body");
+            System.out.println("Warning: No currentChapter in request body");
         }
         
         UserBook saved = userBookRepository.save(userBook);
-        System.out.println("✅ Progress saved successfully");
+        System.out.println("Progress saved successfully");
         
         return ResponseEntity.ok(saved);
     }
 
-    /**
-     * Remove bookmark
-     */
     @DeleteMapping("/{bookId}")
     public ResponseEntity<Void> removeBookmark(
             @AuthenticationPrincipal UserDetails userDetails,

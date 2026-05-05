@@ -583,7 +583,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isAdmin ? 'Админ' : 'Юзер',
+                        isAdmin ? 'Admin' : 'User',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

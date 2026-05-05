@@ -29,23 +29,19 @@ public class BookController {
     @Autowired
     private ChapterRepository chapterRepository;
 
-    // Получить все новеллы
     @GetMapping
     public ResponseEntity<List<Book>> getAllBooks() {
         return ResponseEntity.ok(bookRepository.findAll());
     }
 
-    // Поиск новелл по названию (параметр query теперь необязательный)
     @GetMapping("/search")
     public ResponseEntity<List<Book>> searchBooks(
             @RequestParam(required = false, defaultValue = "") String query) {
         
-        // Если запрос пустой, возвращаем все новеллы
         if (query == null || query.trim().isEmpty()) {
             return ResponseEntity.ok(bookRepository.findAll());
         }
 
-        // Поиск новелл по названию или автору
         List<Book> books = bookRepository.findAll().stream()
                 .filter(book -> 
                     book.getTitle().toLowerCase().contains(query.toLowerCase()) ||
@@ -55,7 +51,6 @@ public class BookController {
         return ResponseEntity.ok(books);
     }
 
-    // Получить новеллу по ID с полной информацией
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable Long id) {
         return bookRepository.findById(id)
@@ -63,7 +58,6 @@ public class BookController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Получить все главы новеллы
     @GetMapping("/{bookId}/chapters")
     public ResponseEntity<List<ChapterDTO>> getBookChapters(@PathVariable Long bookId) {
         List<Chapter> chapters = chapterRepository.findByBookIdOrderByChapterOrderAsc(bookId);
@@ -72,13 +66,12 @@ public class BookController {
                         ch.getId(),
                         ch.getchapterOrder(),
                         ch.getTitle(),
-                        null // Не отдаём контент в списке глав
+                        null 
                 ))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(chapterDTOs);
     }
 
-    // Получить конкретную главу с контентом
     @GetMapping("/{bookId}/chapters/{chapterOrder}")
     public ResponseEntity<ChapterDTO> getChapter(
             @PathVariable Long bookId,

@@ -74,7 +74,6 @@ public class UserController {
             return ResponseEntity.notFound().build();
         }
 
-        // Проверка, занят ли никнейм
         if (userRepository.findByNickname(nickname).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Никнейм уже занят"));
         }
@@ -82,13 +81,12 @@ public class UserController {
         user.setNickname(nickname);
         userRepository.save(user);
 
-        // ✅ Генерируем новый токен с обновленным nickname
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getNickname());
         String newToken = jwtUtil.generateToken(user.getId(), userDetails);
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Никнейм успешно обновлён");
-        response.put("token", newToken); // ← Новый токен
+        response.put("token", newToken);
         response.put("nickname", user.getNickname());
         
         return ResponseEntity.ok(response);

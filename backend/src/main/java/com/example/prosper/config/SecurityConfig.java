@@ -42,20 +42,16 @@ public class SecurityConfig {
             }))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // ✅ Публичные эндпоинты
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/books/**").permitAll()
                 .requestMatchers("/api/genres/**").permitAll()
                 .requestMatchers("/api/test/**").permitAll()
                 
-                // ✅ Статические файлы
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
                 .requestMatchers("/assets/covers/**").permitAll()
                 
-                // ✅ Защищенные эндпоинты
-                // В логах видно "Authorities: [ROLE_ADMIN]", поэтому используем hasAnyRole или hasAnyAuthority с ROLE_
-                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MODERATOR")
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 
