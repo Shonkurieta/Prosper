@@ -103,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             slivers: [
               _buildHeader(theme),
               _buildSearchBar(theme),
-              _isLoading 
+              _isLoading
                 ? const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: accentColor)))
                 : _buildBookGrid(theme),
             ],
@@ -143,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildSearchBar(ThemeProvider theme) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Container(
           height: 48,
           decoration: BoxDecoration(
@@ -176,13 +176,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       return const SliverFillRemaining(child: Center(child: Text('Ничего не найдено')));
     }
     return SliverPadding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.65,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+          crossAxisCount: 3,
+          childAspectRatio: 0.55,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) => _buildBookCard(theme, _filteredBooks[index]),
@@ -202,29 +202,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3))],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(10),
                 child: coverUrl.isNotEmpty
                     ? Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())
                     : _buildPlaceholder(),
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             book['title'] ?? 'Без названия',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
           ),
           Text(
             book['author'] ?? 'Автор неизвестен',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+            style: TextStyle(fontSize: 10, color: theme.textSecondaryColor),
           ),
         ],
       ),

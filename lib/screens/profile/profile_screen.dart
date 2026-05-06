@@ -17,7 +17,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   final UserService _userService = UserService();
   final StorageService _storage = StorageService();
   final BookmarkService _bookmarkService = BookmarkService();
@@ -31,24 +32,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   int _bookmarksCount = 0;
   int _booksInProgress = 0;
 
+  static const Color accentColor = Color(0xFFD46A4F);
+
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    );
+    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.04),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-    ));
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
     _loadData();
   }
@@ -64,16 +61,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     try {
       final profile = await _userService.getProfile(widget.token);
       final bookmarks = await _bookmarkService.getBookmarks(widget.token);
-      
-      // Count only books with READING status
+
       int inProgress = 0;
       for (var bookmark in bookmarks) {
         final status = bookmark['status'] as String?;
-        if (status == BookmarkService.READING) {
-          inProgress++;
-        }
+        if (status == BookmarkService.READING) inProgress++;
       }
-      
+
       setState(() {
         _profile = profile;
         _bookmarksCount = bookmarks.length;
@@ -111,33 +105,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Выход из системы',
+          'Выход',
           style: TextStyle(
             color: theme.textPrimaryColor,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'Вы уверены, что хотите выйти из аккаунта?',
-          style: TextStyle(
-            color: theme.textSecondaryColor,
-            fontSize: 15,
-          ),
+          style: TextStyle(color: theme.textSecondaryColor),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: Text(
-              'Отмена',
-              style: TextStyle(
-                color: theme.textSecondaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -150,18 +131,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: theme.errorColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              backgroundColor: Colors.redAccent,
               elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Выйти',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            child: const Text('Выйти', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -170,463 +144,292 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   String _getInitial() {
     final nickname = _profile?['nickname'] ?? '';
-    final username = _profile?['username'] ?? 'User';
-    
+    final username = _profile?['username'] ?? 'U';
     if (nickname.isNotEmpty) return nickname[0].toUpperCase();
     if (username.isNotEmpty) return username[0].toUpperCase();
     return 'U';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+  String _getDisplayName() {
     final nickname = _profile?['nickname'] ?? '';
     final username = _profile?['username'] ?? 'User';
-    final email = _profile?['email'] ?? '';
+    return nickname.isNotEmpty ? nickname : username;
+  }
 
-    return Consumer<ThemeProvider>(
-      builder: (context, theme, child) {
-        return Scaffold(
-          backgroundColor: theme.backgroundColor,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            automaticallyImplyLeading: false,
-            toolbarHeight: 0, // Скрываем саму панель, но отключаем стрелку
-          ),
-          body: Stack(
-            children: [
-              // Decorative background shapes
-              Positioned(
-                top: -size.height * 0.12,
-                left: -size.width * 0.18,
-                child: Container(
-                  width: size.width * 0.75,
-                  height: size.width * 0.75,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle2,
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -size.height * 0.08,
-                right: -size.width * 0.22,
-                child: Container(
-                  width: size.width * 0.65,
-                  height: size.width * 0.65,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle1,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: size.height * 0.35,
-                right: -25,
-                child: Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle3,
-                  ),
-                ),
-              ),
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: accentColor))
+          : FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: CustomScrollView(
+                  slivers: [
+                    _buildSliverHeader(theme),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          const SizedBox(height: 20),
+                          _buildStatsRow(theme),
+                          const SizedBox(height: 32),
 
-              // Main content
-              SafeArea(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: _isLoading
-                        ? Center(
-                            child: CircularProgressIndicator(
-                              color: theme.primaryColor,
-                              strokeWidth: 2.5,
+                          // Кнопка возврата в админку
+                          FutureBuilder<SharedPreferences>(
+                            future: SharedPreferences.getInstance(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                final role = snapshot.data!.getString('role');
+                                if (role == 'ADMIN' || role == 'MODERATOR') {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildSectionLabel(theme, 'Управление'),
+                                      const SizedBox(height: 12),
+                                      _buildMenuItem(
+                                        theme: theme,
+                                        icon: Icons.admin_panel_settings_outlined,
+                                        title: 'Вернуться в управление',
+                                        subtitle: 'Выйти из режима читателя',
+                                        color: Colors.green,
+                                        onTap: () => Navigator.of(context).pop(),
+                                      ),
+                                      const SizedBox(height: 32),
+                                    ],
+                                  );
+                                }
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+
+                          _buildSectionLabel(theme, 'Настройки'),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: theme.isDarkMode
+                                ? Icons.light_mode_outlined
+                                : Icons.dark_mode_outlined,
+                            title: theme.isDarkMode ? 'Светлая тема' : 'Тёмная тема',
+                            subtitle: 'Переключить оформление',
+                            onTap: () => theme.toggleTheme(),
+                            trailing: Switch(
+                              value: theme.isDarkMode,
+                              activeColor: accentColor,
+                              onChanged: (_) => theme.toggleTheme(),
                             ),
-                          )
-                        : SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                const SizedBox(height: 20),
-                                
-                                // Кнопка возврата в админку (если пользователь админ/модер)
-                                FutureBuilder<SharedPreferences>(
-                                  future: SharedPreferences.getInstance(),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.hasData) {
-                                      final role = snapshot.data!.getString('role');
-                                      if (role == 'ADMIN' || role == 'MODERATOR') {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(bottom: 24),
-                                          child: Container(
-                                            decoration: theme.getCardDecoration(),
-                                            child: InkWell(
-                                              onTap: () => Navigator.of(context).pop(),
-                                              borderRadius: BorderRadius.circular(16),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(16),
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      padding: const EdgeInsets.all(10),
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: theme.accentColor.withValues(alpha: 0.15),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons.admin_panel_settings_outlined,
-                                                        color: theme.accentColor,
-                                                        size: 24,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 16),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            'Вернуться в управление',
-                                                            style: TextStyle(
-                                                              color: theme.textPrimaryColor,
-                                                              fontSize: 16,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            'Выйти из режима читателя',
-                                                            style: TextStyle(
-                                                              color: theme.textSecondaryColor,
-                                                              fontSize: 13,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    Icon(
-                                                      Icons.arrow_forward_ios_rounded,
-                                                      color: theme.textSecondaryColor,
-                                                      size: 16,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                    return const SizedBox.shrink();
-                                  },
-                                ),
-
-                                // Profile Avatar
-                                TweenAnimationBuilder(
-                                  duration: const Duration(milliseconds: 1200),
-                                  tween: Tween<double>(begin: 0, end: 1),
-                                  builder: (context, double value, child) {
-                                    return Transform.scale(
-                                      scale: 0.8 + (value * 0.2),
-                                      child: Container(
-                                        width: 120,
-                                        height: 120,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: theme.primaryColor.withValues(alpha: 0.15),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: theme.primaryColor.withValues(alpha: 0.2),
-                                              blurRadius: 20,
-                                              spreadRadius: 5,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            _getInitial(),
-                                            style: TextStyle(
-                                              fontSize: 48,
-                                              fontWeight: FontWeight.w900,
-                                              color: theme.primaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                // Username
-                                Text(
-                                  nickname.isNotEmpty ? nickname : username,
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    color: theme.textPrimaryColor,
-                                    letterSpacing: 0.3,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.bookmark_border_rounded,
+                            title: 'Мои закладки',
+                            subtitle: 'Сохранённые новеллы и прогресс',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BookmarksScreen(token: widget.token),
+                              ),
+                            ).then((_) => _loadData()),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.refresh_rounded,
+                            title: 'Обновить данные',
+                            subtitle: 'Перезагрузить профиль и статистику',
+                            onTap: _loadData,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.info_outline_rounded,
+                            title: 'О приложении',
+                            subtitle: 'Версия 1.0.0 • Prosper',
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: theme.cardColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                // Email
-                                if (email.isNotEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: theme.getCardDecoration(),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.mail_outline,
-                                          color: theme.textSecondaryColor,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          email,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: theme.textSecondaryColor,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
+                                  title: Text(
+                                    'Prosper',
+                                    style: TextStyle(
+                                      color: theme.textPrimaryColor,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-
-                                const SizedBox(height: 32),
-
-                                // Statistics
-                                Text(
-                                  'Моя статистика',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.textPrimaryColor,
+                                  content: Text(
+                                    'Приложение для чтения визуальных новелл\n\nВерсия: 1.0.0\n\n© 2025 Prosper',
+                                    style: TextStyle(color: theme.textSecondaryColor),
                                   ),
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildStatCard(
-                                        theme: theme,
-                                        icon: Icons.bookmark_rounded,
-                                        title: 'Закладки',
-                                        value: '$_bookmarksCount',
-                                        color: theme.primaryColor,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _buildStatCard(
-                                        theme: theme,
-                                        icon: Icons.auto_stories_rounded,
-                                        title: 'В процессе',
-                                        value: '$_booksInProgress',
-                                        color: const Color(0xFF6C5CE7),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text(
+                                        'Закрыть',
+                                        style: TextStyle(
+                                          color: theme.primaryColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-
-                                const SizedBox(height: 32),
-
-                                // Theme Toggle
-                                _buildMenuItem(
-                                  theme: theme,
-                                  icon: theme.isDarkMode 
-                                      ? Icons.light_mode_outlined 
-                                      : Icons.dark_mode_outlined,
-                                  title: theme.isDarkMode ? 'Светлая тема' : 'Темная тема',
-                                  description: 'Переключить тему оформления',
-                                  onTap: () async {
-                                    await theme.toggleTheme();
-                                  },
-                                  trailing: Switch(
-                                    value: theme.isDarkMode,
-                                    onChanged: (value) async {
-                                      await theme.toggleTheme();
-                                    },
-                                    activeColor: theme.primaryColor,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 14),
-
-                                // Menu Items
-                                _buildMenuItem(
-                                  theme: theme,
-                                  icon: Icons.bookmark_border_rounded,
-                                  title: 'Мои закладки',
-                                  description: 'Сохранённые новеллы и прогресс',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => BookmarksScreen(token: widget.token),
-                                      ),
-                                    ).then((_) => _loadData()); // Обновляем при возврате
-                                  },
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                _buildMenuItem(
-                                  theme: theme,
-                                  icon: Icons.refresh_rounded,
-                                  title: 'Обновить данные',
-                                  description: 'Перезагрузить профиль и статистику',
-                                  onTap: () {
-                                    _loadData();
-                                  },
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                _buildMenuItem(
-                                  theme: theme,
-                                  icon: Icons.info_outline_rounded,
-                                  title: 'О приложении',
-                                  description: 'Версия 1.0.0 • Prosper',
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        backgroundColor: theme.cardColor,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        title: Text(
-                                          'Prosper',
-                                          style: TextStyle(
-                                            color: theme.textPrimaryColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        content: Text(
-                                          'Приложение для чтения визуальных новелл\n\nВерсия: 1.0.0\n\n© 2025 Prosper',
-                                          style: TextStyle(
-                                            color: theme.textSecondaryColor,
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context),
-                                            child: Text(
-                                              'Закрыть',
-                                              style: TextStyle(
-                                                color: theme.primaryColor,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                const SizedBox(height: 40),
-
-                                // Logout Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 60,
-                                  child: ElevatedButton(
-                                    onPressed: _logout,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: theme.errorColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.exit_to_app_rounded, size: 24),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          'Выйти из системы',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 20),
-                              ],
-                            ),
+                              );
+                            },
                           ),
-                  ),
+                          const SizedBox(height: 32),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.logout_rounded,
+                            title: 'Выйти из аккаунта',
+                            subtitle: 'Завершить сессию',
+                            color: Colors.redAccent,
+                            onTap: _logout,
+                          ),
+                          const SizedBox(height: 48),
+                        ]),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        );
-      },
+            ),
     );
   }
 
-  Widget _buildStatCard({
-    required ThemeProvider theme,
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: theme.getCardDecoration(),
-      child: Column(
+  Widget _buildSliverHeader(ThemeProvider theme) {
+    final email = _profile?['email'] ?? '';
+    return SliverToBoxAdapter(
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            height: 200,
+            decoration: BoxDecoration(color: accentColor.withOpacity(0.08)),
+            child: CustomPaint(
+              painter: _GridPatternPainter(accentColor.withOpacity(0.06)),
+              size: Size.infinite,
+            ),
+          ),
+
+          // User chip — top right
+          Positioned(
+            top: 52,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'USER',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: -60,
+            left: 20,
+            right: 20,
+            child: _buildProfileCard(theme, email),
+          ),
+
+          Positioned(
+            top: 52,
+            left: 20,
+            child: Text(
+              'Профиль',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: theme.textPrimaryColor,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 260),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(ThemeProvider theme, String email) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(color: accentColor.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.15),
+              gradient: LinearGradient(
+                colors: [accentColor.withOpacity(0.6), accentColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 28,
+            child: Center(
+              child: Text(
+                _getInitial(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: theme.textPrimaryColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              color: theme.textSecondaryColor,
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getDisplayName(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textPrimaryColor,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                if (email.isNotEmpty)
+                  Text(
+                    email,
+                    style: TextStyle(fontSize: 13, color: theme.textSecondaryColor),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
         ],
@@ -634,37 +437,147 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
+  Widget _buildStatsRow(ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 68),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              theme: theme,
+              icon: Icons.bookmark_rounded,
+              label: 'Закладки',
+              value: '$_bookmarksCount',
+              accent: accentColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard(
+              theme: theme,
+              icon: Icons.auto_stories_rounded,
+              label: 'В процессе',
+              value: '$_booksInProgress',
+              accent: const Color(0xFF6C5CE7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required ThemeProvider theme,
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color accent,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: accent, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: theme.textPrimaryColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(ThemeProvider theme, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: accentColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: theme.textSecondaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMenuItem({
     required ThemeProvider theme,
     required IconData icon,
     required String title,
-    required String description,
+    required String subtitle,
     required VoidCallback onTap,
     Widget? trailing,
+    Color? color,
   }) {
-    return Container(
-      decoration: theme.getCardDecoration(),
+    final iconColor = color ?? accentColor;
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: iconColor.withOpacity(0.12)),
+          ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha: 0.15),
+                  color: iconColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: theme.primaryColor,
-                  size: 24,
-                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,29 +585,23 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     Text(
                       title,
                       style: TextStyle(
-                        color: theme.textPrimaryColor,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
+                        color: theme.textPrimaryColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Text(
-                      description,
-                      style: TextStyle(
-                        color: theme.textSecondaryColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      subtitle,
+                      style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
                     ),
                   ],
                 ),
               ),
               trailing ??
                   Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: theme.textSecondaryColor.withValues(alpha: 0.4),
-                    size: 18,
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: theme.textSecondaryColor.withOpacity(0.4),
                   ),
             ],
           ),
@@ -702,4 +609,26 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
     );
   }
+}
+
+class _GridPatternPainter extends CustomPainter {
+  final Color color;
+  _GridPatternPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    const step = 28.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPatternPainter old) => old.color != color;
 }
