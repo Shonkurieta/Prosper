@@ -1,7 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'admin_books_screen.dart';
+import 'admin_novells_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_profile_screen.dart';
 import 'package:provider/provider.dart';
@@ -20,9 +19,11 @@ class AdminMainScreen extends StatefulWidget {
 class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _animController;
-  late List<Widget> _screens = []; // Initialize with an empty list
+  late List<Widget> _screens = [];
   String _currentAdminEmail = '';
   int _currentAdminId = -1;
+
+  static const Color accentColor = Color(0xFFD46A4F);
 
   @override
   void initState() {
@@ -32,14 +33,21 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
       vsync: this,
     );
     _loadCurrentAdminData().then((_) {
-      setState(() {
-        _screens = [
-          AdminBooksScreen(token: widget.token, role: widget.role),
-          if (widget.role == 'ADMIN') AdminUsersScreen(token: widget.token, currentAdminEmail: _currentAdminEmail, currentAdminId: _currentAdminId),
-          AdminProfileScreen(token: widget.token, role: widget.role),
-        ];
-      });
-      _animController.forward();
+      if (mounted) {
+        setState(() {
+          _screens = [
+            AdminNovellScreen(token: widget.token, role: widget.role),
+            if (widget.role == 'ADMIN') 
+              AdminUsersScreen(
+                token: widget.token, 
+                currentAdminEmail: _currentAdminEmail, 
+                currentAdminId: _currentAdminId
+              ),
+            AdminProfileScreen(token: widget.token, role: widget.role),
+          ];
+        });
+        _animController.forward();
+      }
     });
   }
 
@@ -51,10 +59,8 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
 
   Future<void> _loadCurrentAdminData() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _currentAdminEmail = prefs.getString('email') ?? '';
-      _currentAdminId = prefs.getInt('id') ?? -1;
-    });
+    _currentAdminEmail = prefs.getString('email') ?? '';
+    _currentAdminId = prefs.getInt('id') ?? -1;
   }
 
   void _onItemTapped(int index) {
@@ -67,113 +73,100 @@ class _AdminMainScreenState extends State<AdminMainScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, theme, child) {
-        return Scaffold(
-          backgroundColor: theme.backgroundColor,
-          body: FadeTransition(
-            opacity: _animController,
-            child: _screens.isNotEmpty ? _screens[_selectedIndex] : const Center(child: CircularProgressIndicator()), // Handle empty _screens initially
+    final theme = context.watch<ThemeProvider>();
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: _screens.isNotEmpty 
+          ? FadeTransition(
+              opacity: _animController,
+              child: _screens[_selectedIndex],
+            )
+          : const Center(child: CircularProgressIndicator(color: accentColor)),
+      bottomNavigationBar: _buildBottomBar(theme),
+    );
+  }
+
+  Widget _buildBottomBar(ThemeProvider theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        border: Border(
+          top: BorderSide(
+            color: theme.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+            width: 0.5,
           ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              border: Border(
-                top: BorderSide(
-                  color: theme.borderColor,
-                  width: 1,
-                ),
+        ),
+      ),
+      child: SafeArea(
+        child: Container(
+          height: 65,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                theme: theme,
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home,
+                label: 'Главная',
+                index: 0,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.shadowColor,
-                  blurRadius: 20,
-                  offset: const Offset(0, -2),
+              if (widget.role == 'ADMIN')
+                _buildNavItem(
+                  theme: theme,
+                  icon: Icons.people_outline_rounded,
+                  activeIcon: Icons.people_rounded,
+                  label: 'Пользователи',
+                  index: 1,
                 ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      theme: theme,
-                      icon: Icons.menu_book_rounded,
-                      label: 'Новеллы',
-                      index: 0,
-                    ),
-                    if (widget.role == 'ADMIN')
-                      _buildNavItem(
-                        theme: theme,
-                        icon: Icons.people_outline,
-                        label: 'Пользователи',
-                        index: 1,
-                      ),
-                    _buildNavItem(
-                      theme: theme,
-                      icon: Icons.person_outline,
-                      label: 'Профиль',
-                      index: widget.role == 'ADMIN' ? 2 : 1,
-                    ),
-                  ],
-                ),
+              _buildNavItem(
+                theme: theme,
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: 'Профиль',
+                index: widget.role == 'ADMIN' ? 2 : 1,
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Widget _buildNavItem({
     required ThemeProvider theme,
     required IconData icon,
+    required IconData activeIcon,
     required String label,
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
+    // Используем accentColor для активного состояния, и основной цвет текста для пассивного
+    final color = isSelected ? accentColor : theme.textPrimaryColor;
 
     return Expanded(
-      child: GestureDetector(
+      child: InkWell(
         onTap: () => _onItemTapped(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isSelected 
-                ? theme.primaryColor.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: isSelected 
-                    ? theme.primaryColor
-                    : theme.textSecondaryColor,
-                size: 26,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: color,
+              size: 28, // Чуть больше размер, как на картинке
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected 
-                      ? theme.primaryColor
-                      : theme.textSecondaryColor,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
