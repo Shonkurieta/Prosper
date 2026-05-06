@@ -3,7 +3,6 @@ import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/reading_progress_service.dart';
 import 'package:prosper/screens/novell/novell_detail_screen.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
-import 'package:prosper/screens/library/history_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -21,14 +20,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final BookService _bookService = BookService();
   final ReadingProgressService _progressService = ReadingProgressService();
   final TextEditingController _searchController = TextEditingController();
-  final PageController _pageController = PageController();
   
-  List<dynamic> _latestChapters = [];
-  List<Map<String, dynamic>> _continueReading = [];
-  List<dynamic> _newBooks = [];
+  List<dynamic> _allBooks = [];
   List<dynamic> _searchResults = [];
+  Map<String, dynamic>? _lastReadData;
+  List<Map<String, dynamic>> _newBooksWithChapters = [];
   bool _isLoading = true;
   bool _isSearching = false;
+  bool _showAllNewBooks = false;
+
+  static const Color accentColor = Color(0xFFD46A4F);
 
   @override
   void initState() {
@@ -36,874 +37,289 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _loadData();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _pageController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
       final books = await _bookService.getAllBooks(widget.token);
       
-      Map<int, Map<String, dynamic>> latestChaptersMap = {};
+      // Последняя прочитанная
+      final progress = await _progressService.getRecentProgress(limit: 1);
+      Map<String, dynamic>? lastData;
+      if (progress.isNotEmpty) {
+        final p = progress.first;
+        final book = books.firstWhere((b) => b['id'] == p['bookId'], orElse: () => null);
+        if (book != null) {
+          final chapters = await _bookService.getBookChapters(widget.token, book['id']);
+          lastData = {
+            'book': book,
+            'chapterOrder': p['chapterOrder'],
+            'totalChapters': chapters.length,
+            'percent': chapters.isNotEmpty ? ((p['chapterOrder'] / chapters.length) * 100).toInt() : 0,
+          };
+        }
+      }
+
+      // Новинки с главами
+      var sorted = List.from(books);
+      sorted.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
       
-      for (var book in books) {
+      List<Map<String, dynamic>> enrichedNewBooks = [];
+      final newsToLoad = sorted.take(6).toList();
+      
+      for (var book in newsToLoad) {
         try {
           final chapters = await _bookService.getBookChapters(widget.token, book['id']);
-          if (chapters.isNotEmpty) {
-            var lastChapter = chapters.reduce((a, b) => 
-              (a['chapterOrder'] ?? 0) > (b['chapterOrder'] ?? 0) ? a : b
-            );
-            
-            latestChaptersMap[book['id']] = {
-              'book': book,
-              'chapter': lastChapter,
-              'chapterId': lastChapter['id'],
-              'chapterOrder': lastChapter['chapterOrder'],
-              'chapterTitle': lastChapter['title'],
-            };
-          }
+          enrichedNewBooks.add({
+            'book': book,
+            'lastChapter': chapters.isNotEmpty ? chapters.last['chapterOrder'] : 0,
+          });
         } catch (e) {
-          debugPrint('Error loading chapters for book ${book['id']}: $e');
+          enrichedNewBooks.add({'book': book, 'lastChapter': 0});
         }
       }
-      
-      var sortedChapters = latestChaptersMap.values.toList();
-      sortedChapters.sort((a, b) => (b['chapterId'] as int).compareTo(a['chapterId'] as int));
-      
-      var recentBooks = List<dynamic>.from(books);
-      recentBooks.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
-      
-      // Загружаем прогресс чтения пользователя
-      final continueReading = await _progressService.getRecentProgress(limit: 10);
-      
-      // Обогащаем данные прогресса информацией о книге
-      final enrichedProgress = <Map<String, dynamic>>[];
-      final now = DateTime.now().millisecondsSinceEpoch;
-      const maxAgeHours = 24; // Максимальный возраст в часах
-      const maxAgeMs = maxAgeHours * 60 * 60 * 1000; // Переводим в миллисекунды
-      
-      for (var progress in continueReading) {
-        try {
-          final timestamp = progress['timestamp'] as int;
-          
-          // Пропускаем прогресс старше 24 часов
-          if (now - timestamp > maxAgeMs) {
-            continue;
-          }
-          
-          final bookId = progress['bookId'] as int;
-          final book = books.firstWhere(
-            (b) => b['id'] == bookId,
-            orElse: () => null,
-          );
-          
-          if (book != null) {
-            // Загружаем главы для получения названия главы
-            final chapters = await _bookService.getBookChapters(widget.token, bookId);
-            final chapter = chapters.firstWhere(
-              (ch) => ch['chapterOrder'] == progress['chapterOrder'],
-              orElse: () => null,
-            );
-            
-            enrichedProgress.add({
-              'book': book,
-              'chapterOrder': progress['chapterOrder'],
-              'chapterTitle': chapter?['title'] ?? 'Глава ${progress['chapterOrder']}',
-              'timestamp': timestamp,
-            });
-          }
-        } catch (e) {
-          debugPrint('Error enriching progress for book ${progress['bookId']}: $e');
-        }
-      }
-      
+
       setState(() {
-        _latestChapters = sortedChapters.take(27).toList();
-        _continueReading = enrichedProgress;
-        _newBooks = recentBooks.take(9).toList();
+        _allBooks = books;
+        _lastReadData = lastData;
+        _newBooksWithChapters = enrichedNewBooks;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      if (mounted) {
-        final theme = context.read<ThemeProvider>();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка загрузки: $e'),
-            backgroundColor: theme.errorColor,
-          ),
-        );
-      }
     }
   }
 
-  Future<void> _searchBooks(String query) async {
+  void _onSearch(String query) async {
     if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isSearching = false;
-      });
+      setState(() { _searchResults = []; _isSearching = false; });
       return;
     }
-
     setState(() => _isSearching = true);
     try {
       final results = await _bookService.searchBooks(widget.token, query);
-      setState(() {
-        _searchResults = results;
-        _isSearching = false;
-      });
+      setState(() { _searchResults = results; _isSearching = false; });
     } catch (e) {
       setState(() => _isSearching = false);
     }
   }
 
-  void _openChapter(int bookId, int chapterOrder) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ReaderScreen(
-          token: widget.token,
-          bookId: bookId,
-          chapterOrder: chapterOrder,
-        ),
-      ),
-    ).then((_) {
-      // Обновляем данные после возврата из ридера
-      _loadData();
-    });
-  }
-
-  void _openBookDetail(int bookId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BookDetailScreen(
-          token: widget.token,
-          bookId: bookId,
-        ),
-      ),
-    );
-  }
-
-  String _getTimeAgo(int timestamp) {
-    final now = DateTime.now();
-    final readTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final difference = now.difference(readTime);
-    
-    if (difference.inMinutes < 1) {
-      return 'только что';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} мин назад';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} ч назад';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} дн назад';
-    } else {
-      return '${(difference.inDays / 7).floor()} нед назад';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, theme, child) {
-        return Scaffold(
-          backgroundColor: theme.backgroundColor,
-          body: RefreshIndicator(
-            onRefresh: _loadData,
-            color: theme.primaryColor,
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  floating: true,
-                  snap: true,
-                  backgroundColor: theme.backgroundColor,
-                  elevation: 0,
-                  expandedHeight: 140,
-                  collapsedHeight: 140,
-                  automaticallyImplyLeading: false, // Отключаем стрелку назад
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 50, 20, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Главная',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: theme.textPrimaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: theme.cardColor,
-                              borderRadius: BorderRadius.circular(14),
-                              border: theme.isDarkMode 
-                                  ? Border.all(color: theme.borderColor, width: 1.5)
-                                  : null,
-                              boxShadow: [theme.cardShadow],
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: _searchBooks,
-                              style: TextStyle(
-                                color: theme.textPrimaryColor,
-                                fontSize: 15,
-                              ),
-                              decoration: theme.getInputDecoration(
-                                hintText: 'Быстрый поиск...',
-                                prefixIcon: Icons.search_rounded,
-                                suffixIcon: _searchController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: Icon(
-                                          Icons.close_rounded,
-                                          color: theme.textSecondaryColor,
-                                          size: 20,
-                                        ),
-                                        onPressed: () {
-                                          _searchController.clear();
-                                          _searchBooks('');
-                                        },
-                                      )
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                if (_isSearching || _searchResults.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.all(20),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final book = _searchResults[index];
-                          return _buildNewBookItem(book, theme);
-                        },
-                        childCount: _searchResults.length,
-                      ),
-                    ),
-                  )
-                else if (_isLoading)
-                  SliverFillRemaining(
-                    child: Center(
-                      child: CircularProgressIndicator(color: theme.primaryColor),
-                    ),
-                  )
-                else ...[
-                  // Последние главы
-                  SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: theme.primaryGradient,
-                                  ),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Последние главы',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: theme.textPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: _latestChapters.length,
-                            itemBuilder: (context, index) {
-                              final item = _latestChapters[index];
-                              return Padding(
-                                padding: EdgeInsets.only(
-                                  right: index < _latestChapters.length - 1 ? 12 : 0,
-                                ),
-                                child: _buildChapterCard(item, theme),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SliverToBoxAdapter(child: SizedBox(height: 32)),
-                  
-                  // Продолжить чтение
-                  if (_continueReading.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 4,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: theme.primaryGradient,
-                                    ),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Продолжить чтение',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: theme.textPrimaryColor,
-                                  ),
-                                ),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => HistoryScreen(token: widget.token),
-                                      ),
-                                    ).then((_) => _loadData());
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: theme.primaryColor,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Все',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.arrow_forward_ios_rounded, size: 12),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            height: 150,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: _continueReading.length,
-                              itemBuilder: (context, index) {
-                                final item = _continueReading[index];
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    right: index < _continueReading.length - 1 ? 12 : 0,
-                                  ),
-                                  child: _buildContinueReadingCard(item, theme),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  if (_continueReading.isNotEmpty)
-                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-                  // Новинки
-                  SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: theme.primaryGradient,
-                                  ),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Новинки',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: theme.textPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          height: 300,
-                          child: PageView.builder(
-                            controller: _pageController,
-                            padEnds: false,
-                            itemCount: 3,
-                            itemBuilder: (context, pageIndex) {
-                              return Padding(
-                                padding: EdgeInsets.only(
-                                  left: pageIndex == 0 ? 20 : 6,
-                                  right: pageIndex == 2 ? 20 : 6,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: List.generate(3, (rowIndex) {
-                                    final bookIndex = pageIndex * 3 + rowIndex;
-                                    if (bookIndex >= _newBooks.length) {
-                                      return const SizedBox(height: 92);
-                                    }
-                                    final book = _newBooks[bookIndex];
-                                    return Padding(
-                                      padding: EdgeInsets.only(
-                                        bottom: rowIndex < 2 ? 12 : 0,
-                                      ),
-                                      child: _buildCompactNewBookCard(book, theme),
-                                    );
-                                  }),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChapterCard(Map<String, dynamic> item, ThemeProvider theme) {
-    final book = item['book'];
-    final chapterOrder = item['chapterOrder'];
-    final bookId = book['id'];
-
-    return GestureDetector(
-      onTap: () => _openChapter(bookId, chapterOrder),
-      child: Container(
-        width: 120,
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: theme.isDarkMode 
-              ? Border.all(color: theme.borderColor, width: 1)
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
-                    ? Image.network(
-                        ApiConstants.getCoverUrl(book['coverUrl']),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
-                      )
-                    : _buildPlaceholder(theme),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book['title'] ?? 'Без названия',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: theme.textPrimaryColor,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Гл. $chapterOrder',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContinueReadingCard(Map<String, dynamic> item, ThemeProvider theme) {
-    final book = item['book'];
-    final chapterOrder = item['chapterOrder'];
-    final chapterTitle = item['chapterTitle'] ?? 'Глава $chapterOrder';
-    final timestamp = item['timestamp'] as int;
-    final bookId = book['id'];
-
-    return GestureDetector(
-      onTap: () => _openChapter(bookId, chapterOrder),
-      child: Container(
-        width: 300,
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: theme.isDarkMode 
-              ? Border.all(color: theme.borderColor, width: 1.5)
-              : null,
-          boxShadow: [theme.cardShadow],
-        ),
-        child: Row(
-          children: [
-            // Cover
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-              child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
-                  ? Image.network(
-                      ApiConstants.getCoverUrl(book['coverUrl']),
-                      width: 100,
-                      height: 150,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildMediumPlaceholder(theme),
-                    )
-                  : _buildMediumPlaceholder(theme),
-            ),
-            
-            // Info
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
+    final theme = context.watch<ThemeProvider>();
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          color: accentColor,
+          child: _isLoading 
+            ? const Center(child: CircularProgressIndicator(color: accentColor))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const SizedBox(height: 16),
                     Text(
-                      book['title'] ?? 'Без названия',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: theme.textPrimaryColor,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      'Главная',
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: theme.textPrimaryColor),
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        chapterTitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: theme.primaryColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time_rounded,
-                          size: 14,
-                          color: theme.textSecondaryColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _getTimeAgo(timestamp),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.textSecondaryColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                    const SizedBox(height: 16),
+                    _buildSearchBar(theme),
+                    const SizedBox(height: 24),
+                    
+                    if (_isSearching || _searchResults.isNotEmpty) ...[
+                      _buildSectionHeader(theme, 'Результаты поиска', showAll: false),
+                      const SizedBox(height: 16),
+                      _buildSearchResults(theme),
+                    ] else ...[
+                      if (_lastReadData != null && !_showAllNewBooks) ...[
+                        _buildSectionHeader(theme, 'Продолжить чтение'),
+                        const SizedBox(height: 16),
+                        _buildContinueReadingCard(theme, _lastReadData!),
+                        const SizedBox(height: 28),
                       ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.play_circle_filled_rounded,
-                          size: 16,
-                          color: theme.primaryColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Продолжить',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                      _buildSectionHeader(
+                        theme, 
+                        _showAllNewBooks ? 'Все новинки' : 'Новинки',
+                        onAllTap: () => setState(() => _showAllNewBooks = !_showAllNewBooks),
+                        isAllActive: _showAllNewBooks
+                      ),
+                      const SizedBox(height: 16),
+                      _showAllNewBooks ? _buildNewBooksList(theme) : _buildNewBooksGrid(theme),
+                    ],
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildCompactNewBookCard(Map<String, dynamic> book, ThemeProvider theme) {
-    final bookId = book['id'];
-    
-    return GestureDetector(
-      onTap: () => _openBookDetail(bookId),
-      child: Container(
-        width: double.infinity,
-        height: 92,
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: theme.isDarkMode 
-              ? Border.all(color: theme.borderColor, width: 1.5)
-              : null,
-          boxShadow: [theme.cardShadow],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-              ),
-              child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
-                  ? Image.network(
-                      ApiConstants.getCoverUrl(book['coverUrl']),
-                      width: 65,
-                      height: 92,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildCompactPlaceholder(theme),
-                    )
-                  : _buildCompactPlaceholder(theme),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      book['title'] ?? 'Без названия',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textPrimaryColor,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      book['author'] ?? 'Неизвестный автор',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.textSecondaryColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNewBookItem(Map<String, dynamic> book, ThemeProvider theme) {
-    final bookId = book['id'];
-    
+  Widget _buildSearchBar(ThemeProvider theme) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: theme.isDarkMode 
-            ? Border.all(color: theme.borderColor, width: 1.5)
-            : null,
-        boxShadow: [theme.cardShadow],
+        border: Border.all(color: accentColor.withOpacity(0.3)),
       ),
-      child: InkWell(
-        onTap: () => _openBookDetail(bookId),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: book['coverUrl'] != null && book['coverUrl'].toString().isNotEmpty
-                    ? Image.network(
-                        ApiConstants.getCoverUrl(book['coverUrl']),
-                        width: 50,
-                        height: 70,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildSmallPlaceholder(theme),
-                      )
-                    : _buildSmallPlaceholder(theme),
+      child: Row(
+        children: [
+          const Icon(Icons.search, color: accentColor, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearch,
+              style: TextStyle(color: theme.textPrimaryColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Поиск новелл...',
+                border: InputBorder.none,
+                hintStyle: TextStyle(color: theme.textSecondaryColor.withOpacity(0.4), fontSize: 14),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      book['title'] ?? 'Без названия',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textPrimaryColor,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      book['author'] ?? 'Неизвестный автор',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.textSecondaryColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildPlaceholder(ThemeProvider theme) {
-    return Container(
-      color: theme.primaryColor.withOpacity(0.1),
-      child: Icon(
-        Icons.book,
-        color: theme.primaryColor,
-        size: 30,
+  Widget _buildSectionHeader(ThemeProvider theme, String title, {VoidCallback? onAllTap, bool isAllActive = false, bool showAll = true}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textPrimaryColor)),
+        if (showAll)
+          GestureDetector(
+            onTap: onAllTap,
+            child: Row(
+              children: [
+                Text(
+                  isAllActive ? 'Назад' : 'Все',
+                  style: const TextStyle(color: accentColor, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 2),
+                Icon(isAllActive ? Icons.close : Icons.chevron_right, color: accentColor, size: 16),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildContinueReadingCard(ThemeProvider theme, Map<String, dynamic> data) {
+    final book = data['book'];
+    final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 110, height: 165,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4))]),
+            child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder(size: 30))),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(book['title'] ?? '', maxLines: 2, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textPrimaryColor)),
+                const SizedBox(height: 4),
+                Text(book['author'] ?? '', style: TextStyle(fontSize: 12, color: theme.textSecondaryColor)),
+                const SizedBox(height: 20),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('Глава ${data['chapterOrder']} из ${data['totalChapters']}', style: TextStyle(fontSize: 11, color: theme.textSecondaryColor)),
+                  Text('${data['percent']}%', style: TextStyle(fontSize: 11, color: theme.textSecondaryColor)),
+                ]),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(value: data['percent'] / 100, backgroundColor: accentColor.withOpacity(0.1), valueColor: const AlwaysStoppedAnimation(accentColor), minHeight: 2),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReaderScreen(token: widget.token, bookId: book['id'], chapterOrder: data['chapterOrder']))),
+                  child: const Row(children: [Text('Продолжить чтение', style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 13)), SizedBox(width: 4), Icon(Icons.chevron_right, color: accentColor, size: 16)]),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMediumPlaceholder(ThemeProvider theme) {
-    return Container(
-      width: 100,
-      height: 150,
-      color: theme.primaryColor.withOpacity(0.1),
-      child: Icon(
-        Icons.book,
-        color: theme.primaryColor,
-        size: 40,
+  Widget _buildNewBooksGrid(ThemeProvider theme) {
+    final displayList = _newBooksWithChapters.take(3).toList();
+    return GridView.builder(
+      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: 0.55, crossAxisSpacing: 12, mainAxisSpacing: 12),
+      itemCount: displayList.length,
+      itemBuilder: (context, index) => _buildBookItemGrid(theme, displayList[index]['book']),
+    );
+  }
+
+  Widget _buildNewBooksList(ThemeProvider theme) {
+    return ListView.builder(
+      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      itemCount: _newBooksWithChapters.length,
+      itemBuilder: (context, index) => _buildBookItemList(theme, _newBooksWithChapters[index]),
+    );
+  }
+
+  Widget _buildSearchResults(ThemeProvider theme) {
+    return GridView.builder(
+      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: 0.55, crossAxisSpacing: 12, mainAxisSpacing: 12),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) => _buildBookItemGrid(theme, _searchResults[index]),
+    );
+  }
+
+  Widget _buildBookItemGrid(ThemeProvider theme, dynamic book) {
+    final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())))),
+        const SizedBox(height: 8),
+        Text(book['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textPrimaryColor)),
+        Text(book['author'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: theme.textSecondaryColor)),
+      ]),
+    );
+  }
+
+  Widget _buildBookItemList(ThemeProvider theme, Map<String, dynamic> data) {
+    final book = data['book'];
+    final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']))),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))]),
+        child: Row(children: [
+          ClipRRect(borderRadius: BorderRadius.circular(6), child: SizedBox(width: 50, height: 75, child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder()))),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(book['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textPrimaryColor)),
+            const SizedBox(height: 4),
+            Text(book['author'] ?? '', style: TextStyle(color: theme.textSecondaryColor, fontSize: 12)),
+          ])),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(color: accentColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            child: Text('Глава ${data['lastChapter']}', style: const TextStyle(color: accentColor, fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ]),
       ),
     );
   }
 
-  Widget _buildSmallPlaceholder(ThemeProvider theme) {
-    return Container(
-      width: 50,
-      height: 70,
-      color: theme.primaryColor.withOpacity(0.1),
-      child: Icon(
-        Icons.book,
-        color: theme.primaryColor,
-        size: 20,
-      ),
-    );
-  }
-
-  Widget _buildCompactPlaceholder(ThemeProvider theme) {
-    return Container(
-      width: 65,
-      height: 92,
-      color: theme.primaryColor.withOpacity(0.1),
-      child: Icon(
-        Icons.book,
-        color: theme.primaryColor,
-        size: 30,
-      ),
-    );
+  Widget _buildPlaceholder({double size = 20}) {
+    return Container(color: accentColor.withOpacity(0.05), child: Center(child: Icon(Icons.book_rounded, color: accentColor.withOpacity(0.3), size: size)));
   }
 }
