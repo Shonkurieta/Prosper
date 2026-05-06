@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:prosper/screens/admin/manage_books_screen.dart';
-import 'package:prosper/screens/admin/manage_users_screen.dart';
+import 'package:prosper/screens/admin/manage_novells_screen.dart';
 import 'package:prosper/screens/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -26,8 +25,7 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
       vsync: this,
     );
     _screens = [
-      ManageBooksScreen(token: widget.token),
-      ManageUsersScreen(token: widget.token),
+      ManageNovellsScreen(token: widget.token),
       ProfileScreen(token: widget.token),
     ];
     _animController.forward();

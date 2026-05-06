@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/reading_progress_service.dart';
-import 'package:prosper/screens/book/book_detail_screen.dart';
+import 'package:prosper/screens/novell/novell_detail_screen.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';

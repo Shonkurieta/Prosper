@@ -8,17 +8,17 @@ import 'package:prosper/models/book.dart';
 import 'package:prosper/models/genre.dart';
 import 'package:prosper/constants/api_constants.dart';
 
-class EditBookScreen extends StatefulWidget {
+class EditNovellScreen extends StatefulWidget {
   final String token;
   final Book book;
 
-  const EditBookScreen({super.key, required this.token, required this.book});
+  const EditNovellScreen({super.key, required this.token, required this.book});
 
   @override
-  State<EditBookScreen> createState() => _EditBookScreenState();
+  State<EditNovellScreen> createState() => _EditNovellScreenState();
 }
 
-class _EditBookScreenState extends State<EditBookScreen> with SingleTickerProviderStateMixin {
+class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _authorController;
@@ -84,7 +84,7 @@ class _EditBookScreenState extends State<EditBookScreen> with SingleTickerProvid
     }
   }
 
-  // ✅ Новый метод — диалог с чекбоксами как в AddBookScreen
+  // ✅ Новый метод — диалог с чекбоксами как в AddNovellScreen
   void _showGenrePicker() {
     showDialog(
       context: context,

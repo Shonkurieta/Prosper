@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/admin_service.dart';
-import 'package:prosper/screens/admin/add_book_screen.dart';
-import 'package:prosper/screens/admin/edit_book_screen.dart';
+import 'package:prosper/screens/admin/add_novell_screen.dart';
+import 'package:prosper/screens/admin/edit_novell_screen.dart';
 import 'package:prosper/models/book.dart';
 import 'package:prosper/screens/admin/manage_chapters_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
-class ManageBooksScreen extends StatefulWidget {
+class ManageNovellsScreen extends StatefulWidget {
   final String token;
-  const ManageBooksScreen({super.key, required this.token});
+  const ManageNovellsScreen({super.key, required this.token});
 
   @override
-  State<ManageBooksScreen> createState() => _ManageBooksScreenState();
+  State<ManageNovellsScreen> createState() => _ManageNovellsScreenState();
 }
 
-class _ManageBooksScreenState extends State<ManageBooksScreen> {
+class _ManageNovellsScreenState extends State<ManageNovellsScreen> {
   late Future<List<Book>> _booksFuture;
   int _bookCount = 0;
 
@@ -105,7 +105,7 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> {
 	                        constraints: const BoxConstraints(),
 	                        icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
 	                        onPressed: () async {
-	                          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditBookScreen(token: widget.token, book: book)));
+	                          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditNovellScreen(token: widget.token, book: book)));
 	                          if (result == true) _refreshBooks();
 	                        },
 	                      ),
@@ -126,7 +126,7 @@ class _ManageBooksScreenState extends State<ManageBooksScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddBookScreen(token: widget.token)));
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddNovellScreen(token: widget.token)));
           if (result == true) _refreshBooks();
         },
         backgroundColor: theme.primaryColor,

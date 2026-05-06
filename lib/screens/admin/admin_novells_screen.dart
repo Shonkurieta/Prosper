@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
 import '../../constants/api_constants.dart';
-import 'add_book_screen.dart';
-import 'edit_book_screen.dart';
+import 'add_novell_screen.dart';
+import 'edit_novell_screen.dart';
 import 'manage_chapters_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/models/book.dart';
 
-class AdminBooksScreen extends StatefulWidget {
+class AdminNovellScreen extends StatefulWidget {
   final String token;
   final String role;
 
-  const AdminBooksScreen({super.key, required this.token, required this.role});
+  const AdminNovellScreen({super.key, required this.token, required this.role});
 
   @override
-  State<AdminBooksScreen> createState() => _AdminBooksScreenState();
+  State<AdminNovellScreen> createState() => _AdminNovellScreenState();
 }
 
-class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerProviderStateMixin {
+class _AdminNovellScreenState extends State<AdminNovellScreen> with SingleTickerProviderStateMixin {
   late AdminService adminService;
   List<dynamic> books = [];
   List<dynamic> filteredBooks = [];
@@ -122,7 +122,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
   Future<void> _goToAddBook() async {
     final added = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => AddBookScreen(token: widget.token)),
+      MaterialPageRoute(builder: (_) => AddNovellScreen(token: widget.token)),
     );
     if (added == true) _loadBooks();
   }
@@ -131,7 +131,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
     final updated = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EditBookScreen(
+        builder: (_) => EditNovellScreen(
           token: widget.token,
           book: Book.fromJson(book as Map<String, dynamic>),
         ),
@@ -151,6 +151,11 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
         ),
       ),
     );
+  }
+
+  String _getCoverUrl(String? coverUrl) {
+    if (coverUrl == null || coverUrl.isEmpty) return '';
+    return ApiConstants.getCoverUrl(coverUrl);
   }
 
   @override
@@ -249,9 +254,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
   }
 
   Widget _buildBookGridItem(dynamic book, ThemeProvider theme) {
-    final coverUrl = book['coverUrl'] != null 
-        ? '${ApiConstants.baseUrl}${book['coverUrl']}' 
-        : null;
+    final coverUrl = _getCoverUrl(book['coverUrl']);
     final title = book['title'] ?? 'Без названия';
     final author = book['author'] ?? 'Автор неизвестен';
 
@@ -264,12 +267,6 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(
-                  image: coverUrl != null 
-                      ? NetworkImage(coverUrl) 
-                      : const AssetImage('assets/images/no_cover.png') as ImageProvider,
-                  fit: BoxFit.cover,
-                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -277,6 +274,29 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
                     offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: coverUrl.isNotEmpty
+                    ? Image.network(
+                        coverUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _buildPlaceholderCover(),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 2,
+                              color: accentColor,
+                            ),
+                          );
+                        },
+                      )
+                    : _buildPlaceholderCover(),
               ),
             ),
           ),
@@ -294,6 +314,28 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
             style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderCover() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accentColor.withOpacity(0.15),
+            accentColor.withOpacity(0.05),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.book_rounded,
+          size: 48,
+          color: accentColor,
+        ),
       ),
     );
   }
