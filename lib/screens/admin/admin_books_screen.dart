@@ -27,6 +27,8 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
   final TextEditingController _searchController = TextEditingController();
   bool isSearching = false;
 
+  static const Color accentColor = Color(0xFFD46A4F);
+
   @override
   void initState() {
     super.initState();
@@ -74,24 +76,21 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
     } catch (e) {
       setState(() => loading = false);
       if (mounted) {
-        final theme = context.read<ThemeProvider>();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Ошибка загрузки: $e')),
-              ],
-            ),
-            backgroundColor: theme.errorColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
-        );
+        _showSnackBar('Ошибка загрузки: $e', Colors.redAccent);
       }
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   Future<void> _deleteBook(int id, String title) async {
@@ -100,87 +99,30 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: theme.cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Удалить новеллу?',
-          style: TextStyle(
-            color: theme.textPrimaryColor,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          'Вы уверены, что хотите удалить "$title"?\nЭто действие нельзя отменить.',
-          style: TextStyle(
-            color: theme.textSecondaryColor,
-          ),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Удалить новеллу?'),
+        content: Text('Вы уверены, что хотите удалить "$title"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Отмена',
-              style: TextStyle(color: theme.textSecondaryColor),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.errorColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Удалить'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена', style: TextStyle(color: Colors.grey))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Удалить', style: TextStyle(color: accentColor))),
         ],
       ),
     );
 
     if (confirm != true) return;
-
     try {
       await adminService.deleteBook(id);
       _loadBooks();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Новелла удалена'),
-              ],
-            ),
-            backgroundColor: theme.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
-        );
-      }
+      _showSnackBar('Новелла удалена', accentColor);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка: $e'),
-            backgroundColor: theme.errorColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
-        );
-      }
+      _showSnackBar('Ошибка: $e', Colors.redAccent);
     }
   }
 
   Future<void> _goToAddBook() async {
     final added = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => AddBookScreen(token: widget.token),
-      ),
+      MaterialPageRoute(builder: (_) => AddBookScreen(token: widget.token)),
     );
     if (added == true) _loadBooks();
   }
@@ -195,27 +137,7 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
         ),
       ),
     );
-    if (updated == true) {
-      _loadBooks();
-      if (mounted) {
-        final theme = context.read<ThemeProvider>();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Новелла обновлена'),
-              ],
-            ),
-            backgroundColor: theme.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
-        );
-      }
-    }
+    if (updated == true) _loadBooks();
   }
 
   void _openChapters(dynamic book) {
@@ -231,10 +153,152 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
     );
   }
 
-  void _showBookOptions(dynamic book) {
-    final theme = context.read<ThemeProvider>();
-    final title = book['title'] ?? 'Без названия';
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(theme),
+            _buildSearchBar(theme),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Все новеллы',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
+                  ),
+                  TextButton.icon(
+                    onPressed: _goToAddBook,
+                    icon: const Icon(Icons.add, size: 18, color: accentColor),
+                    label: const Text('Добавить', style: TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: loading 
+                ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(accentColor)))
+                : GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.65,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount: filteredBooks.length,
+                    itemBuilder: (context, index) {
+                      final book = filteredBooks[index];
+                      return FadeTransition(
+                        opacity: _animController,
+                        child: _buildBookGridItem(book, theme),
+                      );
+                    },
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildHeader(ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      child: Text(
+        'Библиотека',
+        style: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          letterSpacing: -1,
+          color: theme.textPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        height: 45,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accentColor.withOpacity(0.5), width: 1),
+        ),
+        child: TextField(
+          controller: _searchController,
+          style: TextStyle(color: theme.textPrimaryColor),
+          decoration: InputDecoration(
+            hintText: 'Поиск новелл...',
+            hintStyle: TextStyle(color: theme.textSecondaryColor.withOpacity(0.5), fontSize: 14),
+            prefixIcon: Icon(Icons.search, color: theme.textPrimaryColor, size: 20),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookGridItem(dynamic book, ThemeProvider theme) {
+    final coverUrl = book['coverUrl'] != null 
+        ? '${ApiConstants.baseUrl}${book['coverUrl']}' 
+        : null;
+    final title = book['title'] ?? 'Без названия';
+    final author = book['author'] ?? 'Автор неизвестен';
+
+    return GestureDetector(
+      onTap: () => _showBookOptions(book, theme),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                image: DecorationImage(
+                  image: coverUrl != null 
+                      ? NetworkImage(coverUrl) 
+                      : const AssetImage('assets/images/no_cover.png') as ImageProvider,
+                  fit: BoxFit.cover,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
+          ),
+          Text(
+            author,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBookOptions(dynamic book, ThemeProvider theme) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -247,603 +311,31 @@ class _AdminBooksScreenState extends State<AdminBooksScreen> with SingleTickerPr
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               width: 40,
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: theme.textSecondaryColor.withValues(alpha: 0.3),
+                color: theme.textSecondaryColor.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textPrimaryColor,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-            const Divider(),
-
-            // Chapters
             ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: theme.getActionColor('chapters').withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.menu_book_rounded,
-                  color: theme.getActionColor('chapters'),
-                  size: 24,
-                ),
-              ),
-              title: Text(
-                'Управление главами',
-                style: TextStyle(
-                  color: theme.textPrimaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                'Добавить, редактировать, удалить главы',
-                style: TextStyle(
-                  color: theme.textSecondaryColor,
-                  fontSize: 13,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _openChapters(book);
-              },
+              leading: const Icon(Icons.menu_book_rounded, color: accentColor),
+              title: Text('Управление главами', style: TextStyle(color: theme.textPrimaryColor)),
+              onTap: () { Navigator.pop(context); _openChapters(book); },
             ),
-
-            // Edit
             ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: theme.getActionColor('edit').withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.edit_outlined,
-                  color: theme.getActionColor('edit'),
-                  size: 24,
-                ),
-              ),
-              title: Text(
-                'Редактировать новеллу',
-                style: TextStyle(
-                  color: theme.textPrimaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                'Изменить название, автора, обложку',
-                style: TextStyle(
-                  color: theme.textSecondaryColor,
-                  fontSize: 13,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _goToEditBook(book);
-              },
+              leading: const Icon(Icons.edit_outlined, color: Colors.blue),
+              title: Text('Редактировать', style: TextStyle(color: theme.textPrimaryColor)),
+              onTap: () { Navigator.pop(context); _goToEditBook(book); },
             ),
-
-            // Delete
             ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: theme.errorColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.delete_outline,
-                  color: theme.errorColor,
-                  size: 24,
-                ),
-              ),
-              title: Text(
-                'Удалить новеллу',
-                style: TextStyle(
-                  color: theme.errorColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                'Безвозвратно удалить новеллу и все главы',
-                style: TextStyle(
-                  color: theme.textSecondaryColor,
-                  fontSize: 13,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteBook(book['id'], title);
-              },
-            ),
-
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getCoverUrl(String? coverUrl) {
-    if (coverUrl == null || coverUrl.isEmpty) return '';
-    if (coverUrl.startsWith('http')) return coverUrl;
-    final baseUrl = ApiConstants.baseUrl.replaceAll('/api', '');
-    return '$baseUrl/api/admin/covers/${coverUrl.split('/').last}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    
-    return Consumer<ThemeProvider>(
-      builder: (context, theme, child) {
-        return Scaffold(
-          backgroundColor: theme.backgroundColor,
-          body: Stack(
-            children: [
-              // Decorative background shapes
-              Positioned(
-                top: -size.height * 0.1,
-                right: -size.width * 0.2,
-                child: Container(
-                  width: size.width * 0.6,
-                  height: size.width * 0.6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle1,
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -size.height * 0.15,
-                left: -size.width * 0.3,
-                child: Container(
-                  width: size.width * 0.8,
-                  height: size.width * 0.8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle2,
-                  ),
-                ),
-              ),
-              
-              SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          if (!isSearching) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.auto_stories_rounded,
-                                color: theme.primaryColor,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                          ],
-                          Expanded(
-                            child: isSearching
-                                ? _buildSearchField(theme)
-                                : Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Новеллы',
-                                        style: TextStyle(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.w900,
-                                          color: theme.textPrimaryColor,
-                                          letterSpacing: 0.5,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        'Управление библиотекой',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: theme.textSecondaryColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: isSearching
-                                  ? theme.primaryColor.withValues(alpha: 0.15)
-                                  : theme.cardColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                isSearching ? Icons.close : Icons.search,
-                                color: isSearching
-                                    ? theme.primaryColor
-                                    : theme.textSecondaryColor,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  isSearching = !isSearching;
-                                  if (!isSearching) {
-                                    _searchController.clear();
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Search results indicator
-                    if (isSearching && _searchController.text.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          'Найдено: ${filteredBooks.length}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: theme.textSecondaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    // Content
-                    Expanded(
-                      child: loading
-                          ? Center(
-                              child: CircularProgressIndicator(
-                                color: theme.primaryColor,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : filteredBooks.isEmpty
-                              ? _buildEmptyState(theme)
-                              : RefreshIndicator(
-                                  onRefresh: _loadBooks,
-                                  color: theme.primaryColor,
-                                  child: GridView.builder(
-                                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      childAspectRatio: 0.62,
-                                      crossAxisSpacing: 16,
-                                      mainAxisSpacing: 16,
-                                    ),
-                                    itemCount: filteredBooks.length,
-                                    itemBuilder: (context, index) {
-                                      return TweenAnimationBuilder(
-                                        duration: Duration(milliseconds: 300 + (index * 50)),
-                                        tween: Tween<double>(begin: 0, end: 1),
-                                        builder: (context, double value, child) {
-                                          return Transform.translate(
-                                            offset: Offset(0, 20 * (1 - value)),
-                                            child: Opacity(
-                                              opacity: value,
-                                              child: _buildBookCard(filteredBooks[index], theme),
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          floatingActionButton: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: FloatingActionButton(
-              onPressed: _goToAddBook,
-              backgroundColor: theme.primaryColor,
-              elevation: 0,
-              child: const Icon(Icons.add_rounded, size: 32, color: Colors.white),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSearchField(ThemeProvider theme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        autofocus: true,
-        style: TextStyle(
-          color: theme.textPrimaryColor,
-          fontSize: 16,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Поиск по названию или автору...',
-          hintStyle: TextStyle(
-            color: theme.textSecondaryColor.withValues(alpha: 0.5),
-          ),
-          prefixIcon: Icon(
-            Icons.search,
-            color: theme.textSecondaryColor,
-          ),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    color: theme.textSecondaryColor,
-                  ),
-                  onPressed: () {
-                    _searchController.clear();
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(ThemeProvider theme) {
-    final isFiltering = _searchController.text.isNotEmpty;
-    
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.primaryColor.withValues(alpha: 0.1),
-            ),
-            child: Icon(
-              isFiltering ? Icons.search_off : Icons.book_outlined,
-              size: 80,
-              color: theme.textSecondaryColor.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            isFiltering ? 'Ничего не найдено' : 'Нет новелл',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: theme.textPrimaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isFiltering
-                ? 'Попробуйте изменить запрос'
-                : 'Добавьте первую новеллу в библиотеку',
-            style: TextStyle(
-              fontSize: 15,
-              color: theme.textSecondaryColor,
-            ),
-          ),
-          if (isFiltering) ...[
-            const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: () {
-                _searchController.clear();
-              },
-              icon: Icon(Icons.clear, color: theme.primaryColor),
-              label: Text(
-                'Очистить поиск',
-                style: TextStyle(color: theme.primaryColor),
-              ),
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Удалить', style: TextStyle(color: Colors.red)),
+              onTap: () { Navigator.pop(context); _deleteBook(book['id'], book['title']); },
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBookCard(dynamic book, ThemeProvider theme) {
-    final coverUrl = _getCoverUrl(book['coverUrl']);
-    final title = book['title'] ?? 'Без названия';
-    final author = book['author'] ?? 'Неизвестный автор';
-
-    return GestureDetector(
-      onTap: () => _showBookOptions(book),
-      child: Container(
-        decoration: theme.getCardDecoration(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Cover image
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: theme.primaryColor.withValues(alpha: 0.1),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: coverUrl.isNotEmpty
-                      ? Image.network(
-                          coverUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildPlaceholderCover(theme);
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                                strokeWidth: 2,
-                                color: theme.primaryColor,
-                              ),
-                            );
-                          },
-                        )
-                      : _buildPlaceholderCover(theme),
-                ),
-              ),
-            ),
-
-            // Book info
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: theme.textPrimaryColor,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    author,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.textSecondaryColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  // Action button with adaptive colors
-                  SizedBox(
-                    width: double.infinity,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: theme.getManagementButtonGradient(),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _showBookOptions(book),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.more_horiz_rounded,
-                                  color: theme.getManagementButtonTextColor(),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    'Управление',
-                                    style: TextStyle(
-                                      color: theme.getManagementButtonTextColor(),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderCover(ThemeProvider theme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.primaryColor.withValues(alpha: 0.1),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.book_rounded,
-          size: 60,
-          color: theme.primaryColor,
         ),
       ),
     );
