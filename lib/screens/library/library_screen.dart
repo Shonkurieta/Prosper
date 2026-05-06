@@ -3,6 +3,7 @@ import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/reading_progress_service.dart';
 import 'package:prosper/screens/novell/novell_detail_screen.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
+import 'package:prosper/screens/library/history_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -385,6 +386,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
                                     color: theme.textPrimaryColor,
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => HistoryScreen(token: widget.token),
+                                      ),
+                                    ).then((_) => _loadData());
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: theme.primaryColor,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Все',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Icon(Icons.arrow_forward_ios_rounded, size: 12),
+                                    ],
                                   ),
                                 ),
                               ],
