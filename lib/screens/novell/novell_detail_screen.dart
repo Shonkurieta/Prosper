@@ -5,6 +5,7 @@ import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/providers/notification_provider.dart';
 
 class BookDetailScreen extends StatefulWidget {
   final String token;
@@ -266,6 +267,7 @@ class _BookDetailScreenState extends State<BookDetailScreen>
         background: Stack(
           fit: StackFit.expand,
           children: [
+            // Background Blur/Cover
             Image.network(
               ApiConstants.getCoverUrl(_book!['coverUrl'] ?? ''),
               fit: BoxFit.cover,
@@ -284,6 +286,7 @@ class _BookDetailScreenState extends State<BookDetailScreen>
                 ),
               ),
             ),
+            // Centered Cover
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 60),
@@ -330,7 +333,7 @@ class _BookDetailScreenState extends State<BookDetailScreen>
         const SizedBox(height: 8),
         Text(
           _book!['author'] ?? 'Автор неизвестен',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             color: accentColor,
             fontWeight: FontWeight.w600,
@@ -342,26 +345,18 @@ class _BookDetailScreenState extends State<BookDetailScreen>
           runSpacing: 8,
           alignment: WrapAlignment.center,
           children: (_book!['genres'] as List<dynamic>? ?? [])
-              .map((g) {
-                // Обрабатываем как Map {id, name}, так и plain string
-                final String genreName = g is Map ? (g['name'] ?? '') : g.toString();
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: accentColor.withOpacity(0.2)),
-                  ),
-                  child: Text(
-                    genreName,
-                    style: const TextStyle(
-                      color: accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+              .map((g) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: accentColor.withOpacity(0.2)),
                     ),
-                  ),
-                );
-              })
+                    child: Text(
+                      g.toString(),
+                      style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ))
               .toList(),
         ),
       ],
@@ -369,23 +364,64 @@ class _BookDetailScreenState extends State<BookDetailScreen>
   }
 
   Widget _buildActionButtons(ThemeProvider theme) {
-    return Row(
+    final notificationProvider = context.watch<NotificationProvider>();
+    final isSubscribed = notificationProvider.isSubscribed(widget.bookId);
+
+    return Column(
       children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(
+                  _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
-            child: Text(
-              _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => notificationProvider.toggleSubscription(widget.bookId),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: accentColor.withOpacity(0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isSubscribed ? Icons.notifications_active : Icons.notifications_none_rounded,
+                      color: accentColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isSubscribed ? 'Вы подписаны' : 'Подписаться на обновления',
+                      style: const TextStyle(
+                        color: accentColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
