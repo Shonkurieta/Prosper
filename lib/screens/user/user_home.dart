@@ -90,6 +90,13 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
             children: [
               _buildNavItem(
                 theme: theme,
+                icon: Icons.bookmark_border_rounded,
+                activeIcon: Icons.bookmark_rounded,
+                label: 'Закладки',
+                index: 2,
+              ),
+              _buildNavItem(
+                theme: theme,
                 icon: Icons.menu_book_outlined,
                 activeIcon: Icons.menu_book,
                 label: 'Каталог',
@@ -101,13 +108,6 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
                 activeIcon: Icons.home,
                 label: 'Главная',
                 index: 1,
-              ),
-              _buildNavItem(
-                theme: theme,
-                icon: Icons.bookmark_border_rounded,
-                activeIcon: Icons.bookmark_rounded,
-                label: 'Закладки',
-                index: 2,
               ),
               _buildNavItem(
                 theme: theme,
