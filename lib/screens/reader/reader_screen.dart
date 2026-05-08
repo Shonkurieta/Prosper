@@ -319,7 +319,7 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
               textAlign: _textAlign,
               style: TextStyle(
                 fontSize: fontProvider.fontSize,
-                height: fontProvider.lineHeight,
+                height: 1.6,
                 color: _customTextColor ?? theme.textPrimaryColor,
                 fontFamily: fontProvider.fontFamily,
                 letterSpacing: 0.2,
