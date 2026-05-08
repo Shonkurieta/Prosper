@@ -310,7 +310,9 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                 fontSize: fontProvider.fontSize + 8,
                 fontWeight: FontWeight.w900,
                 color: _customTextColor ?? theme.textPrimaryColor,
-                fontFamily: fontProvider.fontFamily,
+                fontFamily: fontProvider.fontFamily == FontProvider.defaultFont
+                    ? null
+                    : fontProvider.fontFamily,
               ),
             ),
             const SizedBox(height: 32),
@@ -321,7 +323,9 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                 fontSize: fontProvider.fontSize,
                 height: 1.6,
                 color: _customTextColor ?? theme.textPrimaryColor,
-                fontFamily: fontProvider.fontFamily,
+                fontFamily: fontProvider.fontFamily == FontProvider.defaultFont
+                    ? null
+                    : fontProvider.fontFamily,
                 letterSpacing: 0.2,
               ),
             ),
@@ -398,7 +402,8 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
         ),
         child: Row(
           children: [
-            if (icon == Icons.skip_previous_rounded) Icon(icon, color: isDisabled ? Colors.grey : accentColor, size: 20),
+            if (icon == Icons.skip_previous_rounded)
+              Icon(icon, color: isDisabled ? Colors.grey : accentColor, size: 20),
             const SizedBox(width: 4),
             Text(
               label,
@@ -409,12 +414,15 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
               ),
             ),
             const SizedBox(width: 4),
-            if (icon == Icons.skip_next_rounded) Icon(icon, color: isDisabled ? Colors.grey : accentColor, size: 20),
+            if (icon == Icons.skip_next_rounded)
+              Icon(icon, color: isDisabled ? Colors.grey : accentColor, size: 20),
           ],
         ),
       ),
     );
   }
+
+  // ─── Font Settings Bottom Sheet ───────────────────────────────────────────
 
   void _showFontSettings(ThemeProvider theme, FontProvider fontProvider) {
     showModalBottomSheet(
@@ -430,78 +438,113 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                 color: theme.cardColor,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Настройки текста',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textPrimaryColor,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded, color: accentColor),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSettingRow(
-                    'Размер шрифта',
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildCircleButton(Icons.remove, () {
-                          fontProvider.setFontSize(fontProvider.fontSize - 1);
-                          setModalState(() {});
-                        }, theme),
-                        const SizedBox(width: 16),
                         Text(
-                          '${fontProvider.fontSize.toInt()}',
-                          style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold),
+                          'Настройки текста',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textPrimaryColor,
+                          ),
                         ),
-                        const SizedBox(width: 16),
-                        _buildCircleButton(Icons.add, () {
-                          fontProvider.setFontSize(fontProvider.fontSize + 1);
-                          setModalState(() {});
-                        }, theme),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded, color: accentColor),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSettingRow(
-                    'Выравнивание',
-                    Row(
-                      children: [
-                        _buildIconButton(Icons.format_align_left_rounded, _textAlign == TextAlign.left, () {
-                          setState(() => _textAlign = TextAlign.left);
-                          setModalState(() {});
-                        }, theme),
-                        const SizedBox(width: 8),
-                        _buildIconButton(Icons.format_align_center_rounded, _textAlign == TextAlign.center, () {
-                          setState(() => _textAlign = TextAlign.center);
-                          setModalState(() {});
-                        }, theme),
-                        const SizedBox(width: 8),
-                        _buildIconButton(Icons.format_align_right_rounded, _textAlign == TextAlign.right, () {
-                          setState(() => _textAlign = TextAlign.right);
-                          setModalState(() {});
-                        }, theme),
-                        const SizedBox(width: 8),
-                        _buildIconButton(Icons.format_align_justify_rounded, _textAlign == TextAlign.justify, () {
-                          setState(() => _textAlign = TextAlign.justify);
-                          setModalState(() {});
-                        }, theme),
-                      ],
+
+                    const SizedBox(height: 24),
+
+                    // Font size
+                    _buildSettingRow(
+                      'Размер шрифта',
+                      Row(
+                        children: [
+                          _buildCircleButton(Icons.remove, () {
+                            fontProvider.setFontSize(fontProvider.fontSize - 1);
+                            setModalState(() {});
+                          }, theme),
+                          const SizedBox(width: 16),
+                          Text(
+                            '${fontProvider.fontSize.toInt()}',
+                            style: TextStyle(
+                              color: theme.textPrimaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          _buildCircleButton(Icons.add, () {
+                            fontProvider.setFontSize(fontProvider.fontSize + 1);
+                            setModalState(() {});
+                          }, theme),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+
+                    const SizedBox(height: 24),
+
+                    // Alignment
+                    _buildSettingRow(
+                      'Выравнивание',
+                      Row(
+                        children: [
+                          _buildIconButton(Icons.format_align_left_rounded,
+                              _textAlign == TextAlign.left, () {
+                            setState(() => _textAlign = TextAlign.left);
+                            setModalState(() {});
+                          }, theme),
+                          const SizedBox(width: 8),
+                          _buildIconButton(Icons.format_align_center_rounded,
+                              _textAlign == TextAlign.center, () {
+                            setState(() => _textAlign = TextAlign.center);
+                            setModalState(() {});
+                          }, theme),
+                          const SizedBox(width: 8),
+                          _buildIconButton(Icons.format_align_right_rounded,
+                              _textAlign == TextAlign.right, () {
+                            setState(() => _textAlign = TextAlign.right);
+                            setModalState(() {});
+                          }, theme),
+                          const SizedBox(width: 8),
+                          _buildIconButton(Icons.format_align_justify_rounded,
+                              _textAlign == TextAlign.justify, () {
+                            setState(() => _textAlign = TextAlign.justify);
+                            setModalState(() {});
+                          }, theme),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Font family
+                    Text(
+                      'Шрифт',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFontOption(theme, fontProvider, FontProvider.defaultFont, setModalState),
+                    _buildFontOption(theme, fontProvider, FontProvider.timesNewRoman, setModalState),
+                    _buildFontOption(theme, fontProvider, FontProvider.montserrat, setModalState),
+                    _buildFontOption(theme, fontProvider, FontProvider.cormorantGaramond, setModalState),
+                    _buildFontOption(theme, fontProvider, FontProvider.merriweather, setModalState),
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             );
           },
@@ -509,6 +552,55 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
       },
     );
   }
+
+  Widget _buildFontOption(
+    ThemeProvider theme,
+    FontProvider fontProvider,
+    String font,
+    StateSetter setModalState,
+  ) {
+    final isSelected = fontProvider.fontFamily == font;
+
+    return InkWell(
+      onTap: () {
+        fontProvider.setFontFamily(font);
+        setModalState(() {});
+        setState(() {});
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accentColor : theme.borderColor.withOpacity(0.3),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                FontProvider.getFontDisplayName(font),
+                style: TextStyle(
+                  fontFamily: font == FontProvider.defaultFont ? null : font,
+                  fontSize: 16,
+                  color: isSelected ? accentColor : theme.textPrimaryColor,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: accentColor, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Helper widgets ────────────────────────────────────────────────────────
 
   Widget _buildSettingRow(String label, Widget action) {
     return Row(
@@ -535,7 +627,12 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildIconButton(IconData icon, bool isActive, VoidCallback onTap, ThemeProvider theme) {
+  Widget _buildIconButton(
+    IconData icon,
+    bool isActive,
+    VoidCallback onTap,
+    ThemeProvider theme,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -545,12 +642,12 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
           color: isActive ? accentColor : theme.backgroundColor,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: isActive ? Colors.white : theme.textSecondaryColor, size: 20),
+        child: Icon(
+          icon,
+          color: isActive ? Colors.white : theme.textSecondaryColor,
+          size: 20,
+        ),
       ),
     );
-  }
-
-  void _showColorPicker(String title, Color currentColor, Function(Color) onColorSelected) {
-    // Simplified for brevity, keeping existing functionality in mind
   }
 }
