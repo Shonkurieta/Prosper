@@ -3,6 +3,8 @@ import 'package:prosper/screens/home/home_screen.dart';
 import 'package:prosper/screens/library/library_screen.dart';
 import 'package:prosper/screens/profile/profile_screen.dart';
 import 'package:prosper/screens/bookmarks/bookmarks_screen.dart';
+import 'package:prosper/screens/notifications/notifications_screen.dart';
+import 'package:prosper/providers/notification_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
@@ -33,6 +35,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
       HomeScreen(token: widget.token),
       LibraryScreen(token: widget.token),
       BookmarksScreen(token: widget.token),
+      NotificationsScreen(token: widget.token),
       ProfileScreen(token: widget.token),
     ];
     
@@ -108,10 +111,18 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
               ),
               _buildNavItem(
                 theme: theme,
+                icon: Icons.notifications_none_rounded,
+                activeIcon: Icons.notifications_rounded,
+                label: 'Уведомления',
+                index: 3,
+                showBadge: context.watch<NotificationProvider>().unreadCount > 0,
+              ),
+              _buildNavItem(
+                theme: theme,
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,
                 label: 'Профиль',
-                index: 3,
+                index: 4,
               ),
             ],
           ),
@@ -126,6 +137,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     required IconData activeIcon,
     required String label,
     required int index,
+    bool showBadge = false,
   }) {
     final isSelected = _selectedIndex == index;
     final color = isSelected ? accentColor : theme.textPrimaryColor;
@@ -138,10 +150,28 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: color,
-              size: 26,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  isSelected ? activeIcon : icon,
+                  color: color,
+                  size: 26,
+                ),
+                if (showBadge)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
