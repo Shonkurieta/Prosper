@@ -25,13 +25,15 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
   late TextEditingController _descController;
   File? _cover;
   bool _loading = false;
-  bool _loadingGenres = true; // <-- добавлено
+  bool _loadingGenres = true;
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
   List<Genre> _availableGenres = [];
   List<String> _selectedGenres = [];
+
+  static const Color accentColor = Color(0xFFD46A4F);
 
   @override
   void initState() {
@@ -42,20 +44,15 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
     _selectedGenres = List.from(widget.book.genres);
 
     _animController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    );
+    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.04),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-    ));
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    
     _animController.forward();
     _fetchGenres();
   }
@@ -84,7 +81,6 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
     }
   }
 
-  // ✅ Новый метод — диалог с чекбоксами как в AddNovellScreen
   void _showGenrePicker() {
     showDialog(
       context: context,
@@ -94,13 +90,20 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
             final theme = context.read<ThemeProvider>();
             return AlertDialog(
               backgroundColor: theme.cardColor,
-              title: Text('Выберите жанры', style: TextStyle(color: theme.textPrimaryColor)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Выберите жанры', 
+                style: TextStyle(
+                  color: theme.textPrimaryColor,
+                  fontWeight: FontWeight.bold,
+                )
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: _loadingGenres
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: accentColor))
                     : _availableGenres.isEmpty
-                        ? const Text('Жанры не найдены')
+                        ? Text('Жанры не найдены', style: TextStyle(color: theme.textSecondaryColor))
                         : ListView.builder(
                             shrinkWrap: true,
                             itemCount: _availableGenres.length,
@@ -110,7 +113,9 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
                               return CheckboxListTile(
                                 title: Text(genre.name, style: TextStyle(color: theme.textPrimaryColor)),
                                 value: isSelected,
-                                activeColor: theme.primaryColor,
+                                activeColor: accentColor,
+                                checkColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 onChanged: (val) {
                                   setDialogState(() {
                                     if (val == true) {
@@ -128,7 +133,7 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Готово', style: TextStyle(color: theme.primaryColor)),
+                  child: const Text('Готово', style: TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -170,7 +175,7 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
               Text('Новелла успешно обновлена'),
             ],
           ),
-          backgroundColor: theme.successColor,
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(20),
@@ -203,300 +208,252 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
-    return Consumer<ThemeProvider>(
-      builder: (context, theme, child) {
-        return Scaffold(
-          backgroundColor: theme.backgroundColor,
-          body: Stack(
-            children: [
-              // Decorative background shapes
-              Positioned(
-                top: -size.height * 0.15,
-                left: -size.width * 0.2,
-                child: Container(
-                  width: size.width * 0.8,
-                  height: size.width * 0.8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle2,
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -size.height * 0.1,
-                right: -size.width * 0.25,
-                child: Container(
-                  width: size.width * 0.7,
-                  height: size.width * 0.7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.decorativeCircle1,
-                  ),
-                ),
-              ),
-
-              // Main content
-              SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Back button
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Container(
-                                  decoration: theme.getCardDecoration(),
-                                  child: IconButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    icon: Icon(
-                                      Icons.arrow_back_ios_new,
-                                      color: theme.primaryColor,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 32),
-
-                              // Icon
-                              Center(
-                                child: TweenAnimationBuilder(
-                                  duration: const Duration(milliseconds: 1200),
-                                  tween: Tween<double>(begin: 0, end: 1),
-                                  builder: (context, double value, child) {
-                                    return Transform.rotate(
-                                      angle: value * 0.1,
-                                      child: Icon(
-                                        Icons.edit_note,
-                                        size: 72,
-                                        color: theme.primaryColor,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                              const SizedBox(height: 32),
-
-                              Text(
-                                'Редактировать новеллу',
-                                style: TextStyle(
-                                  fontSize: 28,        // было 44
-                                  fontWeight: FontWeight.w700, // было w900
-                                  color: theme.textPrimaryColor,
-                                  height: 1.1,
-                                ),
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              Text(
-                                'Измените информацию о новелле',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  color: theme.textSecondaryColor,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-
-                              const SizedBox(height: 40),
-
-                              // Cover image section
-                              Center(
-                                child: GestureDetector(
-                                  onTap: _pickImage,
-                                  child: Container(
-                                    width: 180,
-                                    height: 240,
-                                    decoration: BoxDecoration(
-                                      color: theme.cardColor,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: theme.isDarkMode
-                                          ? Border.all(color: theme.borderColor, width: 1.5)
-                                          : null,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: theme.shadowColor,
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: _cover == null
-                                          ? (widget.book.coverUrl.isNotEmpty
-                                              ? Image.network(
-                                                  ApiConstants.baseUrl + widget.book.coverUrl,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => Icon(
-                                                    Icons.broken_image,
-                                                    size: 50,
-                                                    color: theme.textSecondaryColor,
-                                                  ),
-                                                )
-                                              : Column(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Container(
-                                                      padding: const EdgeInsets.all(20),
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: theme.primaryColor.withOpacity(0.1),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons.add_photo_alternate_rounded,
-                                                        size: 50,
-                                                        color: theme.primaryColor,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    Text(
-                                                      'Добавить обложку',
-                                                      style: TextStyle(
-                                                        color: theme.textSecondaryColor,
-                                                        fontSize: 14,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ))
-                                          : Image.file(
-                                              _cover!,
-                                              fit: BoxFit.cover,
-                                            ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 40),
-
-                              // Title field
-                              TextFormField(
-                                controller: _titleController,
-                                decoration: theme.getInputDecoration(
-                                  hintText: 'Название новеллы',
-                                  prefixIcon: Icons.title,
-                                ),
-                                style: TextStyle(color: theme.textPrimaryColor),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Пожалуйста, введите название';
-                                  }
-                                  return null;
-                                },
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Author field
-                              TextFormField(
-                                controller: _authorController,
-                                decoration: theme.getInputDecoration(
-                                  hintText: 'Автор новеллы',
-                                  prefixIcon: Icons.person,
-                                ),
-                                style: TextStyle(color: theme.textPrimaryColor),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Пожалуйста, введите автора';
-                                  }
-                                  return null;
-                                },
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              Text(
-                                'Жанры',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.textPrimaryColor,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              InkWell(
-                                onTap: _showGenrePicker,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-                                  decoration: BoxDecoration(
-                                    color: theme.cardColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          _selectedGenres.isEmpty
-                                              ? 'Выберите жанры'
-                                              : _selectedGenres.join(', '),
-                                          style: TextStyle(
-                                            color: _selectedGenres.isEmpty
-                                                ? theme.textSecondaryColor.withOpacity(0.5)
-                                                : theme.textPrimaryColor,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Icon(Icons.arrow_drop_down, color: theme.primaryColor),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 40),
-
-
-                              // Description field
-                              TextFormField(
-                                controller: _descController,
-                                maxLines: 5,
-                                decoration: theme.getInputDecoration(
-                                  hintText: 'Описание новеллы',
-                                  prefixIcon: Icons.description,
-                                ),
-                                style: TextStyle(color: theme.textPrimaryColor),
-                              ),
-
-                              const SizedBox(height: 40),
-
-                              // Submit button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _loading ? null : _submit,
-                                  style: theme.getPrimaryButtonStyle(),
-                                  child: _loading
-                                      ? const CircularProgressIndicator(color: Colors.white)
-                                      : const Text('Сохранить изменения'),
-                                ),
-                              ),
-
-                              const SizedBox(height: 40),
-                            ],
-                          ),
+    final theme = context.watch<ThemeProvider>();
+    
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: CustomScrollView(
+              slivers: [
+                _buildSliverHeader(theme),
+                SliverPadding(
+                  padding: const EdgeInsets.all(20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCoverSection(theme),
+                            const SizedBox(height: 32),
+                            _buildSectionLabel(theme, 'Основная информация'),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              theme: theme,
+                              controller: _titleController,
+                              hint: 'Название новеллы',
+                              icon: Icons.book_outlined,
+                              validator: (v) => v?.isEmpty ?? true ? 'Введите название' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              theme: theme,
+                              controller: _authorController,
+                              hint: 'Автор',
+                              icon: Icons.person_outline,
+                              validator: (v) => v?.isEmpty ?? true ? 'Введите автора' : null,
+                            ),
+                            const SizedBox(height: 24),
+                            _buildSectionLabel(theme, 'Жанры'),
+                            const SizedBox(height: 12),
+                            _buildGenreSelector(theme),
+                            const SizedBox(height: 24),
+                            _buildSectionLabel(theme, 'Описание'),
+                            const SizedBox(height: 12),
+                            _buildTextField(
+                              theme: theme,
+                              controller: _descController,
+                              hint: 'Описание новеллы...',
+                              icon: Icons.description_outlined,
+                              maxLines: 6,
+                            ),
+                            const SizedBox(height: 40),
+                            _buildSubmitButton(theme),
+                            const SizedBox(height: 40),
+                          ],
                         ),
                       ),
-                    ),
+                    ]),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliverHeader(ThemeProvider theme) {
+    return SliverAppBar(
+      expandedHeight: 0,
+      floating: true,
+      backgroundColor: theme.backgroundColor,
+      elevation: 0,
+      leading: IconButton(
+        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.arrow_back_ios_new, color: accentColor, size: 20),
+      ),
+      title: Text(
+        'Редактирование',
+        style: TextStyle(
+          color: theme.textPrimaryColor,
+          fontWeight: FontWeight.w900,
+          fontSize: 24,
+        ),
+      ),
+      centerTitle: false,
+    );
+  }
+
+  Widget _buildCoverSection(ThemeProvider theme) {
+    return Center(
+      child: GestureDetector(
+        onTap: _pickImage,
+        child: Stack(
+          children: [
+            Container(
+              width: 140,
+              height: 210,
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _cover != null
+                    ? Image.file(_cover!, fit: BoxFit.cover)
+                    : Image.network(
+                        ApiConstants.getCoverUrl(widget.book.coverUrl),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.add_photo_alternate_outlined,
+                          size: 40,
+                          color: theme.textSecondaryColor.withOpacity(0.3),
+                        ),
+                      ),
+              ),
+            ),
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(ThemeProvider theme, String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: theme.textPrimaryColor,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required ThemeProvider theme,
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withOpacity(0.1)),
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        validator: validator,
+        style: TextStyle(color: theme.textPrimaryColor, fontSize: 15),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon, color: accentColor, size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          hintStyle: TextStyle(color: theme.textSecondaryColor.withOpacity(0.4)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenreSelector(ThemeProvider theme) {
+    return InkWell(
+      onTap: _showGenrePicker,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accentColor.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.category_outlined, color: accentColor, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _selectedGenres.isEmpty ? 'Выберите жанры' : _selectedGenres.join(', '),
+                style: TextStyle(
+                  color: _selectedGenres.isEmpty
+                      ? theme.textSecondaryColor.withOpacity(0.4)
+                      : theme.textPrimaryColor,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: accentColor, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(ThemeProvider theme) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _loading ? null : _submit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: _loading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : const Text(
+                'Сохранить изменения',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+      ),
     );
   }
 }
