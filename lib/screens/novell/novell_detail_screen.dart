@@ -32,18 +32,23 @@ class _BookDetailScreenState extends State<BookDetailScreen>
   int _currentChapter = 1;
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  static const Color accentColor = Color(0xFFD46A4F);
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeInOut,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    
     _loadBookDetails();
   }
 
@@ -162,468 +167,340 @@ class _BookDetailScreenState extends State<BookDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, theme, child) {
-        if (_isLoading) {
-          return Scaffold(
-            backgroundColor: theme.backgroundColor,
-            body: Center(
-              child: CircularProgressIndicator(
-                color: theme.primaryColor,
-                strokeWidth: 2.5,
-              ),
-            ),
-          );
-        }
+    final theme = context.watch<ThemeProvider>();
+    
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.backgroundColor,
+        body: const Center(child: CircularProgressIndicator(color: accentColor)),
+      );
+    }
 
-        if (_book == null) {
-          return Scaffold(
-            backgroundColor: theme.backgroundColor,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              title: const Text('Ошибка'),
-            ),
-            body: Center(
-              child: Text(
-                'Новелла не найдена',
-                style: TextStyle(color: theme.textPrimaryColor),
-              ),
-            ),
-          );
-        }
+    if (_book == null) {
+      return Scaffold(
+        backgroundColor: theme.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: accentColor),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(child: Text('Новелла не найдена', style: TextStyle(color: theme.textPrimaryColor))),
+      );
+    }
 
-        // Проверяем, есть ли главы
-        final hasChapters = _chapters.isNotEmpty;
-        
-        // Извлекаем жанры
-        final List<dynamic> genres = _book!['genres'] ?? [];
-
-        return Scaffold(
-          backgroundColor: theme.backgroundColor,
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [theme.cardShadow],
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: CustomScrollView(
+            slivers: [
+              _buildSliverHeader(theme),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 24),
+                    _buildBookInfo(theme),
+                    const SizedBox(height: 32),
+                    _buildActionButtons(theme),
+                    const SizedBox(height: 32),
+                    _buildSectionLabel(theme, 'Описание'),
+                    const SizedBox(height: 12),
+                    _buildDescription(theme),
+                    const SizedBox(height: 32),
+                    _buildSectionLabel(theme, 'Главы (${_chapters.length})'),
+                    const SizedBox(height: 16),
+                  ]),
                 ),
-                child: Icon(Icons.arrow_back, color: theme.primaryColor),
               ),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: [
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [theme.cardShadow],
-                  ),
-                  child: Icon(
-                    _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    color: _isBookmarked ? theme.primaryColor : theme.textSecondaryColor,
-                  ),
-                ),
-                onPressed: _toggleBookmark,
-              ),
+              _buildChaptersList(theme),
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
-          body: FadeTransition(
-            opacity: _fadeAnimation,
-            child: CustomScrollView(
-              slivers: [
-                // Hero cover
-                SliverToBoxAdapter(
-                  child: Container(
-                    padding: const EdgeInsets.only(top: 120, bottom: 30),
-                    child: Column(
-                      children: [
-                        Hero(
-                          tag: 'book-${widget.bookId}',
-                          child: Container(
-                            width: 200,
-                            height: 300,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: theme.shadowColor,
-                                  blurRadius: 30,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: _book!['coverUrl'] != null && _book!['coverUrl'].toString().isNotEmpty
-                                  ? Image.network(
-                                      ApiConstants.getCoverUrl(_book!['coverUrl']),
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return Container(
-                                          color: theme.cardColor,
-                                          child: Center(
-                                            child: CircularProgressIndicator(
-                                              color: theme.primaryColor,
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return _buildPlaceholder(theme);
-                                      },
-                                    )
-                                  : _buildPlaceholder(theme),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            children: [
-                              Text(
-                                _book!['title'] ?? 'Без названия',
-                                style: TextStyle(
-                                  color: theme.textPrimaryColor,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _book!['author'] ?? 'Неизвестный автор',
-                                style: TextStyle(
-                                  color: theme.textSecondaryColor,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliverHeader(ThemeProvider theme) {
+    return SliverAppBar(
+      expandedHeight: 340,
+      pinned: true,
+      backgroundColor: theme.backgroundColor,
+      elevation: 0,
+      leading: IconButton(
+        onPressed: () => Navigator.pop(context),
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.backgroundColor.withOpacity(0.5),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.arrow_back_ios_new, color: accentColor, size: 18),
+        ),
+      ),
+      actions: [
+        IconButton(
+          onPressed: _toggleBookmark,
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.backgroundColor.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              color: accentColor,
+              size: 20,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background Blur/Cover
+            Image.network(
+              ApiConstants.getCoverUrl(_book!['coverUrl'] ?? ''),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: theme.cardColor),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.backgroundColor.withOpacity(0.1),
+                    theme.backgroundColor.withOpacity(0.8),
+                    theme.backgroundColor,
+                  ],
+                ),
+              ),
+            ),
+            // Centered Cover
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 60),
+                width: 160,
+                height: 240,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    ApiConstants.getCoverUrl(_book!['coverUrl'] ?? ''),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
                   ),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                // Action buttons
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: hasChapters ? () => _openReader(_currentChapter) : null,
-                            icon: Icon(
-                              hasChapters ? Icons.play_arrow_rounded : Icons.menu_book_outlined,
-                            ),
-                            label: Text(
-                              hasChapters
-                                  ? (_currentChapter > 1
-                                      ? 'Продолжить (гл. $_currentChapter)'
-                                      : 'Начать читать')
-                                  : 'Нет глав',
-                            ),
-                            style: hasChapters
-                                ? theme.getPrimaryButtonStyle().copyWith(
-                                    padding: const WidgetStatePropertyAll(
-                                      EdgeInsets.symmetric(vertical: 16),
-                                    ),
-                                  )
-                                : ElevatedButton.styleFrom(
-                                    backgroundColor: theme.textSecondaryColor.withOpacity(0.3),
-                                    foregroundColor: theme.textSecondaryColor,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          height: 56,
-                          width: 56,
-                          decoration: theme.getCardDecoration(),
-                          child: IconButton(
-                            onPressed: _toggleBookmark,
-                            icon: Icon(
-                              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                              color: _isBookmarked ? theme.primaryColor : theme.textSecondaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
+  Widget _buildBookInfo(ThemeProvider theme) {
+    return Column(
+      children: [
+        Text(
+          _book!['title'] ?? 'Без названия',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            color: theme.textPrimaryColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _book!['author'] ?? 'Автор неизвестен',
+          style: TextStyle(
+            fontSize: 16,
+            color: accentColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: (_book!['genres'] as List<dynamic>? ?? [])
+              .map((g) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: accentColor.withOpacity(0.2)),
                     ),
+                    child: Text(
+                      g.toString(),
+                      style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(ThemeProvider theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: Text(
+              _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionLabel(ThemeProvider theme, String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: theme.textPrimaryColor,
+      ),
+    );
+  }
+
+  Widget _buildDescription(ThemeProvider theme) {
+    return Text(
+      _book!['description'] ?? 'Описание отсутствует',
+      style: TextStyle(
+        fontSize: 15,
+        color: theme.textSecondaryColor,
+        height: 1.6,
+      ),
+    );
+  }
+
+  Widget _buildChaptersList(ThemeProvider theme) {
+    if (_chapters.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.menu_book_outlined, size: 48, color: theme.textSecondaryColor.withOpacity(0.2)),
+              const SizedBox(height: 16),
+              Text('Главы пока не добавлены', style: TextStyle(color: theme.textSecondaryColor)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final chapter = _chapters[index];
+          final chapterNum = chapter['chapterOrder'] as int;
+          final isCurrent = chapterNum == _currentChapter;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 20, right: 20),
+            child: InkWell(
+              onTap: () => _openReader(chapterNum),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isCurrent ? accentColor.withOpacity(0.05) : theme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isCurrent ? accentColor.withOpacity(0.3) : Colors.transparent,
                   ),
                 ),
-
-                // Description
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Описание',
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isCurrent ? accentColor : theme.backgroundColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$chapterNum',
                           style: TextStyle(
-                            color: theme.textPrimaryColor,
-                            fontSize: 20,
+                            color: isCurrent ? Colors.white : theme.textPrimaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _book!['description'] ?? 'Описание отсутствует',
-                          style: TextStyle(
-                            color: theme.textSecondaryColor,
-                            fontSize: 15,
-                            height: 1.6,
-                          ),
-                        ),
-                        
-                        // Блок жанров (теперь после описания)
-                        if (genres.isNotEmpty) ...[
-                          const SizedBox(height: 32),
-                          Text(
-                            'Жанры',
-                            style: TextStyle(
-                              color: theme.textPrimaryColor,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: genres.map((genre) {
-                              final String genreName = genre is Map ? (genre['name'] ?? '') : genre.toString();
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: theme.primaryColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: theme.primaryColor.withValues(alpha: 0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  genreName,
-                                  style: TextStyle(
-                                    color: theme.primaryColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-
-                        const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Главы',
-                              style: TextStyle(
-                                color: theme.textPrimaryColor,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: hasChapters
-                                    ? theme.primaryColor.withValues(alpha: 0.15)
-                                    : theme.textSecondaryColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                hasChapters ? '${_chapters.length} глав' : 'Нет глав',
-                                style: TextStyle(
-                                  color: hasChapters
-                                      ? theme.primaryColor
-                                      : theme.textSecondaryColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-
-                // Chapters list or empty state
-                hasChapters
-                    ? SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final chapter = _chapters[index];
-                            final chapterNum = chapter['chapterOrder'];
-                            final isCurrent = chapterNum == _currentChapter;
-
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isCurrent ? theme.primaryColor : theme.cardColor,
-                                borderRadius: BorderRadius.circular(16),
-                                border: theme.isDarkMode && !isCurrent
-                                    ? Border.all(color: theme.borderColor, width: 1.5)
-                                    : null,
-                                boxShadow: [theme.cardShadow],
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                leading: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: isCurrent
-                                        ? Colors.white.withValues(alpha: 0.3)
-                                        : theme.primaryColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '$chapterNum',
-                                      style: TextStyle(
-                                        color: isCurrent
-                                            ? Colors.white
-                                            : theme.primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  chapter['title'] ?? 'Глава $chapterNum',
-                                  style: TextStyle(
-                                    color: isCurrent
-                                        ? Colors.white
-                                        : theme.textPrimaryColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                trailing: Icon(
-                                  isCurrent
-                                      ? Icons.play_circle_filled_rounded
-                                      : Icons.arrow_forward_ios_rounded,
-                                  color: isCurrent
-                                      ? Colors.white
-                                      : theme.textSecondaryColor,
-                                  size: isCurrent ? 24 : 16,
-                                ),
-                                onTap: () => _openReader(chapterNum),
-                              ),
-                            );
-                          },
-                          childCount: _chapters.length,
-                        ),
-                      )
-                    : SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-                          child: Container(
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: theme.cardColor,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: theme.borderColor,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: theme.primaryColor.withValues(alpha: 0.1),
-                                  ),
-                                  child: Icon(
-                                    Icons.menu_book_outlined,
-                                    size: 60,
-                                    color: theme.primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Главы отсутствуют',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.textPrimaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Эта новелла пока не содержит глав для чтения',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: theme.textSecondaryColor,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        chapter['title'] ?? 'Глава $chapterNum',
+                        style: TextStyle(
+                          color: theme.textPrimaryColor,
+                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                          fontSize: 15,
                         ),
                       ),
-
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 40),
+                    ),
+                    Icon(
+                      isCurrent ? Icons.play_circle_filled : Icons.chevron_right,
+                      color: isCurrent ? accentColor : theme.textSecondaryColor.withOpacity(0.3),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+        childCount: _chapters.length,
+      ),
     );
   }
 
   Widget _buildPlaceholder(ThemeProvider theme) {
     return Container(
-      decoration: BoxDecoration(
-        color: theme.primaryColor.withValues(alpha: 0.1),
-      ),
+      color: theme.cardColor,
       child: Center(
         child: Icon(
           Icons.book_rounded,
-          size: 80,
-          color: theme.primaryColor,
+          size: 60,
+          color: theme.textSecondaryColor.withOpacity(0.1),
         ),
       ),
     );
