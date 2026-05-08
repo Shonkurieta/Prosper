@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:prosper/screens/home/home_screen.dart';
 import 'package:prosper/screens/library/library_screen.dart';
 import 'package:prosper/screens/profile/profile_screen.dart';
+import 'package:prosper/screens/bookmarks/bookmarks_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
@@ -31,6 +32,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     _screens = [
       HomeScreen(token: widget.token),
       LibraryScreen(token: widget.token),
+      BookmarksScreen(token: widget.token),
       ProfileScreen(token: widget.token),
     ];
     
@@ -99,10 +101,17 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
               ),
               _buildNavItem(
                 theme: theme,
+                icon: Icons.bookmark_border_rounded,
+                activeIcon: Icons.bookmark_rounded,
+                label: 'Закладки',
+                index: 2,
+              ),
+              _buildNavItem(
+                theme: theme,
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,
                 label: 'Профиль',
-                index: 2,
+                index: 3,
               ),
             ],
           ),
@@ -132,14 +141,14 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
             Icon(
               isSelected ? activeIcon : icon,
               color: color,
-              size: 28,
+              size: 26,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 color: color,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

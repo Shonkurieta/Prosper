@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:prosper/services/bookmark_service.dart';
 import 'package:prosper/constants/api_constants.dart';
-import 'package:prosper/screens/reader/reader_screen.dart';
+import 'package:prosper/screens/novell/novell_detail_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
@@ -43,6 +43,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
   }
 
   Future<void> _loadBookmarks() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final allBookmarks = await _bookmarkService.getBookmarks(widget.token);
@@ -56,12 +57,16 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
       for (var b in allBookmarks) {
         grouped[b['status'] ?? BookmarkService.READING]?.add(b);
       }
-      setState(() {
-        _bookmarksByStatus = grouped;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _bookmarksByStatus = grouped;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -70,103 +75,192 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     final theme = context.watch<ThemeProvider>();
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.backgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: theme.textPrimaryColor, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Закладки',
-          style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.w900, fontSize: 24),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: accentColor,
-          indicatorWeight: 3,
-          labelColor: accentColor,
-          unselectedLabelColor: theme.textSecondaryColor,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-          tabs: [
-            Tab(text: 'Читаю'),
-            Tab(text: 'Прочитано'),
-            Tab(text: 'Любимое'),
-            Tab(text: 'Брошено'),
-            Tab(text: 'В планах'),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                'Закладки',
+                style: TextStyle(
+                  color: theme.textPrimaryColor,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 32,
+                ),
+              ),
+            ),
+            TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              indicatorColor: accentColor,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelColor: accentColor,
+              unselectedLabelColor: theme.textSecondaryColor.withOpacity(0.5),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(text: 'Читаю'),
+                Tab(text: 'Прочитано'),
+                Tab(text: 'Любимое'),
+                Tab(text: 'Брошено'),
+                Tab(text: 'В планах'),
+              ],
+            ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: accentColor))
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildBookmarkGrid(theme, BookmarkService.READING),
+                        _buildBookmarkGrid(theme, BookmarkService.COMPLETED),
+                        _buildBookmarkGrid(theme, BookmarkService.FAVORITE),
+                        _buildBookmarkGrid(theme, BookmarkService.DROPPED),
+                        _buildBookmarkGrid(theme, BookmarkService.PLANNED),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: accentColor))
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildBookmarkList(theme, BookmarkService.READING),
-                _buildBookmarkList(theme, BookmarkService.COMPLETED),
-                _buildBookmarkList(theme, BookmarkService.FAVORITE),
-                _buildBookmarkList(theme, BookmarkService.DROPPED),
-                _buildBookmarkList(theme, BookmarkService.PLANNED),
-              ],
-            ),
     );
   }
 
-  Widget _buildBookmarkList(ThemeProvider theme, String status) {
+  Widget _buildBookmarkGrid(ThemeProvider theme, String status) {
     final bookmarks = _bookmarksByStatus[status]!;
     if (bookmarks.isEmpty) {
       return Center(
-        child: Text('Здесь пока пусто', style: TextStyle(color: theme.textSecondaryColor)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.bookmark_border_rounded, size: 64, color: theme.textSecondaryColor.withOpacity(0.2)),
+            const SizedBox(height: 16),
+            Text(
+              'Здесь пока пусто',
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: bookmarks.length,
-      itemBuilder: (context, index) {
-        final b = bookmarks[index];
-        final book = b['book'];
-        return _buildBookmarkCard(theme, book);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadBookmarks,
+      color: accentColor,
+      child: GridView.builder(
+        padding: const EdgeInsets.all(20),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 0.55,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 20,
+        ),
+        itemCount: bookmarks.length,
+        itemBuilder: (context, index) {
+          final b = bookmarks[index];
+          final book = b['book'];
+          return _buildBookCard(theme, book, b['currentChapter'] ?? 1);
+        },
+      ),
     );
   }
 
-  Widget _buildBookmarkCard(ThemeProvider theme, dynamic book) {
+  Widget _buildBookCard(ThemeProvider theme, dynamic book, int currentChapter) {
     final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox(
-            width: 50,
-            height: 70,
-            child: coverUrl.isNotEmpty
-                ? Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder())
-                : _buildPlaceholder(),
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context, 
+        MaterialPageRoute(builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']))
+      ).then((_) => _loadBookmarks()),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    coverUrl.isNotEmpty
+                        ? Image.network(
+                            coverUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                          )
+                        : _buildPlaceholder(),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                          ),
+                        ),
+                        child: Text(
+                          'Гл. $currentChapter',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        title: Text(
-          book['title'] ?? 'Без названия',
-          style: TextStyle(fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
-        ),
-        subtitle: Text(
-          book['author'] ?? 'Автор неизвестен',
-          style: TextStyle(color: theme.textSecondaryColor, fontSize: 13),
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: accentColor),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReaderScreen(token: widget.token, bookId: book['id'], chapterOrder: 1))),
+          const SizedBox(height: 8),
+          Text(
+            book['title'] ?? 'Без названия',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: theme.textPrimaryColor,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            book['author'] ?? 'Автор',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10,
+              color: theme.textSecondaryColor,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildPlaceholder() {
-    return Container(color: accentColor.withOpacity(0.1), child: const Icon(Icons.book, color: accentColor, size: 24));
+    return Container(
+      color: accentColor.withOpacity(0.1),
+      child: const Icon(Icons.book_rounded, color: accentColor, size: 32),
+    );
   }
 }

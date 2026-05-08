@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:prosper/services/user_service.dart';
 import 'package:prosper/services/storage_service.dart';
 import 'package:prosper/services/bookmark_service.dart';
-import 'package:prosper/screens/bookmarks/bookmarks_screen.dart';
 import 'package:prosper/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -57,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final profile = await _userService.getProfile(widget.token);
@@ -68,15 +68,17 @@ class _ProfileScreenState extends State<ProfileScreen>
         if (status == BookmarkService.READING) inProgress++;
       }
 
-      setState(() {
-        _profile = profile;
-        _bookmarksCount = bookmarks.length;
-        _booksInProgress = inProgress;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          _profile = profile;
+          _bookmarksCount = bookmarks.length;
+          _booksInProgress = inProgress;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         final theme = context.read<ThemeProvider>();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -226,19 +228,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           const SizedBox(height: 12),
                           _buildMenuItem(
                             theme: theme,
-                            icon: Icons.bookmark_border_rounded,
-                            title: 'Мои закладки',
-                            subtitle: 'Сохранённые новеллы и прогресс',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BookmarksScreen(token: widget.token),
-                              ),
-                            ).then((_) => _loadData()),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMenuItem(
-                            theme: theme,
                             icon: Icons.refresh_rounded,
                             title: 'Обновить данные',
                             subtitle: 'Перезагрузить профиль и статистику',
@@ -251,50 +240,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                             title: 'О приложении',
                             subtitle: 'Версия 1.0.0 • Prosper',
                             onTap: () {
-                              showDialog(
+                              showAboutDialog(
                                 context: context,
-                                builder: (context) => AlertDialog(
-                                  backgroundColor: theme.cardColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  title: Text(
-                                    'Prosper',
-                                    style: TextStyle(
-                                      color: theme.textPrimaryColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  content: Text(
-                                    'Приложение для чтения визуальных новелл\n\nВерсия: 1.0.0\n\n© 2025 Prosper',
-                                    style: TextStyle(color: theme.textSecondaryColor),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text(
-                                        'Закрыть',
-                                        style: TextStyle(
-                                          color: theme.primaryColor,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                applicationName: 'Prosper',
+                                applicationVersion: '1.0.0',
+                                applicationIcon: const Icon(Icons.book_rounded, color: accentColor),
                               );
                             },
                           ),
                           const SizedBox(height: 32),
+                          _buildSectionLabel(theme, 'Аккаунт'),
+                          const SizedBox(height: 12),
                           _buildMenuItem(
                             theme: theme,
                             icon: Icons.logout_rounded,
-                            title: 'Выйти из аккаунта',
-                            subtitle: 'Завершить сессию',
+                            title: 'Выйти из системы',
+                            subtitle: 'Завершить текущую сессию',
                             color: Colors.redAccent,
                             onTap: _logout,
                           ),
-                          const SizedBox(height: 48),
+                          const SizedBox(height: 40),
                         ]),
                       ),
                     ),
@@ -306,212 +271,150 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSliverHeader(ThemeProvider theme) {
-    final email = _profile?['email'] ?? '';
-    return SliverToBoxAdapter(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            height: 200,
-            decoration: BoxDecoration(color: accentColor.withOpacity(0.08)),
-            child: CustomPaint(
-              painter: _GridPatternPainter(accentColor.withOpacity(0.06)),
-              size: Size.infinite,
-            ),
-          ),
-
-          // User chip — top right
-          Positioned(
-            top: 52,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    return SliverAppBar(
+      expandedHeight: 220,
+      backgroundColor: theme.backgroundColor,
+      automaticallyImplyLeading: false,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          children: [
+            Container(
               decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'USER',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.5,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accentColor,
+                    accentColor.withOpacity(0.8),
+                  ],
                 ),
               ),
             ),
-          ),
-
-          Positioned(
-            bottom: -60,
-            left: 20,
-            right: 20,
-            child: _buildProfileCard(theme, email),
-          ),
-
-          Positioned(
-            top: 52,
-            left: 20,
-            child: Text(
-              'Профиль',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                color: theme.textPrimaryColor,
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.1,
+                child: CustomPaint(painter: GridPainter()),
               ),
             ),
-          ),
-
-          const SizedBox(height: 260),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileCard(ThemeProvider theme, String email) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: accentColor.withOpacity(0.15)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [accentColor.withOpacity(0.6), accentColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                _getInitial(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.backgroundColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _getDisplayName(),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: theme.textPrimaryColor,
-                    letterSpacing: -0.3,
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        _getInitial(),
+                        style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                if (email.isNotEmpty)
+                  const SizedBox(height: 12),
                   Text(
-                    email,
-                    style: TextStyle(fontSize: 13, color: theme.textSecondaryColor),
-                    overflow: TextOverflow.ellipsis,
+                    _getDisplayName(),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-              ],
+                  Text(
+                    _profile?['email'] ?? '',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildStatsRow(ThemeProvider theme) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 68),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              theme: theme,
-              icon: Icons.bookmark_rounded,
-              label: 'Закладки',
-              value: '$_bookmarksCount',
-              accent: accentColor,
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            theme,
+            '$_bookmarksCount',
+            'В закладках',
+            Icons.bookmarks_outlined,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              theme: theme,
-              icon: Icons.auto_stories_rounded,
-              label: 'В процессе',
-              value: '$_booksInProgress',
-              accent: const Color(0xFF6C5CE7),
-            ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            theme,
+            '$_booksInProgress',
+            'В процессе',
+            Icons.menu_book_rounded,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildStatCard({
-    required ThemeProvider theme,
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color accent,
-  }) {
+  Widget _buildStatCard(ThemeProvider theme, String value, String label, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accent.withOpacity(0.15)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accent, size: 22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: theme.textPrimaryColor,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ],
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: accentColor, size: 28),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: theme.textPrimaryColor,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.textSecondaryColor,
             ),
           ),
         ],
@@ -520,27 +423,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSectionLabel(ThemeProvider theme, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: accentColor,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: theme.textSecondaryColor,
-          ),
-        ),
-      ],
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: theme.textSecondaryColor,
+        letterSpacing: 1.2,
+      ),
     );
   }
 
@@ -553,82 +443,61 @@ class _ProfileScreenState extends State<ProfileScreen>
     Widget? trailing,
     Color? color,
   }) {
-    final iconColor = color ?? accentColor;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: iconColor.withOpacity(0.12)),
+            color: (color ?? accentColor).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: theme.textPrimaryColor,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
-                    ),
-                  ],
-                ),
-              ),
-              trailing ??
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: theme.textSecondaryColor.withOpacity(0.4),
-                  ),
-            ],
+          child: Icon(icon, color: color ?? accentColor, size: 24),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: theme.textPrimaryColor,
           ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.textSecondaryColor,
+          ),
+        ),
+        trailing: trailing ?? Icon(
+          Icons.chevron_right_rounded,
+          color: theme.textSecondaryColor.withOpacity(0.5),
         ),
       ),
     );
   }
 }
 
-class _GridPatternPainter extends CustomPainter {
-  final Color color;
-  _GridPatternPainter(this.color);
-
+class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
+      ..color = Colors.white
       ..strokeWidth = 1;
-    const step = 28.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+
+    for (double i = 0; i < size.width; i += 30) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    for (double i = 0; i < size.height; i += 30) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
     }
   }
 
   @override
-  bool shouldRepaint(_GridPatternPainter old) => old.color != color;
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
