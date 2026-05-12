@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:prosper/services/admin_service.dart';
 import 'package:prosper/screens/admin/add_novell_screen.dart';
@@ -97,7 +98,7 @@ class _ManageNovellsScreenState extends State<ManageNovellsScreen> {
 	                        padding: EdgeInsets.zero,
 	                        constraints: const BoxConstraints(),
 	                        icon: const Icon(Icons.list_alt, color: Colors.blue, size: 20),
-	                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManageChaptersScreen(token: widget.token, bookId: book.id, bookTitle: book.title))),
+	                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ManageChaptersScreen(token: widget.token, bookId: book.id, bookTitle: book.title, bookCover: book.coverUrl))),
 	                      ),
 	                      const SizedBox(width: 8),
 	                      IconButton(

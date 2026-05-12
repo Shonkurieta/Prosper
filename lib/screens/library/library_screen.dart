@@ -270,7 +270,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']),
+          builder: (_) => NovellDetailScreen(token: widget.token, bookId: book['id']),
         ),
       ),
       child: Row(
@@ -513,7 +513,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']),
+          builder: (_) => NovellDetailScreen(token: widget.token, bookId: book['id']),
         ),
       ),
       child: Column(
@@ -570,7 +570,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']),
+          builder: (_) => NovellDetailScreen(token: widget.token, bookId: book['id']),
         ),
       ),
       child: Container(

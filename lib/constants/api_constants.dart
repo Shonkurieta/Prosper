@@ -7,7 +7,7 @@ class ApiConstants {
   static String get booksUrl => '$baseUrl/books';
   
   static String getCoverUrl(String coverPath) {
-    final apiBase = dotenv.env['API_BASE_URL'] ?? 'http://10.152.195.182:8080';
+    final apiBase = dotenv.env['API_BASE_URL'] ?? 'http://10.177.112.182:8080';
     
     if (coverPath.startsWith('/')) {
       return '$apiBase$coverPath';
