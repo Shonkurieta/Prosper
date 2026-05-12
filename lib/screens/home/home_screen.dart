@@ -195,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildBookCard(ThemeProvider theme, dynamic book) {
     final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']))),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NovellDetailScreen(token: widget.token, bookId: book['id']))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

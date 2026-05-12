@@ -148,6 +148,7 @@ class _AdminNovellScreenState extends State<AdminNovellScreen> with SingleTicker
           token: widget.token,
           bookId: book['id'],
           bookTitle: book['title'],
+          bookCover: book['coverUrl'] ?? '',
         ),
       ),
     );

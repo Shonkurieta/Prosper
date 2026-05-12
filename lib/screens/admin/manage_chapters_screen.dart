@@ -8,14 +8,17 @@ import 'package:xml/xml.dart';
 import '../../constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/providers/notification_provider.dart';
 
 class ManageChaptersScreen extends StatefulWidget {
   final String token;
   final int bookId;
+  final String bookCover;
   final String bookTitle;
 
   const ManageChaptersScreen({
     super.key,
+    required this.bookCover,
     required this.token,
     required this.bookId,
     required this.bookTitle,
@@ -492,6 +495,18 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
                     if (res.statusCode == 200 || res.statusCode == 201) {
                       Navigator.pop(ctx);
                       _loadChapters();
+                      if (chapter == null) {
+                        final notificationProvider = context.read<NotificationProvider>();
+                        notificationProvider.addNotification(AppNotification(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          title: "Добавлена новая глава ($order)",
+                          bookTitle: widget.bookTitle,
+                          coverUrl: widget.bookCover,
+                          chapterOrder: int.parse(order),
+                          bookId: widget.bookId,
+                          timestamp: DateTime.now(),
+                        ));
+                      }
                       _showSnackBar(chapter == null ? 'Глава добавлена' : 'Сохранено');
                     } else {
                       _showSnackBar('Ошибка: ${res.statusCode}', isError: true);

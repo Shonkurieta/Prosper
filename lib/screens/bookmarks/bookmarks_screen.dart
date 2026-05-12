@@ -173,7 +173,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> with SingleTickerProv
     return GestureDetector(
       onTap: () => Navigator.push(
         context, 
-        MaterialPageRoute(builder: (_) => BookDetailScreen(token: widget.token, bookId: book['id']))
+        MaterialPageRoute(builder: (_) => NovellDetailScreen(token: widget.token, bookId: book['id']))
       ).then((_) => _loadBookmarks()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
