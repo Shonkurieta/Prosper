@@ -14,7 +14,7 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  String _filter = 'Все';
+  String _filter = 'Непрочитанные';
   static const Color accentColor = Color(0xFFD46A4F);
 
   @override
