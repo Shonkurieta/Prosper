@@ -125,6 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+              context.read<NotificationProvider>().clearOnLogout();
               await _storage.clearToken();
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(

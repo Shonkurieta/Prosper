@@ -128,7 +128,7 @@ class NotificationProvider extends ChangeNotifier {
   void simulateNewChapter(int bookId, String bookTitle, String coverUrl, int chapterOrder) {
     addNotification(AppNotification(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: 'добавлена новая глава ($chapterOrder)',
+      title: 'добавлена новая глава',
       bookTitle: bookTitle,
       coverUrl: coverUrl,
       chapterOrder: chapterOrder,

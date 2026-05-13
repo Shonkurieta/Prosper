@@ -159,7 +159,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: notification.isRead ? Colors.transparent : accentColor.withOpacity(0.05),
           border: Border(
@@ -170,42 +170,55 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Обложка слева
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               child: Image.network(
                 ApiConstants.getCoverUrl(notification.coverUrl),
-                width: 50,
-                height: 70,
+                width: 45,
+                height: 65,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  width: 50,
-                  height: 70,
+                  width: 45,
+                  height: 65,
                   color: theme.cardColor,
-                  child: Icon(Icons.book, color: theme.textSecondaryColor),
+                  child: Icon(Icons.book, color: theme.textSecondaryColor, size: 20),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
+            // Информация справа
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     notification.bookTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: theme.textPrimaryColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    notification.title,
+                    'Добавлена глава ${notification.chapterOrder}',
                     style: TextStyle(
                       color: theme.textSecondaryColor,
-                      fontSize: 13,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTimestamp(notification.timestamp),
+                    style: TextStyle(
+                      color: theme.textSecondaryColor.withOpacity(0.6),
+                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -213,11 +226,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             if (!notification.isRead)
               Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(top: 4),
+                width: 10,
+                height: 10,
                 decoration: const BoxDecoration(
-                  color: Colors.red,
+                  color: accentColor,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -225,6 +237,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
     );
+  }
+
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'только что';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} мин. назад';
+    if (diff.inHours < 24) return '${diff.inHours} ч. назад';
+    return '${dt.day}.${dt.month}.${dt.year}';
   }
 
   Widget _buildEmptyState(ThemeProvider theme) {
