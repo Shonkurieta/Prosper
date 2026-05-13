@@ -329,23 +329,19 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
         String title = document.findAllElements('title').isEmpty 
             ? 'Глава $order' 
             : document.findAllElements('title').first.innerText;
-            
+        
         if (title.trim().isEmpty) title = 'Глава $order';
         
-        String body = '';
-        final bodyElements = document.findAllElements('body');
-        if (bodyElements.isNotEmpty) {
-          body = bodyElements.first.innerText.trim();
-        }
-        
-        if (body.length > 50) {
-          result.add({
-            'title': title,
-            'content': body,
-            'order': order.toString(),
-          });
-          order++;
-        }
+        String content = document.findAllElements('body').isEmpty
+            ? htmlContent
+            : document.findAllElements('body').first.innerText;
+            
+        result.add({
+          'title': title.trim(),
+          'content': content.trim(),
+          'order': order.toString(),
+        });
+        order++;
       }
     }
     return result;
@@ -353,61 +349,40 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
 
   void _showEpubSelectionDialog(List<Map<String, String>> extractedChapters) {
     final theme = context.read<ThemeProvider>();
-    List<bool> selectedChapters = List.generate(extractedChapters.length, (_) => true);
+    Set<int> selectedIndices = Set.from(Iterable.generate(extractedChapters.length));
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
+      builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: theme.cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Выберите главы для импорта', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: Text('Импорт ${extractedChapters.length} глав'),
           content: SizedBox(
             width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () => setDialogState(() => selectedChapters.fillRange(0, selectedChapters.length, true)),
-                      child: const Text('Выбрать все', style: TextStyle(color: accentColor)),
-                    ),
-                    TextButton(
-                      onPressed: () => setDialogState(() => selectedChapters.fillRange(0, selectedChapters.length, false)),
-                      child: const Text('Снять все', style: TextStyle(color: Colors.grey)),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: extractedChapters.length,
-                    itemBuilder: (context, index) {
-                      final chapter = extractedChapters[index];
-                      return CheckboxListTile(
-                        value: selectedChapters[index],
-                        activeColor: accentColor,
-                        onChanged: (v) => setDialogState(() => selectedChapters[index] = v ?? false),
-                        title: Text(chapter['title']!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                        subtitle: Text('Глава ${chapter['order']} • ${chapter['content']!.length} симв.', style: const TextStyle(fontSize: 12)),
-                      );
-                    },
-                  ),
-                ),
-              ],
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: extractedChapters.length,
+              itemBuilder: (context, index) => CheckboxListTile(
+                title: Text(extractedChapters[index]['title']!, style: TextStyle(color: theme.textPrimaryColor)),
+                value: selectedIndices.contains(index),
+                activeColor: accentColor,
+                onChanged: (val) {
+                  setDialogState(() {
+                    if (val!) selectedIndices.add(index);
+                    else selectedIndices.remove(index);
+                  });
+                },
+              ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена', style: TextStyle(color: Colors.grey))),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(ctx);
-                _importSelectedChapters(extractedChapters.asMap().entries.where((e) => selectedChapters[e.key]).map((e) => e.value).toList());
+                Navigator.pop(context);
+                _importSelectedChapters(extractedChapters, selectedIndices);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: accentColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              style: ElevatedButton.styleFrom(backgroundColor: accentColor),
               child: const Text('Импортировать', style: TextStyle(color: Colors.white)),
             ),
           ],
@@ -416,78 +391,66 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
     );
   }
 
-  Future<void> _importSelectedChapters(List<Map<String, String>> selectedChapters) async {
-    final theme = context.read<ThemeProvider>();
-    int successCount = 0;
-    int errorCount = 0;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(16)),
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [CircularProgressIndicator(color: accentColor), SizedBox(height: 16), Text('Импорт глав...')],
-          ),
-        ),
-      ),
-    );
-
-    for (var chapter in selectedChapters) {
+  Future<void> _importSelectedChapters(List<Map<String, String>> chapters, Set<int> selectedIndices) async {
+    int success = 0;
+    for (int i in selectedIndices) {
       try {
-        final payload = {'title': chapter['title']!, 'content': chapter['content']!, 'chapterOrder': int.parse(chapter['order']!)};
-        final res = await http.post(Uri.parse('$baseUrl/books/${widget.bookId}/chapters'), headers: headers, body: jsonEncode(payload));
-        if (res.statusCode == 200 || res.statusCode == 201) successCount++;
-        else errorCount++;
-      } catch (e) {
-        errorCount++;
-      }
+        final res = await http.post(
+          Uri.parse('$baseUrl/books/${widget.bookId}/chapters'),
+          headers: headers,
+          body: jsonEncode({
+            'title': chapters[i]['title'],
+            'content': chapters[i]['content'],
+            'chapterOrder': int.parse(chapters[i]['order']!),
+          }),
+        );
+        if (res.statusCode == 200 || res.statusCode == 201) success++;
+      } catch (_) {}
     }
-
-    if (mounted) {
-      Navigator.pop(context);
-      await _loadChapters();
-      _showSnackBar(errorCount == 0 ? 'Импортировано глав: $successCount' : 'Импортировано: $successCount, Ошибок: $errorCount', isError: errorCount > successCount);
-    }
+    _loadChapters();
+    _showSnackBar('Успешно импортировано: $success');
   }
 
-  Future<void> _addOrEditChapter({Map<String, dynamic>? chapter}) async {
+  // ========== ADD / EDIT CHAPTER ==========
+
+  void _addOrEditChapter({dynamic chapter}) {
     final theme = context.read<ThemeProvider>();
     final titleController = TextEditingController(text: chapter?['title'] ?? '');
     final contentController = TextEditingController(text: chapter?['content'] ?? '');
-    final orderController = TextEditingController(text: chapter?['chapterOrder']?.toString() ?? '');
+    final orderController = TextEditingController(text: chapter?['chapterOrder']?.toString() ?? (chapters.length + 1).toString());
 
-    await showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => Dialog.fullscreen(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.85,
+        decoration: BoxDecoration(color: theme.backgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
         child: Scaffold(
-          backgroundColor: theme.backgroundColor,
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            backgroundColor: theme.cardColor,
+            backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(icon: const Icon(Icons.close, color: accentColor), onPressed: () => Navigator.pop(ctx)),
-            title: Text(chapter == null ? 'Добавить главу' : 'Редактировать', style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold)),
+            leading: IconButton(icon: Icon(Icons.close, color: theme.textPrimaryColor), onPressed: () => Navigator.pop(ctx)),
+            title: Text(chapter == null ? 'Новая глава' : 'Редактировать', style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold)),
             actions: [
               TextButton(
                 onPressed: () async {
                   final title = titleController.text.trim();
                   final content = contentController.text.trim();
                   final order = orderController.text.trim();
-                  
+
                   if (title.isEmpty || content.isEmpty || order.isEmpty) {
                     _showSnackBar('Заполните все поля', isError: true);
                     return;
                   }
 
+                  final payload = {'title': title, 'content': content, 'chapterOrder': int.parse(order)};
+                  final url = chapter == null 
+                      ? '$baseUrl/books/${widget.bookId}/chapters' 
+                      : '$baseUrl/books/${widget.bookId}/chapters/${chapter['id']}';
+
                   try {
-                    final payload = {'title': title, 'content': content, 'chapterOrder': int.parse(order)};
-                    final url = chapter == null 
-                        ? '$baseUrl/books/${widget.bookId}/chapters'
-                        : '$baseUrl/books/${widget.bookId}/chapters/${chapter['id']}';
-                    
                     final res = chapter == null
                         ? await http.post(Uri.parse(url), headers: headers, body: jsonEncode(payload))
                         : await http.put(Uri.parse(url), headers: headers, body: jsonEncode(payload));
@@ -496,10 +459,9 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
                       Navigator.pop(ctx);
                       _loadChapters();
                       if (chapter == null) {
-                        final notificationProvider = context.read<NotificationProvider>();
-                        notificationProvider.addNotification(AppNotification(
+                        context.read<NotificationProvider>().addNotification(AppNotification(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          title: "Добавлена новая глава ($order)",
+                          title: "Добавлена новая глава",
                           bookTitle: widget.bookTitle,
                           coverUrl: widget.bookCover,
                           chapterOrder: int.parse(order),

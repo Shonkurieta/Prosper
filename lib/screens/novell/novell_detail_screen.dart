@@ -6,6 +6,7 @@ import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NovellDetailScreen extends StatefulWidget {
   final String token;
@@ -51,8 +52,15 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     
     _loadBookDetails();
-    // Set current user for notification provider
-    context.read<NotificationProvider>().setCurrentUser(widget.token);
+    _initUserInNotificationProvider();
+  }
+
+  Future<void> _initUserInNotificationProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('id')?.toString();
+    if (mounted) {
+      context.read<NotificationProvider>().setCurrentUser(userId);
+    }
   }
 
   @override
