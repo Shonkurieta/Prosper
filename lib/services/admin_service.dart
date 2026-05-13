@@ -8,7 +8,7 @@ import '../constants/api_constants.dart';
 import '../models/genre.dart';
 
 class AdminService {
-  static final String baseUrl = ApiConstants.adminUrl;
+  String get baseUrl => ApiConstants.adminUrl;
 
   final String token;
 
