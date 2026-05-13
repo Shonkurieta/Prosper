@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants/api_constants.dart';
 
 class UserService {
-  final String baseUrl = 'http://10.177.112.182:8080/api';
+  String get baseUrl => ApiConstants.baseUrl;
 
   // ========================================
   // ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ

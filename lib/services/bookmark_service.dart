@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 
 class BookmarkService {
-  final String baseUrl = ApiConstants.baseUrl;
+  String get baseUrl => ApiConstants.baseUrl;
 
   // Enum для статусов (синхронизирован с backend)
   static const String READING = 'READING';
