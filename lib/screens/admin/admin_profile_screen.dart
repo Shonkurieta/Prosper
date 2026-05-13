@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
-import 'package:prosper/providers/notification_provider.dart';
 import 'package:prosper/services/admin_service.dart';
 import 'package:prosper/screens/user/user_home.dart';
 
@@ -91,16 +90,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
-              
-              // Очищаем провайдер уведомлений
-              if (mounted) {
-                context.read<NotificationProvider>().clearOnLogout();
-              }
-              
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              
               if (mounted) {
                 Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
               }
@@ -308,17 +299,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                   _username,
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                     color: theme.textPrimaryColor,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   _email,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: theme.textSecondaryColor,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -329,64 +322,111 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
   }
 
   Widget _buildStatsRow(ThemeProvider theme) {
-    return Row(
-      children: [
-        _buildStatCard(theme, 'Новеллы', _booksCount.toString(), Icons.book_rounded),
-        if (widget.role == 'ADMIN') ...[
-          const SizedBox(width: 16),
-          _buildStatCard(theme, 'Пользователи', _usersCount.toString(), Icons.people_rounded),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildStatCard(ThemeProvider theme, String label, String value, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: theme.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: accentColor, size: 24),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: theme.textPrimaryColor,
-              ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 68),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              theme: theme,
+              icon: Icons.auto_stories_outlined,
+              label: 'Новелл',
+              value: '$_booksCount',
+              accent: accentColor,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.textSecondaryColor,
+          ),
+          if (widget.role == 'ADMIN') ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                theme: theme,
+                icon: Icons.people_outline_rounded,
+                label: 'Пользователей',
+                value: '$_usersCount',
+                accent: const Color(0xFF5B8CDB),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 
+  Widget _buildStatCard({
+  required ThemeProvider theme,
+  required IconData icon,
+  required String label,
+  required String value,
+  required Color accent,
+}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+    decoration: BoxDecoration(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: accent.withOpacity(0.15)),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: accent.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: accent, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(                          // ← вот это критично
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: theme.textPrimaryColor,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
   Widget _buildSectionLabel(ThemeProvider theme, String label) {
-    return Text(
-      label,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: theme.textSecondaryColor,
-        letterSpacing: 1.2,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: accentColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: theme.textSecondaryColor,
+          ),
+        ),
+      ],
     );
   }
 
@@ -396,48 +436,65 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    Color? color,
     Widget? trailing,
+    Color? color,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
-        ),
-      ),
-      child: ListTile(
+    final iconColor = color ?? accentColor;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: (color ?? accentColor).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: iconColor.withOpacity(0.12)),
           ),
-          child: Icon(icon, color: color ?? accentColor, size: 24),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: theme.textPrimaryColor,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: theme.textPrimaryColor,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+                    ),
+                  ],
+                ),
+              ),
+              trailing ??
+                  Icon(Icons.chevron_right_rounded,
+                      size: 20, color: theme.textSecondaryColor.withOpacity(0.4)),
+            ],
           ),
         ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: theme.textSecondaryColor,
-          ),
-        ),
-        trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: theme.textSecondaryColor, size: 20),
       ),
     );
   }
 }
 
+// Subtle grid pattern for the header banner
 class _GridPatternPainter extends CustomPainter {
   final Color color;
   _GridPatternPainter(this.color);
@@ -447,16 +504,15 @@ class _GridPatternPainter extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..strokeWidth = 1;
-
-    const step = 20.0;
-    for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    const step = 28.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
-    for (double i = 0; i < size.height; i += step) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(_GridPatternPainter old) => old.color != color;
 }

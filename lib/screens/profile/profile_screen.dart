@@ -6,7 +6,6 @@ import 'package:prosper/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
-import 'package:prosper/providers/notification_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
@@ -126,21 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
-              // Очищаем провайдер уведомлений
-              if (mounted) {
-                context.read<NotificationProvider>().clearOnLogout();
-              }
-              
               await _storage.clearToken();
-              
-              // Также очищаем остальные данные из SharedPreferences
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('id');
-              await prefs.remove('username');
-              await prefs.remove('email');
-              await prefs.remove('role');
-
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -287,22 +272,37 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildSliverHeader(ThemeProvider theme) {
     return SliverAppBar(
-      expandedHeight: 280,
-      pinned: true,
+      expandedHeight: 220,
       backgroundColor: theme.backgroundColor,
-      elevation: 0,
+      automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           children: [
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    accentColor.withOpacity(0.15),
-                    theme.backgroundColor,
+                    accentColor,
+                    accentColor.withOpacity(0.8),
                   ],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.1,
+                child: CustomPaint(painter: GridPainter()),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.backgroundColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                 ),
               ),
             ),
@@ -310,18 +310,17 @@ class _ProfileScreenState extends State<ProfileScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 40),
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
-                      color: accentColor,
+                      color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: accentColor.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -329,28 +328,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Text(
                         _getInitial(),
                         style: const TextStyle(
-                          color: Colors.white,
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
+                          color: accentColor,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     _getDisplayName(),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: theme.textPrimaryColor,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     _profile?['email'] ?? '',
                     style: TextStyle(
                       fontSize: 14,
-                      color: theme.textSecondaryColor,
+                      color: Colors.white.withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -365,47 +363,61 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildStatsRow(ThemeProvider theme) {
     return Row(
       children: [
-        _buildStatCard(theme, 'Закладки', _bookmarksCount.toString(), Icons.bookmark_rounded),
+        Expanded(
+          child: _buildStatCard(
+            theme,
+            '$_bookmarksCount',
+            'В закладках',
+            Icons.bookmarks_outlined,
+          ),
+        ),
         const SizedBox(width: 16),
-        _buildStatCard(theme, 'Читаю', _booksInProgress.toString(), Icons.menu_book_rounded),
+        Expanded(
+          child: _buildStatCard(
+            theme,
+            '$_booksInProgress',
+            'В процессе',
+            Icons.menu_book_rounded,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildStatCard(ThemeProvider theme, String label, String value, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: theme.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+  Widget _buildStatCard(ThemeProvider theme, String value, String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: accentColor, size: 24),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: theme.textPrimaryColor,
-              ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: accentColor, size: 28),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: theme.textPrimaryColor,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.textSecondaryColor,
-              ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.textSecondaryColor,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -428,20 +440,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    Color? color,
     Widget? trailing,
+    Color? color,
   }) {
     return Container(
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
-        ),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -453,7 +462,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         title: Text(
           title,
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
             color: theme.textPrimaryColor,
           ),
         ),
@@ -464,8 +474,30 @@ class _ProfileScreenState extends State<ProfileScreen>
             color: theme.textSecondaryColor,
           ),
         ),
-        trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: theme.textSecondaryColor, size: 20),
+        trailing: trailing ?? Icon(
+          Icons.chevron_right_rounded,
+          color: theme.textSecondaryColor.withOpacity(0.5),
+        ),
       ),
     );
   }
+}
+
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1;
+
+    for (double i = 0; i < size.width; i += 30) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += 30) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
