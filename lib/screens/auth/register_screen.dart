@@ -77,12 +77,18 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
 
       final token = response['token']?.toString() ?? '';
       final role = response['role']?.toString() ?? 'USER';
+      final usernameFromServer = response['username']?.toString() ?? '';
+      final emailFromServer = response['email']?.toString() ?? '';
+      final id = response['id'] as int? ?? -1;
 
       if (token.isEmpty) throw Exception('Токен не получен от сервера');
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', token);
       await prefs.setString('role', role);
+      await prefs.setString('username', usernameFromServer);
+      await prefs.setString('email', emailFromServer);
+      await prefs.setInt('id', id);
 
       if (!mounted) return;
 

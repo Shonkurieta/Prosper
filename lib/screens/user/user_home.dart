@@ -7,6 +7,7 @@ import 'package:prosper/screens/notifications/notifications_screen.dart';
 import 'package:prosper/providers/notification_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserHome extends StatefulWidget {
   final String token;
@@ -40,6 +41,19 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     ];
     
     _animController.forward();
+    
+    // Устанавливаем текущего пользователя в провайдере уведомлений
+    _initUserInNotificationProvider();
+  }
+
+  Future<void> _initUserInNotificationProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Используем id пользователя как стабильный идентификатор
+    final userId = prefs.getInt('id')?.toString();
+    
+    if (mounted) {
+      context.read<NotificationProvider>().setCurrentUser(userId);
+    }
   }
 
   @override
