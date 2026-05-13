@@ -25,51 +25,91 @@ class AppNotification {
 class NotificationProvider extends ChangeNotifier {
   String? _currentUserId;
   final Map<String, Set<int>> _userSubscriptions = {};
-  final List<AppNotification> _notifications = [];
+  // Храним уведомления отдельно для каждого пользователя
+  final Map<String, List<AppNotification>> _userNotifications = {};
   
 
-  List<AppNotification> get notifications => _notifications;
-  Set<int> get _subscribedBookIds => _userSubscriptions[_currentUserId] ?? {};
+  List<AppNotification> get notifications {
+    if (_currentUserId == null) return [];
+    return _userNotifications[_currentUserId] ?? [];
+  }
 
-  int get unreadCount => _notifications.where((n) => !n.isRead).length;
+  int get unreadCount => notifications.where((n) => !n.isRead).length;
 
   void addNotification(AppNotification notification) {
-    // Добавляем уведомление только если пользователь подписан на эту книгу
-    if (_currentUserId != null && _userSubscriptions[_currentUserId] != null && _userSubscriptions[_currentUserId]!.contains(notification.bookId)) {
-      _notifications.insert(0, notification);
-      notifyListeners();
-    }
+    // В симуляции мы добавляем уведомление всем пользователям, которые подписаны на книгу
+    // В реальном приложении это бы делал бэкенд
+    _userSubscriptions.forEach((userId, subscriptions) {
+      if (subscriptions.contains(notification.bookId)) {
+        _userNotifications.putIfAbsent(userId, () => []);
+        
+        // Создаем копию уведомления для каждого пользователя, чтобы статус isRead был индивидуальным
+        final userNotification = AppNotification(
+          id: notification.id,
+          title: notification.title,
+          bookTitle: notification.bookTitle,
+          coverUrl: notification.coverUrl,
+          chapterOrder: notification.chapterOrder,
+          bookId: notification.bookId,
+          timestamp: notification.timestamp,
+          isRead: false,
+        );
+        
+        _userNotifications[userId]!.insert(0, userNotification);
+      }
+    });
+    notifyListeners();
   }
 
   void markAsRead(String id) {
-    final index = _notifications.indexWhere((n) => n.id == id);
-    if (index != -1 && !_notifications[index].isRead) {
-      _notifications[index].isRead = true;
+    if (_currentUserId == null) return;
+    final userNotifs = _userNotifications[_currentUserId];
+    if (userNotifs == null) return;
+
+    final index = userNotifs.indexWhere((n) => n.id == id);
+    if (index != -1 && !userNotifs[index].isRead) {
+      userNotifs[index].isRead = true;
       notifyListeners();
     }
   }
 
   void markAllAsRead() {
-    for (var n in _notifications) {
+    if (_currentUserId == null) return;
+    final userNotifs = _userNotifications[_currentUserId];
+    if (userNotifs == null) return;
+
+    for (var n in userNotifs) {
       n.isRead = true;
     }
     notifyListeners();
   }
 
   void removeAllNotifications() {
-    _notifications.clear();
+    if (_currentUserId == null) return;
+    _userNotifications[_currentUserId]?.clear();
     notifyListeners();
   }
 
-    void setCurrentUser(String? userId) {
+  void setCurrentUser(String? userId) {
     if (_currentUserId != userId) {
       _currentUserId = userId;
+      print('🔔 NotificationProvider: Current user set to $userId');
       notifyListeners();
     }
   }
 
+  void clearOnLogout() {
+    _currentUserId = null;
+    // Мы не очищаем все уведомления всех пользователей, 
+    // просто сбрасываем текущего пользователя.
+    // Если нужно очистить память полностью - можно раскомментировать:
+    // _userNotifications.clear();
+    // _userSubscriptions.clear();
+    notifyListeners();
+  }
+
   void toggleSubscription(int bookId) {
-    if (_currentUserId == null) return; // Cannot subscribe without a user
+    if (_currentUserId == null) return;
     _userSubscriptions.putIfAbsent(_currentUserId!, () => {});
     if (_userSubscriptions[_currentUserId]!.contains(bookId)) {
       _userSubscriptions[_currentUserId]!.remove(bookId);
@@ -80,10 +120,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   bool isSubscribed(int bookId) {
-    return _currentUserId != null && _userSubscriptions[_currentUserId] != null && _userSubscriptions[_currentUserId]!.contains(bookId);
+    return _currentUserId != null && 
+           _userSubscriptions[_currentUserId] != null && 
+           _userSubscriptions[_currentUserId]!.contains(bookId);
   }
 
-  // Helper for demo/test purposes - usually this would come from a real backend
   void simulateNewChapter(int bookId, String bookTitle, String coverUrl, int chapterOrder) {
     addNotification(AppNotification(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
