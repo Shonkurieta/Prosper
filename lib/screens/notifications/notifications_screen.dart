@@ -23,7 +23,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final notificationProvider = context.watch<NotificationProvider>();
     
     List<AppNotification> filteredNotifications = notificationProvider.notifications;
-    if (_filter == 'Непрочитанные') {
+    if (_filter == 'Все') {
       filteredNotifications = filteredNotifications.where((n) => !n.isRead).toList();
     } else if (_filter == 'Прочитанные') {
       filteredNotifications = filteredNotifications.where((n) => n.isRead).toList();
