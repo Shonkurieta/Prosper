@@ -6,6 +6,7 @@ import 'package:prosper/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/providers/notification_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
