@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/bookmark_service.dart';
 import 'package:prosper/services/reading_progress_service.dart';
+import 'package:prosper/widgets/comments_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/font_provider.dart';
@@ -11,12 +12,14 @@ class ReaderScreen extends StatefulWidget {
   final String token;
   final int bookId;
   final int chapterOrder;
+  final String currentUsername;
 
   const ReaderScreen({
     super.key,
     required this.token,
     required this.bookId,
     required this.chapterOrder,
+    required this.currentUsername,
   });
 
   @override
@@ -34,6 +37,7 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
   int _totalChapters = 0;
   bool _isLoading = true;
   bool _showControls = true;
+  bool _showComments = false;
   TextAlign _textAlign = TextAlign.left;
   bool _enableIndent = false;
   Color? _customTextColor;
@@ -75,14 +79,28 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
     
     _controlsAnimController.forward();
     _loadChapter();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _controlsAnimController.dispose();
     _contentAnimController.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.offset;
+      
+      // Show comments when user scrolls near the bottom (within 200 pixels)
+      if (maxScroll - currentScroll < 200 && !_showComments) {
+        setState(() => _showComments = true);
+      }
+    }
   }
 
   Future<void> _loadChapter() async {
@@ -157,6 +175,7 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
       setState(() {
         _chapter = chapter;
         _isLoading = false;
+        _showComments = false; // Reset comments visibility when loading new chapter
       });
       
       _contentAnimController.forward();
@@ -329,6 +348,20 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                 letterSpacing: 0.2,
               ),
             ),
+            // Comments section (lazy loaded)
+            if (_showComments)
+              Padding(
+                padding: const EdgeInsets.only(top: 48),
+                child: SizedBox(
+                  height: 400,
+                  child: CommentsWidget(
+                    token: widget.token,
+                    bookId: widget.bookId,
+                    chapterId: _chapter?['id'] ?? 0,
+                    currentUsername: widget.currentUsername,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -422,8 +455,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
     );
   }
 
-  // ─── Font Settings Bottom Sheet ───────────────────────────────────────────
-
   void _showFontSettings(ThemeProvider theme, FontProvider fontProvider) {
     showModalBottomSheet(
       context: context,
@@ -443,7 +474,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -461,10 +491,7 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Font size
                     _buildSettingRow(
                       'Размер шрифта',
                       Row(
@@ -489,10 +516,7 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Alignment
                     _buildSettingRow(
                       'Выравнивание',
                       Row(
@@ -523,10 +547,7 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 28),
-
-                    // Font family
                     Text(
                       'Шрифт',
                       style: TextStyle(
@@ -541,7 +562,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                     _buildFontOption(theme, fontProvider, FontProvider.montserrat, setModalState),
                     _buildFontOption(theme, fontProvider, FontProvider.cormorantGaramond, setModalState),
                     _buildFontOption(theme, fontProvider, FontProvider.merriweather, setModalState),
-
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -599,8 +619,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
       ),
     );
   }
-
-  // ─── Helper widgets ────────────────────────────────────────────────────────
 
   Widget _buildSettingRow(String label, Widget action) {
     return Row(
