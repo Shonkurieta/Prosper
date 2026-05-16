@@ -249,7 +249,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                         decoration: BoxDecoration(
                           color: _isSubmitting
                               ? Colors.grey[200]
-                              : accentColor.withOpacity(0.1),
+                              : accentColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(

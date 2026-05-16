@@ -32,6 +32,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   bool _isLoading = true;
   bool _isBookmarked = false;
   int _currentChapter = 1;
+  String _currentUsername = 'Гость';
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -53,6 +54,14 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     
     _loadBookDetails();
     _initUserInNotificationProvider();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentUsername = prefs.getString('username') ?? 'Гость';
+    });
   }
 
   Future<void> _initUserInNotificationProvider() async {
@@ -171,6 +180,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           token: widget.token,
           bookId: widget.bookId,
           chapterOrder: chapterOrder,
+          currentUsername: _currentUsername,
         ),
       ),
     ).then((_) => _loadBookDetails());
@@ -249,7 +259,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: theme.backgroundColor.withOpacity(0.5),
+            color: theme.backgroundColor.withValues(alpha: 0.5),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.arrow_back_ios_new, color: accentColor, size: 18),
@@ -275,7 +285,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.backgroundColor.withOpacity(0.5),
+                  color: theme.backgroundColor.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -292,7 +302,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.backgroundColor.withOpacity(0.5),
+              color: theme.backgroundColor.withValues(alpha: 0.5),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -319,8 +329,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    theme.backgroundColor.withOpacity(0.1),
-                    theme.backgroundColor.withOpacity(0.8),
+                    theme.backgroundColor.withValues(alpha: 0.1),
+                    theme.backgroundColor.withValues(alpha: 0.8),
                     theme.backgroundColor,
                   ],
                 ),
@@ -335,7 +345,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -390,9 +400,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
+                    color: accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: accentColor.withOpacity(0.2)),
+                    border: Border.all(color: accentColor.withValues(alpha: 0.2)),
                   ),
                   child: Text(
                     genreName,
@@ -449,51 +459,32 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       _book!['description'] ?? 'Описание отсутствует',
       style: TextStyle(
         fontSize: 15,
-        color: theme.textSecondaryColor,
         height: 1.6,
+        color: theme.textSecondaryColor,
       ),
     );
   }
 
   Widget _buildChaptersList(ThemeProvider theme) {
-    if (_chapters.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.menu_book_outlined, size: 48, color: theme.textSecondaryColor.withOpacity(0.2)),
-              const SizedBox(height: 16),
-              Text('Главы пока не добавлены', style: TextStyle(color: theme.textSecondaryColor)),
-            ],
-          ),
-        ),
-      );
-    }
-
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           final chapter = _chapters[index];
-          final chapterNum = chapter['chapterOrder'] as int;
+          final chapterNum = chapter['chapterOrder'];
           final isCurrent = chapterNum == _currentChapter;
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12, left: 20, right: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: InkWell(
               onTap: () => _openReader(chapterNum),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isCurrent ? accentColor.withOpacity(0.05) : theme.cardColor,
-                  borderRadius: BorderRadius.circular(16),
+                  color: isCurrent ? accentColor.withValues(alpha: 0.05) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isCurrent ? accentColor.withOpacity(0.3) : Colors.transparent,
+                    color: isCurrent ? accentColor.withValues(alpha: 0.2) : Colors.transparent,
                   ),
                 ),
                 child: Row(
@@ -528,7 +519,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                     ),
                     Icon(
                       isCurrent ? Icons.play_circle_filled : Icons.chevron_right,
-                      color: isCurrent ? accentColor : theme.textSecondaryColor.withOpacity(0.3),
+                      color: isCurrent ? accentColor : theme.textSecondaryColor.withValues(alpha: 0.3),
                     ),
                   ],
                 ),
@@ -548,7 +539,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         child: Icon(
           Icons.book_rounded,
           size: 60,
-          color: theme.textSecondaryColor.withOpacity(0.1),
+          color: theme.textSecondaryColor.withValues(alpha: 0.1),
         ),
       ),
     );
