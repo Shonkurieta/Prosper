@@ -6,6 +6,7 @@ import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LibraryScreen extends StatefulWidget {
   final String token;
@@ -21,7 +22,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final ReadingProgressService _progressService = ReadingProgressService();
   final TextEditingController _searchController = TextEditingController();
 
-  List<dynamic> _allBooks = [];
   List<dynamic> _searchResults = [];
   Map<String, dynamic>? _lastReadData;
   List<Map<String, dynamic>> _allProgressData = [];
@@ -30,6 +30,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool _isSearching = false;
   bool _showAllNewBooks = false;
   bool _showAllContinueReading = false;
+  String _currentUsername = 'Гость';
 
   static const Color accentColor = Color(0xFFD46A4F);
 
@@ -42,6 +43,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _currentUsername = prefs.getString('username') ?? 'Гость';
+
       final books = await _bookService.getAllBooks(widget.token);
 
       // Все записи прогресса (до 20)
@@ -85,7 +89,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
       }
 
       setState(() {
-        _allBooks = books;
         _lastReadData = lastData;
         _allProgressData = allProgress;
         _newBooksWithChapters = enrichedNewBooks;
@@ -193,7 +196,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.3)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -208,7 +211,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 hintText: 'Поиск новелл...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(
-                  color: theme.textSecondaryColor.withOpacity(0.4),
+                  color: theme.textSecondaryColor.withValues(alpha: 0.4),
                   fontSize: 14,
                 ),
               ),
@@ -283,7 +286,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -334,7 +337,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
                   value: data['percent'] / 100,
-                  backgroundColor: accentColor.withOpacity(0.1),
+                  backgroundColor: accentColor.withValues(alpha: 0.1),
                   valueColor: const AlwaysStoppedAnimation(accentColor),
                   minHeight: 2,
                 ),
@@ -347,6 +350,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         token: widget.token,
                         bookId: book['id'],
                         chapterOrder: data['chapterOrder'],
+                        currentUsername: _currentUsername,
                       ),
                     ),
                   ),
@@ -390,6 +394,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 token: widget.token,
                 bookId: book['id'],
                 chapterOrder: data['chapterOrder'],
+                currentUsername: _currentUsername,
               ),
             ),
           ),
@@ -401,7 +406,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -437,28 +442,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        book['author'] ?? '',
+                        'Глава ${data['chapterOrder']} • ${data['percent']}%',
                         style: TextStyle(color: theme.textSecondaryColor, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Глава ${data['chapterOrder']}',
-                    style: const TextStyle(
-                      color: accentColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                const Icon(Icons.chevron_right, color: accentColor, size: 20),
               ],
             ),
           ),
@@ -468,7 +458,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildNewBooksGrid(ThemeProvider theme) {
-    final displayList = _newBooksWithChapters.take(3).toList();
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -478,8 +467,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: displayList.length,
-      itemBuilder: (context, index) => _buildBookItemGrid(theme, displayList[index]['book']),
+      itemCount: _newBooksWithChapters.length,
+      itemBuilder: (context, index) => _buildBookItemGrid(theme, _newBooksWithChapters[index]['book']),
     );
   }
 
@@ -525,7 +514,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -581,7 +570,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -627,7 +616,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
+                color: accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -647,9 +636,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildPlaceholder({double size = 20}) {
     return Container(
-      color: accentColor.withOpacity(0.05),
+      color: accentColor.withValues(alpha: 0.05),
       child: Center(
-        child: Icon(Icons.book_rounded, color: accentColor.withOpacity(0.3), size: size),
+        child: Icon(Icons.book_rounded, color: accentColor.withValues(alpha: 0.3), size: size),
       ),
     );
   }

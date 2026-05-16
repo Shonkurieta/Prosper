@@ -4,6 +4,7 @@ import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final String token;
@@ -15,7 +16,21 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   String _filter = 'Непрочитанные';
+  String _currentUsername = 'Гость';
   static const Color accentColor = Color(0xFFD46A4F);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentUsername = prefs.getString('username') ?? 'Гость';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +169,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               token: widget.token,
               bookId: notification.bookId,
               chapterOrder: notification.chapterOrder,
+              currentUsername: _currentUsername,
             ),
           ),
         );
@@ -161,10 +177,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: notification.isRead ? Colors.transparent : accentColor.withOpacity(0.05),
+          color: notification.isRead ? Colors.transparent : accentColor.withValues(alpha: 0.05),
           border: Border(
             bottom: BorderSide(
-              color: theme.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+              color: theme.isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
               width: 0.5,
             ),
           ),
@@ -217,7 +233,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Text(
                     _formatTimestamp(notification.timestamp),
                     style: TextStyle(
-                      color: theme.textSecondaryColor.withOpacity(0.6),
+                      color: theme.textSecondaryColor.withValues(alpha: 0.6),
                       fontSize: 11,
                     ),
                   ),
@@ -253,7 +269,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none_rounded, size: 80, color: theme.textSecondaryColor.withOpacity(0.2)),
+          Icon(Icons.notifications_none_rounded, size: 80, color: theme.textSecondaryColor.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           Text(
             'Уведомлений пока нет',
