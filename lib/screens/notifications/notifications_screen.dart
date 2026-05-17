@@ -39,7 +39,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     
     List<AppNotification> filteredNotifications = notificationProvider.notifications;
     if (_filter == 'Все') {
-      filteredNotifications = filteredNotifications.where((n) => !n.isRead).toList();
+      filteredNotifications = filteredNotifications.where((n) => n.isRead).toList();
     } else if (_filter == 'Прочитанные') {
       filteredNotifications = filteredNotifications.where((n) => n.isRead).toList();
     }
