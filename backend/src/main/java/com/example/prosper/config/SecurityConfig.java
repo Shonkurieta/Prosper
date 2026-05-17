@@ -30,13 +30,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Отключаем авто-регистрацию JwtFilter как обычного сервлет-фильтра.
-     * Без этого Spring Boot регистрирует @Component-фильтры дважды:
-     * один раз как сервлет-фильтр (вне SecurityFilterChain) и один раз
-     * через addFilterBefore внутри SecurityFilterChain.
-     * Двойная регистрация приводит к непредсказуемому поведению авторизации.
-     */
     @Bean
     public FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtFilter filter) {
         FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>(filter);
@@ -62,19 +55,20 @@ public class SecurityConfig {
                 .requestMatchers("/api/books/**").permitAll()
                 .requestMatchers("/api/genres/**").permitAll()
                 .requestMatchers("/api/test/**").permitAll()
-
-                .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll() // Разрешить всем читать комментарии
-                .requestMatchers(HttpMethod.POST, "/api/comments/**").hasAnyRole("USER", "ADMIN", "MODERATOR") // Только авторизованным писать
-                .requestMatchers(HttpMethod.DELETE, "/api/comments/**").hasAnyRole("USER", "ADMIN", "MODERATOR")    
-
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
-                .requestMatchers("/assets/covers/**").permitAll()
 
-                // Только ADMIN и MODERATOR могут управлять пользователями, книгами и т.д.
-                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "MODERATOR")
+                // Явно разрешаем GET для комментариев
+                .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
+                
+                // Для POST/DELETE используем authenticated() для проверки, что фильтр вообще работает
+                // Если это сработает, значит проблема была в проверке ролей (hasAnyRole)
+                .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
+
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
-                .requestMatchers("/api/bookmarks/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
+                .requestMatchers("/api/bookmarks/**").authenticated()
 
                 .anyRequest().authenticated()
             )
