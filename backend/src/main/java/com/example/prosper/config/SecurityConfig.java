@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -61,6 +62,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/books/**").permitAll()
                 .requestMatchers("/api/genres/**").permitAll()
                 .requestMatchers("/api/test/**").permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll() // Разрешить всем читать комментарии
+                .requestMatchers(HttpMethod.POST, "/api/comments/**").hasAnyRole("USER", "ADMIN", "MODERATOR") // Только авторизованным писать
+                .requestMatchers(HttpMethod.DELETE, "/api/comments/**").hasAnyRole("USER", "ADMIN", "MODERATOR")    
 
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
