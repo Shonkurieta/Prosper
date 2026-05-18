@@ -2,7 +2,6 @@ package com.example.prosper.config;
 
 import java.util.List;
 
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,13 +30,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtFilter filter) {
-        FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>(filter);
-        registration.setEnabled(false);
-        return registration;
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
@@ -58,14 +50,14 @@ public class SecurityConfig {
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
 
-                // Явно разрешаем GET для комментариев
+                // Разрешаем GET для комментариев всем пользователям
                 .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                 
-                // Для POST/DELETE используем authenticated() для проверки, что фильтр вообще работает
-                // Если это сработает, значит проблема была в проверке ролей (hasAnyRole)
+                // Для POST/DELETE комментариев требуется аутентификация
                 .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
 
+                // Правила для админки и профиля
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 .requestMatchers("/api/bookmarks/**").authenticated()

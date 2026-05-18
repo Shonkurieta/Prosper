@@ -12,12 +12,14 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "chapters")
 public class Chapter {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
     @JoinColumn(name = "book_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "genres", "description", "content"})
     private Book book;
 
     @Column(nullable = false)

@@ -1,8 +1,6 @@
 name: prosper
 description: "A new Flutter project."
-
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -30,32 +28,30 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-flutter_launcher_icons:
-  android: true
-  image_path: "backend/assets/icon/icon.png"
-  
   assets:
     - .env
     - backend/assets/covers/
     - backend/assets/fonts/
-
   fonts:
     - family: TimesNewRoman
       fonts:
         - asset: backend/assets/fonts/timesnewromanpsmt.ttf
-    
+
     - family: Montserrat
       fonts:
         - asset: backend/assets/fonts/Montserrat-Black.ttf
           weight: 900
-    
+
     - family: CormorantGaramond
       fonts:
         - asset: backend/assets/fonts/CormorantGaramond-Bold.ttf
           weight: 700
-    
+
     - family: Merriweather
       fonts:
         - asset: backend/assets/fonts/Merriweather-Black.ttf
           weight: 900
+
+flutter_launcher_icons:
+  android: true
+  image_path: "backend/assets/icon/icon.png"
