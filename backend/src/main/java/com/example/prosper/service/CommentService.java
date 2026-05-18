@@ -21,15 +21,19 @@ public class CommentService {
 
     @Autowired
     private CommentRepository commentRepository;
+
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private BookRepository bookRepository;
+
     @Autowired
     private ChapterRepository chapterRepository;
 
     public List<Comment> getCommentsByChapterId(Long chapterId) {
-        return commentRepository.findByChapterIdAndParentCommentIsNullOrderByCreatedAtAsc(chapterId);
+        // Возвращаем ВСЕ комментарии включая ответы
+        return commentRepository.findByChapterIdOrderByCreatedAtAsc(chapterId);
     }
 
     public Optional<Comment> getCommentById(Long commentId) {
@@ -40,8 +44,10 @@ public class CommentService {
     public Comment addComment(Long userId, Long bookId, Long chapterId, Long parentCommentId, String content) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("Book not found"));
+
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new RuntimeException("Chapter not found"));
 
@@ -63,6 +69,7 @@ public class CommentService {
         if (!comment.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to delete this comment");
         }
+
         commentRepository.delete(comment);
     }
 

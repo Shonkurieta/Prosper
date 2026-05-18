@@ -24,8 +24,9 @@ class CommentsWidget extends StatefulWidget {
 class _CommentsWidgetState extends State<CommentsWidget> {
   final CommentService _commentService = CommentService();
   final TextEditingController _commentController = TextEditingController();
-  
-  List<Map<String, dynamic>> _comments = [];
+
+  List<Map<String, dynamic>> _rootComments = [];
+  Map<int, List<Map<String, dynamic>>> _repliesMap = {};
   bool _isLoading = false;
   bool _isSubmitting = false;
   int? _replyingToId;
@@ -46,11 +47,30 @@ class _CommentsWidgetState extends State<CommentsWidget> {
   Future<void> _loadComments() async {
     setState(() => _isLoading = true);
     try {
-      final comments = await _commentService.getCommentsForChapter(
+      final allComments = await _commentService.getCommentsForChapter(
         widget.token,
         widget.chapterId,
       );
-      setState(() => _comments = comments);
+
+      // Разделяем на корневые и ответы
+      final roots = <Map<String, dynamic>>[];
+      final replies = <int, List<Map<String, dynamic>>>{};
+
+      for (final comment in allComments) {
+        final parent = comment['parentComment'];
+        if (parent == null) {
+          roots.add(comment);
+        } else {
+          final parentId = parent['id'] as int;
+          replies.putIfAbsent(parentId, () => []);
+          replies[parentId]!.add(comment);
+        }
+      }
+
+      setState(() {
+        _rootComments = roots;
+        _repliesMap = replies;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -156,7 +176,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
               padding: EdgeInsets.symmetric(vertical: 32),
               child: CircularProgressIndicator(color: accentColor),
             )
-          else if (_comments.isEmpty)
+          else if (_rootComments.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Text(
@@ -174,8 +194,20 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    for (var comment in _comments)
-                      _buildCommentTile(comment),
+                    for (final comment in _rootComments) ...[
+                      _buildCommentTile(comment, isReply: false),
+                      // Ответы на этот комментарий
+                      if (_repliesMap.containsKey(comment['id']))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 24),
+                          child: Column(
+                            children: [
+                              for (final reply in _repliesMap[comment['id']]!)
+                                _buildCommentTile(reply, isReply: true),
+                            ],
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -195,7 +227,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                         Expanded(
                           child: Text(
                             'Ответ на: $_replyingToAuthor',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: accentColor,
                               fontWeight: FontWeight.w500,
@@ -269,76 +301,97 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     );
   }
 
-  Widget _buildCommentTile(Map<String, dynamic> comment) {
+  Widget _buildCommentTile(Map<String, dynamic> comment, {required bool isReply}) {
     final isOwnComment = comment['user']['nickname'] == widget.currentUsername;
-    final commentId = comment['id'];
+    final commentId = comment['id'] as int;
     final author = comment['user']['nickname'] ?? 'Аноним';
     final content = comment['content'] ?? '';
     final createdAt = comment['createdAt'] ?? '';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                author,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+              if (isReply)
+                Container(
+                  width: 2,
+                  height: 40,
+                  margin: const EdgeInsets.only(right: 10),
+                  color: accentColor.withValues(alpha: 0.3),
+                ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          author,
+                          style: TextStyle(
+                            fontSize: isReply ? 12 : 13,
+                            fontWeight: FontWeight.w500,
+                            color: isReply ? Colors.black54 : Colors.black87,
+                          ),
+                        ),
+                        if (isOwnComment)
+                          InkWell(
+                            onTap: () => _deleteComment(commentId),
+                            child: Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      content,
+                      style: TextStyle(
+                        fontSize: isReply ? 12 : 13,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w300,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          _formatDate(createdAt),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[400],
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                        if (!isReply) ...[
+                          const SizedBox(width: 16),
+                          InkWell(
+                            onTap: () => _setReplyingTo(commentId, author),
+                            child: const Text(
+                              'Ответить',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: accentColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              if (isOwnComment)
-                InkWell(
-                  onTap: () => _deleteComment(commentId),
-                  child: Icon(
-                    Icons.close,
-                    size: 16,
-                    color: Colors.grey[400],
-                  ),
-                ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            content,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black54,
-              fontWeight: FontWeight.w300,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                _formatDate(createdAt),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[400],
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              const SizedBox(width: 16),
-              InkWell(
-                onTap: () => _setReplyingTo(commentId, author),
-                child: Text(
-                  'Ответить',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: accentColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Container(
             height: 1,
             color: Colors.grey[100],
@@ -350,7 +403,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
 
   String _formatDate(String dateString) {
     try {
-      final date = DateTime.parse(dateString);
+      final date = DateTime.parse(dateString + 'Z').toLocal();
       final now = DateTime.now();
       final difference = now.difference(date);
 

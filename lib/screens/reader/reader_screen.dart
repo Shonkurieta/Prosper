@@ -349,19 +349,19 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
               ),
             ),
             // Comments section (lazy loaded)
-            if (_showComments)
-              Padding(
-                padding: const EdgeInsets.only(top: 48),
-                child: SizedBox(
-                  height: 400,
-                  child: CommentsWidget(
-                    token: widget.token,
-                    bookId: widget.bookId,
-                    chapterId: _chapter?['id'] ?? 0,
-                    currentUsername: widget.currentUsername,
-                  ),
+          if (_showComments && _chapter != null && _chapter!['id'] != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 48),
+              child: SizedBox(
+                height: 400,
+                child: CommentsWidget(
+                  token: widget.token,
+                  bookId: widget.bookId,
+                  chapterId: _chapter!['id'] as int,
+                  currentUsername: widget.currentUsername,
                 ),
               ),
+            ),
           ],
         ),
       ),

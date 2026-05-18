@@ -1,20 +1,32 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import '../constants/api_constants.dart';
 
 class CommentService {
+
   Future<List<Map<String, dynamic>>> getCommentsForChapter(
     String token,
     int chapterId,
   ) async {
+    final url = '${ApiConstants.baseUrl}/comments/chapter/$chapterId';
+
+    print('>>> [CommentService] GET $url');
+    print('>>> [CommentService] TOKEN EMPTY: ${token.isEmpty}');
+    print('>>> [CommentService] TOKEN (20): ${token.length >= 20 ? token.substring(0, 20) : token}');
+
     try {
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/comments/chapter/$chapterId'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
+
+      print('<<< [CommentService] STATUS: ${response.statusCode}');
+      print('<<< [CommentService] BODY: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = jsonDecode(response.body);
@@ -34,6 +46,12 @@ class CommentService {
     String content, {
     int? parentCommentId,
   }) async {
+    final url = '${ApiConstants.baseUrl}/comments';
+
+    print('>>> [CommentService] POST $url');
+    print('>>> [CommentService] TOKEN EMPTY: ${token.isEmpty}');
+    print('>>> [CommentService] TOKEN (20): ${token.length >= 20 ? token.substring(0, 20) : token}');
+
     try {
       final payload = {
         'bookId': bookId,
@@ -42,14 +60,19 @@ class CommentService {
         if (parentCommentId != null) 'parentCommentId': parentCommentId,
       };
 
+      print('>>> [CommentService] PAYLOAD: $payload');
+
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/comments'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(payload),
       );
+
+      print('<<< [CommentService] STATUS: ${response.statusCode}');
+      print('<<< [CommentService] BODY: ${response.body}');
 
       if (response.statusCode == 201) {
         return jsonDecode(response.body);
@@ -65,14 +88,22 @@ class CommentService {
     String token,
     int commentId,
   ) async {
+    final url = '${ApiConstants.baseUrl}/comments/$commentId';
+
+    print('>>> [CommentService] DELETE $url');
+    print('>>> [CommentService] TOKEN EMPTY: ${token.isEmpty}');
+
     try {
       final response = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}/comments/$commentId'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
+
+      print('<<< [CommentService] STATUS: ${response.statusCode}');
+      print('<<< [CommentService] BODY: ${response.body}');
 
       if (response.statusCode != 204) {
         throw Exception('Ошибка при удалении комментария: ${response.statusCode}');
