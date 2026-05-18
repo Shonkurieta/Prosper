@@ -1,7 +1,7 @@
 package com.example.prosper.model;
 
 public enum BookmarkStatus {
-    READING("В процессе"),
+    READING("Читаю"),
     COMPLETED("Прочитанное"),
     FAVORITE("Любимое"),
     DROPPED("Брошенное"),

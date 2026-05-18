@@ -122,7 +122,7 @@ class BookmarkService {
   static String getStatusDisplayName(String status) {
     switch (status) {
       case READING:
-        return 'В процессе';
+        return 'Читаю';
       case COMPLETED:
         return 'Прочитанное';
       case FAVORITE:
@@ -132,7 +132,7 @@ class BookmarkService {
       case PLANNED:
         return 'В планах';
       default:
-        return 'В процессе';
+        return 'Читаю';
     }
   }
 

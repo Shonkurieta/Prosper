@@ -378,7 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: _buildStatCard(
             theme,
             '$_booksInProgress',
-            'В процессе',
+            'Читаю',
             Icons.menu_book_rounded,
           ),
         ),
