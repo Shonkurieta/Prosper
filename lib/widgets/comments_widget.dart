@@ -6,14 +6,14 @@ const Color accentColor = Color(0xFFD46A4F);
 class CommentsWidget extends StatefulWidget {
   final String token;
   final int bookId;
-  final int chapterId;
+  final int? chapterId;
   final String currentUsername;
 
   const CommentsWidget({
     super.key,
     required this.token,
     required this.bookId,
-    required this.chapterId,
+    this.chapterId,
     required this.currentUsername,
   });
 
@@ -47,10 +47,18 @@ class _CommentsWidgetState extends State<CommentsWidget> {
   Future<void> _loadComments() async {
     setState(() => _isLoading = true);
     try {
-      final allComments = await _commentService.getCommentsForChapter(
-        widget.token,
-        widget.chapterId,
-      );
+      final List<Map<String, dynamic>> allComments;
+      if (widget.chapterId != null) {
+        allComments = await _commentService.getCommentsForChapter(
+          widget.token,
+          widget.chapterId!,
+        );
+      } else {
+        allComments = await _commentService.getCommentsForBook(
+          widget.token,
+          widget.bookId,
+        );
+      }
 
       // Разделяем на корневые и ответы
       final roots = <Map<String, dynamic>>[];
@@ -411,7 +419,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
         return 'Только что';
       } else if (difference.inHours < 1) {
         return '${difference.inMinutes} мин назад';
-      } else if (difference.inDays < 1) {
+      } else if (difference.inHours < 24) {
         return '${difference.inHours} ч назад';
       } else if (difference.inDays < 7) {
         return '${difference.inDays} дн назад';

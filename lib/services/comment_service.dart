@@ -39,10 +39,40 @@ class CommentService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getCommentsForBook(
+    String token,
+    int bookId,
+  ) async {
+    final url = '${ApiConstants.baseUrl}/comments/book/$bookId';
+
+    print('>>> [CommentService] GET $url');
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('<<< [CommentService] STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+        return jsonList.cast<Map<String, dynamic>>();
+      } else {
+        throw Exception('Ошибка загрузки комментариев: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Ошибка при загрузке комментариев: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> addComment(
     String token,
     int bookId,
-    int chapterId,
+    int? chapterId,
     String content, {
     int? parentCommentId,
   }) async {

@@ -36,6 +36,11 @@ public class CommentService {
         return commentRepository.findByChapterIdOrderByCreatedAtAsc(chapterId);
     }
 
+    public List<Comment> getCommentsByBookId(Long bookId) {
+        // Возвращаем комментарии к книге (где глава NULL)
+        return commentRepository.findByBookIdAndChapterIsNullOrderByCreatedAtAsc(bookId);
+    }
+
     public Optional<Comment> getCommentById(Long commentId) {
         return commentRepository.findById(commentId);
     }
@@ -48,8 +53,11 @@ public class CommentService {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("Book not found"));
 
-        Chapter chapter = chapterRepository.findById(chapterId)
-                .orElseThrow(() -> new RuntimeException("Chapter not found"));
+        Chapter chapter = null;
+        if (chapterId != null) {
+            chapter = chapterRepository.findById(chapterId)
+                    .orElseThrow(() -> new RuntimeException("Chapter not found"));
+        }
 
         Comment parentComment = null;
         if (parentCommentId != null) {

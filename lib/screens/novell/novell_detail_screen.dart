@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:prosper/widgets/comments_widget.dart';
 
 class NovellDetailScreen extends StatefulWidget {
   final String token;
@@ -23,7 +24,7 @@ class NovellDetailScreen extends StatefulWidget {
 }
 
 class _NovellDetailScreenState extends State<NovellDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final BookService _bookService = BookService();
   final BookmarkService _bookmarkService = BookmarkService();
 
@@ -33,9 +34,12 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   bool _isBookmarked = false;
   int _currentChapter = 1;
   String _currentUsername = 'Гость';
+  
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  
+  late TabController _tabController;
 
   static const Color accentColor = Color(0xFFD46A4F);
 
@@ -51,6 +55,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       begin: const Offset(0, 0.04),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    
+    _tabController = TabController(length: 4, vsync: this);
     
     _loadBookDetails();
     _initUserInNotificationProvider();
@@ -75,6 +81,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   @override
   void dispose() {
     _animController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -218,30 +225,46 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         opacity: _fadeAnimation,
         child: SlideTransition(
           position: _slideAnimation,
-          child: CustomScrollView(
-            slivers: [
-              _buildSliverHeader(theme),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const SizedBox(height: 24),
-                    _buildBookInfo(theme),
-                    const SizedBox(height: 32),
-                    _buildActionButtons(theme),
-                    const SizedBox(height: 32),
-                    _buildSectionLabel(theme, 'Описание'),
-                    const SizedBox(height: 12),
-                    _buildDescription(theme),
-                    const SizedBox(height: 32),
-                    _buildSectionLabel(theme, 'Главы (${_chapters.length})'),
-                    const SizedBox(height: 16),
-                  ]),
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                _buildSliverHeader(theme),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                    child: _buildConstantArea(theme),
+                  ),
                 ),
-              ),
-              _buildChaptersList(theme),
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
-            ],
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SliverAppBarDelegate(
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: accentColor,
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: accentColor,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      tabs: const [
+                        Tab(text: 'Главы'),
+                        Tab(text: 'Комм.'),
+                        Tab(text: 'Отзывы'),
+                        Tab(text: 'О тайтле'),
+                      ],
+                    ),
+                    theme.backgroundColor,
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildChaptersTab(theme),
+                _buildCommentsTab(theme),
+                _buildReviewsTab(theme),
+                _buildAboutTab(theme),
+              ],
+            ),
           ),
         ),
       ),
@@ -250,7 +273,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
 
   Widget _buildSliverHeader(ThemeProvider theme) {
     return SliverAppBar(
-      expandedHeight: 340,
+      expandedHeight: 280,
       pinned: true,
       backgroundColor: theme.backgroundColor,
       elevation: 0,
@@ -265,55 +288,6 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           child: const Icon(Icons.arrow_back_ios_new, color: accentColor, size: 18),
         ),
       ),
-      actions: [
-        Consumer<NotificationProvider>(
-          builder: (context, notificationProvider, child) {
-            final isSubscribed = notificationProvider.isSubscribed(widget.bookId);
-            return IconButton(
-              onPressed: () {
-                notificationProvider.toggleSubscription(widget.bookId);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(isSubscribed 
-                      ? 'Подписка отменена' 
-                      : 'Вы подписались на уведомления о новых главах'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.backgroundColor.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isSubscribed ? Icons.notifications_active : Icons.notifications_none,
-                  color: accentColor,
-                  size: 20,
-                ),
-              ),
-            );
-          },
-        ),
-        IconButton(
-          onPressed: _toggleBookmark,
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.backgroundColor.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              color: accentColor,
-              size: 20,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -330,7 +304,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                   end: Alignment.bottomCenter,
                   colors: [
                     theme.backgroundColor.withValues(alpha: 0.1),
-                    theme.backgroundColor.withValues(alpha: 0.8),
+                    theme.backgroundColor.withValues(alpha: 0.6),
                     theme.backgroundColor,
                   ],
                 ),
@@ -338,21 +312,21 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             ),
             Center(
               child: Container(
-                margin: const EdgeInsets.only(top: 60),
-                width: 160,
-                height: 240,
+                margin: const EdgeInsets.only(top: 40),
+                width: 140,
+                height: 200,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   child: Image.network(
                     ApiConstants.getCoverUrl(_book!['coverUrl'] ?? ''),
                     fit: BoxFit.cover,
@@ -367,78 +341,221 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     );
   }
 
-  Widget _buildBookInfo(ThemeProvider theme) {
+  Widget _buildConstantArea(ThemeProvider theme) {
     return Column(
       children: [
         Text(
           _book!['title'] ?? 'Без названия',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 26,
+            fontSize: 22,
             fontWeight: FontWeight.w900,
             color: theme.textPrimaryColor,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          _book!['author'] ?? 'Автор неизвестен',
-          style: const TextStyle(
-            fontSize: 16,
-            color: accentColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: (_book!['genres'] as List<dynamic>? ?? [])
-              .map((g) {
-                // Обрабатываем как Map {id, name}, так и plain string
-                final String genreName = g is Map ? (g['name'] ?? '') : g.toString();
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: accentColor.withValues(alpha: 0.2)),
-                  ),
-                  child: Text(
-                    genreName,
-                    style: const TextStyle(
-                      color: accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _toggleBookmark,
+                icon: Icon(
+                  _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  size: 18,
+                ),
+                label: Text(_isBookmarked ? 'В закладках' : 'В закладки'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: accentColor,
+                  side: const BorderSide(color: accentColor),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Consumer<NotificationProvider>(
+                builder: (context, notificationProvider, child) {
+                  final isSubscribed = notificationProvider.isSubscribed(widget.bookId);
+                  return OutlinedButton.icon(
+                    onPressed: () {
+                      notificationProvider.toggleSubscription(widget.bookId);
+                    },
+                    icon: Icon(
+                      isSubscribed ? Icons.notifications_active : Icons.notifications_none,
+                      size: 18,
                     ),
-                  ),
-                );
-              })
-              .toList(),
+                    label: const Text('Подписаться'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: accentColor,
+                      side: const BorderSide(color: accentColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons(ThemeProvider theme) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildChaptersTab(ThemeProvider theme) {
+    if (_chapters.isEmpty) {
+      return Center(
+        child: Text('Главы скоро появятся', style: TextStyle(color: theme.textSecondaryColor)),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: _chapters.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final chapter = _chapters[index];
+        final isCurrent = chapter['orderIndex'] == _currentChapter;
+        return InkWell(
+          onTap: () => _openReader(chapter['orderIndex']),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isCurrent ? accentColor.withValues(alpha: 0.05) : theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isCurrent ? accentColor.withValues(alpha: 0.3) : Colors.transparent,
+              ),
             ),
-            child: Text(
-              _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isCurrent ? accentColor : theme.backgroundColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${chapter['orderIndex']}',
+                      style: TextStyle(
+                        color: isCurrent ? Colors.white : theme.textSecondaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    chapter['title'] ?? 'Глава ${chapter['orderIndex']}',
+                    style: TextStyle(
+                      color: theme.textPrimaryColor,
+                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, size: 14, color: theme.textSecondaryColor.withValues(alpha: 0.5)),
+              ],
             ),
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCommentsTab(ThemeProvider theme) {
+    return CommentsWidget(
+      token: widget.token,
+      bookId: widget.bookId,
+      currentUsername: _currentUsername,
+    );
+  }
+
+  Widget _buildReviewsTab(ThemeProvider theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.rate_review_outlined, size: 48, color: theme.textSecondaryColor.withValues(alpha: 0.3)),
+          const SizedBox(height: 16),
+          Text(
+            'Здесь пока нету отзывов, будь первым',
+            style: TextStyle(color: theme.textSecondaryColor, fontWeight: FontWeight.w300),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutTab(ThemeProvider theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoRow(theme, 'Автор', _book!['author'] ?? 'Неизвестен'),
+          const SizedBox(height: 16),
+          _buildSectionLabel(theme, 'Жанры'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: (_book!['genres'] as List<dynamic>? ?? [])
+                .map((g) {
+                  final String genreName = g is Map ? (g['name'] ?? '') : g.toString();
+                  return Chip(
+                    label: Text(genreName, style: const TextStyle(fontSize: 12, color: accentColor)),
+                    backgroundColor: accentColor.withValues(alpha: 0.1),
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  );
+                })
+                .toList(),
+          ),
+          const SizedBox(height: 24),
+          _buildSectionLabel(theme, 'Аннотация'),
+          const SizedBox(height: 8),
+          Text(
+            _book!['description'] ?? 'Нет описания',
+            style: TextStyle(
+              color: theme.textSecondaryColor,
+              height: 1.6,
+              fontSize: 15,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: Text(
+                _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(ThemeProvider theme, String label, String value) {
+    return Row(
+      children: [
+        Text('$label: ', style: TextStyle(color: theme.textSecondaryColor, fontWeight: FontWeight.w500)),
+        Text(value, style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -448,86 +565,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       label,
       style: TextStyle(
         fontSize: 18,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w800,
         color: theme.textPrimaryColor,
-      ),
-    );
-  }
-
-  Widget _buildDescription(ThemeProvider theme) {
-    return Text(
-      _book!['description'] ?? 'Описание отсутствует',
-      style: TextStyle(
-        fontSize: 15,
-        height: 1.6,
-        color: theme.textSecondaryColor,
-      ),
-    );
-  }
-
-  Widget _buildChaptersList(ThemeProvider theme) {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final chapter = _chapters[index];
-          final chapterNum = chapter['chapterOrder'];
-          final isCurrent = chapterNum == _currentChapter;
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: InkWell(
-              onTap: () => _openReader(chapterNum),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isCurrent ? accentColor.withValues(alpha: 0.05) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isCurrent ? accentColor.withValues(alpha: 0.2) : Colors.transparent,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: isCurrent ? accentColor : theme.backgroundColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$chapterNum',
-                          style: TextStyle(
-                            color: isCurrent ? Colors.white : theme.textPrimaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        chapter['title'] ?? 'Глава $chapterNum',
-                        style: TextStyle(
-                          color: theme.textPrimaryColor,
-                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      isCurrent ? Icons.play_circle_filled : Icons.chevron_right,
-                      color: isCurrent ? accentColor : theme.textSecondaryColor.withValues(alpha: 0.3),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-        childCount: _chapters.length,
+        letterSpacing: 0.5,
       ),
     );
   }
@@ -535,13 +575,32 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Widget _buildPlaceholder(ThemeProvider theme) {
     return Container(
       color: theme.cardColor,
-      child: Center(
-        child: Icon(
-          Icons.book_rounded,
-          size: 60,
-          color: theme.textSecondaryColor.withValues(alpha: 0.1),
-        ),
-      ),
+      child: const Center(child: Icon(Icons.book, color: accentColor, size: 40)),
     );
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverAppBarDelegate(this._tabBar, this._backgroundColor);
+
+  final TabBar _tabBar;
+  final Color _backgroundColor;
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: _backgroundColor,
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return false;
   }
 }

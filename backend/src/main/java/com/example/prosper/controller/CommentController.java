@@ -37,6 +37,12 @@ public class CommentController {
         return ResponseEntity.ok(comments);
     }
 
+    @GetMapping("/book/{bookId}")
+    public ResponseEntity<List<Comment>> getCommentsForBook(@PathVariable Long bookId) {
+        List<Comment> comments = commentService.getCommentsByBookId(bookId);
+        return ResponseEntity.ok(comments);
+    }
+
     @PostMapping
     public ResponseEntity<Comment> addComment(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -45,9 +51,9 @@ public class CommentController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Long bookId = ((Number) payload.get("bookId")).longValue();
-        Long chapterId = ((Number) payload.get("chapterId")).longValue();
+        Long chapterId = payload.get("chapterId") != null ? ((Number) payload.get("chapterId")).longValue() : null;
         String content = (String) payload.get("content");
-        Long parentCommentId = payload.containsKey("parentCommentId") ? ((Number) payload.get("parentCommentId")).longValue() : null;
+        Long parentCommentId = payload.get("parentCommentId") != null ? ((Number) payload.get("parentCommentId")).longValue() : null;
 
         Comment newComment = commentService.addComment(user.getId(), bookId, chapterId, parentCommentId, content);
         return new ResponseEntity<>(newComment, HttpStatus.CREATED);
