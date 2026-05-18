@@ -32,6 +32,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   List<dynamic> _chapters = [];
   bool _isLoading = true;
   bool _isBookmarked = false;
+  String? _currentStatus;
   int _currentChapter = 1;
   String _currentUsername = 'Гость';
   
@@ -99,6 +100,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         _chapters = chapters;
         _currentChapter = progress['currentChapter'] ?? 1;
         _isBookmarked = progress['isBookmarked'] ?? false;
+        _currentStatus = progress['status'];
         _isLoading = false;
       });
       _animController.forward();
@@ -125,51 +127,114 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     }
   }
 
-  Future<void> _toggleBookmark() async {
+  void _showBookmarkCategories() {
+    final theme = context.read<ThemeProvider>();
+    final statuses = [
+      {'id': BookmarkService.READING, 'name': 'Читаю'},
+      {'id': BookmarkService.PLANNED, 'name': 'В планах'},
+      {'id': BookmarkService.COMPLETED, 'name': 'Прочитано'},
+      {'id': BookmarkService.FAVORITE, 'name': 'Любимое'},
+      {'id': BookmarkService.DROPPED, 'name': 'Брошено'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.backgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Выберите категорию',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textPrimaryColor,
+                  ),
+                ),
+              ),
+              ...statuses.map((status) {
+                final isSelected = _currentStatus == status['id'] && _isBookmarked;
+                return ListTile(
+                  leading: Icon(
+                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    color: isSelected ? accentColor : Colors.grey,
+                  ),
+                  title: Text(
+                    status['name']!,
+                    style: TextStyle(
+                      color: isSelected ? accentColor : theme.textPrimaryColor,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _updateBookmark(status['id']!);
+                  },
+                );
+              }),
+              if (_isBookmarked)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  title: const Text('Удалить из закладок', style: TextStyle(color: Colors.redAccent)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeBookmark();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _updateBookmark(String status) async {
     final theme = context.read<ThemeProvider>();
     try {
-      if (_isBookmarked) {
-        await _bookmarkService.removeBookmark(widget.token, widget.bookId);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.bookmark_remove, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('Удалено из закладок'),
-                ],
-              ),
-              backgroundColor: theme.warningColor,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.all(20),
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        }
-      } else {
-        await _bookmarkService.addBookmark(widget.token, widget.bookId);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.bookmark_added, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('Добавлено в закладки'),
-                ],
-              ),
-              backgroundColor: theme.successColor,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.all(20),
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        }
+      await _bookmarkService.addBookmark(widget.token, widget.bookId, status: status);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Добавлено в "${BookmarkService.getStatusDisplayName(status)}"'),
+            backgroundColor: theme.successColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
       }
-      setState(() => _isBookmarked = !_isBookmarked);
+      _loadBookDetails();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeBookmark() async {
+    final theme = context.read<ThemeProvider>();
+    try {
+      await _bookmarkService.removeBookmark(widget.token, widget.bookId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Удалено из закладок'),
+            backgroundColor: theme.warningColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+      _loadBookDetails();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -245,10 +310,10 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                       indicatorColor: accentColor,
                       indicatorSize: TabBarIndicatorSize.label,
                       tabs: const [
+                        Tab(text: 'О тайтле'),
                         Tab(text: 'Главы'),
                         Tab(text: 'Комм.'),
                         Tab(text: 'Отзывы'),
-                        Tab(text: 'О тайтле'),
                       ],
                     ),
                     theme.backgroundColor,
@@ -259,10 +324,10 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             body: TabBarView(
               controller: _tabController,
               children: [
+                _buildAboutTab(theme),
                 _buildChaptersTab(theme),
                 _buildCommentsTab(theme),
                 _buildReviewsTab(theme),
-                _buildAboutTab(theme),
               ],
             ),
           ),
@@ -358,12 +423,16 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _toggleBookmark,
+                onPressed: _showBookmarkCategories,
                 icon: Icon(
                   _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   size: 18,
                 ),
-                label: Text(_isBookmarked ? 'В закладках' : 'В закладки'),
+                label: Text(
+                  _isBookmarked 
+                    ? BookmarkService.getStatusDisplayName(_currentStatus ?? '')
+                    : 'В закладки'
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: accentColor,
                   side: const BorderSide(color: accentColor),
@@ -397,6 +466,24 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: Text(
+              _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+          ),
         ),
       ],
     );
@@ -525,24 +612,6 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               height: 1.6,
               fontSize: 15,
               fontWeight: FontWeight.w300,
-            ),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: Text(
-                _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
             ),
           ),
           const SizedBox(height: 40),

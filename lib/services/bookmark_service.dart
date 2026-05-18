@@ -52,9 +52,14 @@ class BookmarkService {
   }
 
   // Добавить закладку
-  Future<void> addBookmark(String token, int bookId) async {
+  Future<void> addBookmark(String token, int bookId, {String? status}) async {
+    String url = '$baseUrl/bookmarks/$bookId';
+    if (status != null) {
+      url += '?status=$status';
+    }
+    
     final response = await http.post(
-      Uri.parse('$baseUrl/bookmarks/$bookId'),
+      Uri.parse(url),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',

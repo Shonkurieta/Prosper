@@ -81,7 +81,8 @@ public class BookmarkController {
     @PostMapping("/{bookId}")
     public ResponseEntity<UserBook> addBookmark(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long bookId
+            @PathVariable Long bookId,
+            @RequestParam(required = false) BookmarkStatus status
     ) {
         User user = userRepository.findByNickname(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -94,10 +95,13 @@ public class BookmarkController {
                     newUserBook.setUser(user);
                     newUserBook.setBook(book);
                     newUserBook.setCurrentChapter(1);
-                    newUserBook.setStatus(BookmarkStatus.READING);
+                    newUserBook.setStatus(status != null ? status : BookmarkStatus.READING);
                     return newUserBook;
                 });
 
+        if (status != null) {
+            userBook.setStatus(status);
+        }
         userBook.setBookmarked(true);
         return ResponseEntity.ok(userBookRepository.save(userBook));
     }
