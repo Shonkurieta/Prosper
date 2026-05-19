@@ -501,9 +501,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final chapter = _chapters[index];
-        final isCurrent = chapter['orderIndex'] == _currentChapter;
+        final isCurrent = chapter['chapterOrder'] == _currentChapter;
         return InkWell(
-          onTap: () => _openReader(chapter['orderIndex']),
+          onTap: () => _openReader(chapter['chapterOrder']),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -525,7 +525,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                   ),
                   child: Center(
                     child: Text(
-                      '${chapter['orderIndex']}',
+                      '${chapter['chapterOrder']}',
                       style: TextStyle(
                         color: isCurrent ? Colors.white : theme.textSecondaryColor,
                         fontWeight: FontWeight.bold,
@@ -537,7 +537,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    chapter['title'] ?? 'Глава ${chapter['orderIndex']}',
+                    chapter['title'] ?? 'Глава ${chapter['chapterOrder']}',
                     style: TextStyle(
                       color: theme.textPrimaryColor,
                       fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
