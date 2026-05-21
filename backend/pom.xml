@@ -4,6 +4,7 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>com.example</groupId>
     <artifactId>prosper-backend</artifactId>
     <version>1.0.0</version>
@@ -20,6 +21,7 @@
     </properties>
 
     <dependencies>
+
         <!-- REST API -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -32,14 +34,12 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
-
-        <!-- JPA (работа с БД) -->
+        <!-- JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Spring Security (для авторизации, BCrypt и конфигурации безопасности) -->
         <!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -56,7 +56,25 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>2.2.0</version>
+            <version>1.34.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client</artifactId>
+            <version>1.34.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-gson</artifactId>
+            <version>1.42.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>1.42.3</version>
         </dependency>
 
         <!-- JWT -->
@@ -65,12 +83,14 @@
             <artifactId>jjwt-api</artifactId>
             <version>0.11.5</version>
         </dependency>
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
@@ -78,12 +98,15 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Lombok (удобные геттеры/сеттеры)
+        <!-- Lombok -->
+        <!--
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
-        </dependency> -->
+        </dependency>
+        -->
+
     </dependencies>
 
     <build>
@@ -94,4 +117,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>

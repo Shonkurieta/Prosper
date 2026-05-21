@@ -5,6 +5,8 @@ import '../constants/api_constants.dart';
 
 class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId:
+      '339366407339-h0sebq3pfi5n82olfq6g37b6m8vlppbm.apps.googleusercontent.com',
     scopes: ['email', 'profile'],
   );
   // ВАЖНО: Убедитесь, что здесь только /api без дублирования
@@ -94,6 +96,9 @@ class AuthService {
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      print("ACCESS TOKEN: ${googleAuth.accessToken}");
+      print("ID TOKEN: ${googleAuth.idToken}");
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) {
