@@ -29,24 +29,18 @@ class ReviewService {
     required String token,
     required int bookId,
     required String content,
-    String? type,
-    int? rating,
-    String? sentiment,
-    int? parentId,
+    required String type,
+    required int rating,
+    required String sentiment,
   }) async {
     try {
       final Map<String, dynamic> body = {
         'bookId': bookId,
         'content': content,
+        'type': type,
+        'rating': rating,
+        'sentiment': sentiment,
       };
-
-      if (parentId != null) {
-        body['parentId'] = parentId;
-      } else {
-        body['type'] = type;
-        body['rating'] = rating;
-        body['sentiment'] = sentiment;
-      }
 
       final response = await http.post(
         Uri.parse('$baseUrl/reviews'),

@@ -56,33 +56,22 @@ public class ReviewController {
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
 
+            Object rawType = payload.get("type");
+            Object rawRating = payload.get("rating");
+            Object rawSentiment = payload.get("sentiment");
+
+            if (rawType == null || rawRating == null || rawSentiment == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "type, rating and sentiment are required"));
+            }
+
             Review review = new Review();
             review.setUser(user);
             review.setBook(book);
             review.setContent((String) payload.get("content"));
-
-            if (payload.containsKey("parentId") && payload.get("parentId") != null) {
-                Long parentId = Long.valueOf(payload.get("parentId").toString());
-                Review parent = reviewService.getReviewById(parentId)
-                        .orElseThrow(() -> new RuntimeException("Parent review not found: " + parentId));
-                review.setParentReview(parent);
-                review.setType(parent.getType());
-                review.setRating(0);
-                review.setSentiment(Review.Sentiment.NEUTRAL);
-            } else {
-                Object rawType = payload.get("type");
-                Object rawRating = payload.get("rating");
-                Object rawSentiment = payload.get("sentiment");
-
-                if (rawType == null || rawRating == null || rawSentiment == null) {
-                    return ResponseEntity.badRequest()
-                            .body(Map.of("message", "type, rating and sentiment are required"));
-                }
-
-                review.setType(Review.ReviewType.valueOf(rawType.toString()));
-                review.setRating(Integer.valueOf(rawRating.toString()));
-                review.setSentiment(Review.Sentiment.valueOf(rawSentiment.toString()));
-            }
+            review.setType(Review.ReviewType.valueOf(rawType.toString()));
+            review.setRating(Integer.valueOf(rawRating.toString()));
+            review.setSentiment(Review.Sentiment.valueOf(rawSentiment.toString()));
 
             return ResponseEntity.ok(reviewService.createReview(review));
 

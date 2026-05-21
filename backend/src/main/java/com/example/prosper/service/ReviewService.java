@@ -32,15 +32,6 @@ public class ReviewService {
     }
 
     private void validateReview(Review review) {
-        if (review.getParentReview() != null) {
-            // It's a reply, maybe different validation? 
-            // For now just check content exists
-            if (review.getContent() == null || review.getContent().trim().isEmpty()) {
-                throw new IllegalArgumentException("Content cannot be empty");
-            }
-            return;
-        }
-
         String content = review.getContent();
         int length = content != null ? content.length() : 0;
 

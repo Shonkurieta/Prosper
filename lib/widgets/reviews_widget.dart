@@ -128,12 +128,13 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
     );
   }
 
-  Widget _buildReviewItem(dynamic review, ThemeProvider theme, {bool isReply = false}) {
+  Widget _buildReviewItem(dynamic review, ThemeProvider theme) {
     final date = DateTime.parse(review['createdAt']);
     final formattedDate = DateFormat('dd.MM.yyyy').format(date);
+    final isOwner = review['user']['username'] == widget.currentUsername;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16, left: isReply ? 24 : 0),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
@@ -169,54 +170,45 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                   ],
                 ),
               ),
-              if (!isReply) ...[
-                _buildSentimentIcon(review['sentiment']),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${review['rating']}/10',
-                    style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+              _buildSentimentIcon(review['sentiment']),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              ],
+                child: Text(
+                  '${review['rating']}/10',
+                  style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (isOwner)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                  onPressed: () => _showDeleteConfirmation(review['id'], theme),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
           const SizedBox(height: 12),
-          if (!isReply)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                border: Border.all(color: accentColor.withValues(alpha: 0.5)),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                review['type'] == 'REVIEW' ? 'ОТЗЫВ' : 'РЕЦЕНЗИЯ',
-                style: const TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              border: Border.all(color: accentColor.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(4),
             ),
+            child: Text(
+              review['type'] == 'REVIEW' ? 'ОТЗЫВ' : 'РЕЦЕНЗИЯ',
+              style: const TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ),
           Text(
             review['content'],
             style: TextStyle(color: theme.textPrimaryColor, fontSize: 14, height: 1.5),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              TextButton.icon(
-                onPressed: () => _showAddReviewModal(parentId: review['id']),
-                icon: const Icon(Icons.reply, size: 16, color: accentColor),
-                label: const Text('Ответить', style: TextStyle(color: accentColor, fontSize: 12)),
-                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
-              ),
-            ],
-          ),
-          if (review['replies'] != null && (review['replies'] as List).isNotEmpty)
-            ... (review['replies'] as List).map((reply) => _buildReviewItem(reply, theme, isReply: true)),
         ],
       ),
     );
@@ -253,7 +245,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
     );
   }
 
-  void _showAddReviewModal({int? parentId}) {
+  void _showAddReviewModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -261,7 +253,6 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
       builder: (context) => AddReviewModal(
         token: widget.token,
         bookId: widget.bookId,
-        parentId: parentId,
         onSuccess: () {
           _loadReviews();
           Navigator.pop(context);
@@ -269,19 +260,66 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
       ),
     );
   }
+
+  void _showDeleteConfirmation(int reviewId, ThemeProvider theme) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        title: Text('Удалить отзыв?', style: TextStyle(color: theme.textPrimaryColor)),
+        content: Text('Вы уверены, что хотите удалить этот отзыв? Это действие нельзя отменить.',
+            style: TextStyle(color: theme.textSecondaryColor)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена', style: TextStyle(color: theme.textSecondaryColor)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteReview(reviewId);
+            },
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteReview(int reviewId) async {
+    try {
+      await _reviewService.deleteReview(widget.token, reviewId);
+      _loadReviews();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Отзыв удален'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка: $errorMessage'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
 }
 
 class AddReviewModal extends StatefulWidget {
   final String token;
   final int bookId;
-  final int? parentId;
   final VoidCallback onSuccess;
 
   const AddReviewModal({
     super.key,
     required this.token,
     required this.bookId,
-    this.parentId,
     required this.onSuccess,
   });
 
@@ -300,7 +338,6 @@ class _AddReviewModalState extends State<AddReviewModal> {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
-    final isReply = widget.parentId != null;
 
     return Container(
       decoration: BoxDecoration(
@@ -319,45 +356,43 @@ class _AddReviewModalState extends State<AddReviewModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isReply ? 'Ответить' : 'Написать отзыв',
+              'Написать отзыв',
               style: TextStyle(color: theme.textPrimaryColor, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            if (!isReply) ...[
-              Row(
-                children: [
-                  _buildTypeOption('REVIEW', 'Отзыв', theme),
-                  const SizedBox(width: 12),
-                  _buildTypeOption('CRITIQUE', 'Рецензия', theme),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text('Оценка: $_rating/10', style: TextStyle(color: theme.textPrimaryColor)),
-              Slider(
-                value: _rating.toDouble(),
-                min: 1,
-                max: 10,
-                divisions: 9,
-                activeColor: const Color(0xFFD46A4F),
-                onChanged: (v) => setState(() => _rating = v.toInt()),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildSentimentOption('POSITIVE', Icons.sentiment_satisfied_alt_outlined, Colors.green),
-                  _buildSentimentOption('NEUTRAL', Icons.sentiment_neutral_outlined, Colors.grey),
-                  _buildSentimentOption('NEGATIVE', Icons.sentiment_very_dissatisfied_outlined, Colors.red),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+            Row(
+              children: [
+                _buildTypeOption('REVIEW', 'Отзыв', theme),
+                const SizedBox(width: 12),
+                _buildTypeOption('CRITIQUE', 'Рецензия', theme),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text('Оценка: $_rating/10', style: TextStyle(color: theme.textPrimaryColor)),
+            Slider(
+              value: _rating.toDouble(),
+              min: 1,
+              max: 10,
+              divisions: 9,
+              activeColor: const Color(0xFFD46A4F),
+              onChanged: (v) => setState(() => _rating = v.toInt()),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildSentimentOption('POSITIVE', Icons.sentiment_satisfied_alt_outlined, Colors.green),
+                _buildSentimentOption('NEUTRAL', Icons.sentiment_neutral_outlined, Colors.grey),
+                _buildSentimentOption('NEGATIVE', Icons.sentiment_very_dissatisfied_outlined, Colors.red),
+              ],
+            ),
+            const SizedBox(height: 20),
             TextField(
               controller: _controller,
               maxLines: 5,
               style: TextStyle(color: theme.textPrimaryColor),
               decoration: theme.getInputDecoration(
-                hintText: isReply ? 'Ваш ответ...' : (_type == 'REVIEW' ? 'Минимум 500 символов' : 'Минимум 3000 символов'),
+                hintText: _type == 'REVIEW' ? 'Минимум 500 символов' : 'Минимум 3000 символов',
               ),
             ),
             const SizedBox(height: 20),
@@ -445,10 +480,9 @@ class _AddReviewModalState extends State<AddReviewModal> {
         token: widget.token,
         bookId: widget.bookId,
         content: _controller.text,
-        type: widget.parentId == null ? _type : null,
-        rating: widget.parentId == null ? _rating : null,
-        sentiment: widget.parentId == null ? _sentiment : null,
-        parentId: widget.parentId,
+        type: _type,
+        rating: _rating,
+        sentiment: _sentiment,
       );
       widget.onSuccess();
     } catch (e) {

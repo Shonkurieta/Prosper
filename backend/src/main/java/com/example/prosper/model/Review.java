@@ -41,14 +41,7 @@ public class Review {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "parentReview", "replies"})
-    private Review parentReview;
 
-    @OneToMany(mappedBy = "parentReview", cascade = CascadeType.ALL, orphanRemoval = true)
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"parentReview"})
-    private List<Review> replies = new ArrayList<>();
 
     public enum ReviewType {
         REVIEW, CRITIQUE
@@ -87,9 +80,5 @@ public class Review {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public Review getParentReview() { return parentReview; }
-    public void setParentReview(Review parentReview) { this.parentReview = parentReview; }
 
-    public List<Review> getReplies() { return replies; }
-    public void setReplies(List<Review> replies) { this.replies = replies; }
 }
