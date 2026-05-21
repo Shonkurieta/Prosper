@@ -35,11 +35,11 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   String? _currentStatus;
   int _currentChapter = 1;
   String _currentUsername = 'Гость';
-  
+
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   late TabController _tabController;
 
   static const Color accentColor = Color(0xFFD46A4F);
@@ -51,14 +51,20 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _fadeAnimation =
+        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.04),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
-    
+
     _tabController = TabController(length: 4, vsync: this);
-    
+
+    // ← Убираем клавиатуру при смене таба
+    _tabController.addListener(() {
+      FocusManager.instance.primaryFocus?.unfocus();
+    });
+
     _loadBookDetails();
     _initUserInNotificationProvider();
     _loadUsername();
@@ -89,7 +95,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Future<void> _loadBookDetails() async {
     try {
       final book = await _bookService.getBookById(widget.token, widget.bookId);
-      final chapters = await _bookService.getBookChapters(widget.token, widget.bookId);
+      final chapters =
+          await _bookService.getBookChapters(widget.token, widget.bookId);
       final progress = await _bookmarkService.getProgress(
         widget.token,
         widget.bookId,
@@ -119,7 +126,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             ),
             backgroundColor: theme.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(20),
           ),
         );
@@ -161,7 +169,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                 ),
               ),
               ...statuses.map((status) {
-                final isSelected = _currentStatus == status['id'] && _isBookmarked;
+                final isSelected =
+                    _currentStatus == status['id'] && _isBookmarked;
                 return ListTile(
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
@@ -171,7 +180,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                     status['name']!,
                     style: TextStyle(
                       color: isSelected ? accentColor : theme.textPrimaryColor,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                   onTap: () {
@@ -182,8 +193,10 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               }),
               if (_isBookmarked)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  title: const Text('Удалить из закладок', style: TextStyle(color: Colors.redAccent)),
+                  leading:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  title: const Text('Удалить из закладок',
+                      style: TextStyle(color: Colors.redAccent)),
                   onTap: () {
                     Navigator.pop(context);
                     _removeBookmark();
@@ -199,11 +212,13 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Future<void> _updateBookmark(String status) async {
     final theme = context.read<ThemeProvider>();
     try {
-      await _bookmarkService.addBookmark(widget.token, widget.bookId, status: status);
+      await _bookmarkService.addBookmark(widget.token, widget.bookId,
+          status: status);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Добавлено в "${BookmarkService.getStatusDisplayName(status)}"'),
+            content: Text(
+                'Добавлено в "${BookmarkService.getStatusDisplayName(status)}"'),
             backgroundColor: theme.successColor,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 1),
@@ -261,11 +276,12 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
-    
+
     if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.backgroundColor,
-        body: const Center(child: CircularProgressIndicator(color: accentColor)),
+        body:
+            const Center(child: CircularProgressIndicator(color: accentColor)),
       );
     }
 
@@ -276,59 +292,69 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: accentColor),
+            icon:
+                const Icon(Icons.arrow_back_ios_new, color: accentColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: Center(child: Text('Новелла не найдена', style: TextStyle(color: theme.textPrimaryColor))),
+        body: Center(
+            child: Text('Новелла не найдена',
+                style: TextStyle(color: theme.textPrimaryColor))),
       );
     }
 
-    return Scaffold(
-      backgroundColor: theme.backgroundColor,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                _buildSliverHeader(theme),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                    child: _buildConstantArea(theme),
-                  ),
-                ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _SliverAppBarDelegate(
-                    TabBar(
-                      controller: _tabController,
-                      labelColor: accentColor,
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: accentColor,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      tabs: const [
-                        Tab(text: 'О тайтле'),
-                        Tab(text: 'Главы'),
-                        Tab(text: 'Комм.'),
-                        Tab(text: 'Отзывы'),
-                      ],
+    // ← GestureDetector с HitTestBehavior.translucent — убирает клавиатуру
+    // при тапе на любую область экрана, не перехватывая другие события
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: theme.backgroundColor,
+        body: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  _buildSliverHeader(theme),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 24),
+                      child: _buildConstantArea(theme),
                     ),
-                    theme.backgroundColor,
                   ),
-                ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAboutTab(theme),
-                _buildChaptersTab(theme),
-                _buildCommentsTab(theme),
-                _buildReviewsTab(theme),
-              ],
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _SliverAppBarDelegate(
+                      TabBar(
+                        controller: _tabController,
+                        labelColor: accentColor,
+                        unselectedLabelColor: Colors.grey,
+                        indicatorColor: accentColor,
+                        indicatorSize: TabBarIndicatorSize.label,
+                        tabs: const [
+                          Tab(text: 'О тайтле'),
+                          Tab(text: 'Главы'),
+                          Tab(text: 'Комм.'),
+                          Tab(text: 'Отзывы'),
+                        ],
+                      ),
+                      theme.backgroundColor,
+                    ),
+                  ),
+                ];
+              },
+              body: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildAboutTab(theme),
+                  _buildChaptersTab(theme),
+                  _buildCommentsTab(theme),
+                  _buildReviewsTab(theme),
+                ],
+              ),
             ),
           ),
         ),
@@ -350,7 +376,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             color: theme.backgroundColor.withValues(alpha: 0.5),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.arrow_back_ios_new, color: accentColor, size: 18),
+          child: const Icon(Icons.arrow_back_ios_new,
+              color: accentColor, size: 18),
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
@@ -360,7 +387,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             Image.network(
               ApiConstants.getCoverUrl(_book!['coverUrl'] ?? ''),
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: theme.cardColor),
+              errorBuilder: (_, __, ___) =>
+                  Container(color: theme.cardColor),
             ),
             Container(
               decoration: BoxDecoration(
@@ -395,7 +423,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                   child: Image.network(
                     ApiConstants.getCoverUrl(_book!['coverUrl'] ?? ''),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
+                    errorBuilder: (_, __, ___) =>
+                        _buildPlaceholder(theme),
                   ),
                 ),
               ),
@@ -428,16 +457,16 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                   _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   size: 18,
                 ),
-                label: Text(
-                  _isBookmarked 
-                    ? BookmarkService.getStatusDisplayName(_currentStatus ?? '')
-                    : 'В закладки'
-                ),
+                label: Text(_isBookmarked
+                    ? BookmarkService.getStatusDisplayName(
+                        _currentStatus ?? '')
+                    : 'В закладки'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: accentColor,
                   side: const BorderSide(color: accentColor),
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
@@ -445,13 +474,17 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             Expanded(
               child: Consumer<NotificationProvider>(
                 builder: (context, notificationProvider, child) {
-                  final isSubscribed = notificationProvider.isSubscribed(widget.bookId);
+                  final isSubscribed =
+                      notificationProvider.isSubscribed(widget.bookId);
                   return OutlinedButton.icon(
                     onPressed: () {
-                      notificationProvider.toggleSubscription(widget.bookId);
+                      notificationProvider
+                          .toggleSubscription(widget.bookId);
                     },
                     icon: Icon(
-                      isSubscribed ? Icons.notifications_active : Icons.notifications_none,
+                      isSubscribed
+                          ? Icons.notifications_active
+                          : Icons.notifications_none,
                       size: 18,
                     ),
                     label: const Text('Подписаться'),
@@ -459,7 +492,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                       foregroundColor: accentColor,
                       side: const BorderSide(color: accentColor),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                   );
                 },
@@ -471,17 +505,22 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
+            onPressed:
+                _chapters.isNotEmpty ? () => _openReader(_currentChapter) : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: accentColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
               elevation: 0,
             ),
             child: Text(
-              _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              _currentChapter > 1
+                  ? 'Продолжить чтение'
+                  : 'Начать чтение',
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -492,7 +531,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Widget _buildChaptersTab(ThemeProvider theme) {
     if (_chapters.isEmpty) {
       return Center(
-        child: Text('Главы скоро появятся', style: TextStyle(color: theme.textSecondaryColor)),
+        child: Text('Главы скоро появятся',
+            style: TextStyle(color: theme.textSecondaryColor)),
       );
     }
     return ListView.separated(
@@ -508,10 +548,14 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isCurrent ? accentColor.withValues(alpha: 0.05) : theme.cardColor,
+              color: isCurrent
+                  ? accentColor.withValues(alpha: 0.05)
+                  : theme.cardColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isCurrent ? accentColor.withValues(alpha: 0.3) : Colors.transparent,
+                color: isCurrent
+                    ? accentColor.withValues(alpha: 0.3)
+                    : Colors.transparent,
               ),
             ),
             child: Row(
@@ -527,7 +571,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                     child: Text(
                       '${chapter['chapterOrder']}',
                       style: TextStyle(
-                        color: isCurrent ? Colors.white : theme.textSecondaryColor,
+                        color:
+                            isCurrent ? Colors.white : theme.textSecondaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -537,14 +582,18 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    chapter['title'] ?? 'Глава ${chapter['chapterOrder']}',
+                    chapter['title'] ??
+                        'Глава ${chapter['chapterOrder']}',
                     style: TextStyle(
                       color: theme.textPrimaryColor,
-                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight:
+                          isCurrent ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios, size: 14, color: theme.textSecondaryColor.withValues(alpha: 0.5)),
+                Icon(Icons.arrow_forward_ios,
+                    size: 14,
+                    color: theme.textSecondaryColor.withValues(alpha: 0.5)),
               ],
             ),
           ),
@@ -566,11 +615,15 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.rate_review_outlined, size: 48, color: theme.textSecondaryColor.withValues(alpha: 0.3)),
+          Icon(Icons.rate_review_outlined,
+              size: 48,
+              color: theme.textSecondaryColor.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text(
             'Здесь пока нету отзывов, будь первым',
-            style: TextStyle(color: theme.textSecondaryColor, fontWeight: FontWeight.w300),
+            style: TextStyle(
+                color: theme.textSecondaryColor,
+                fontWeight: FontWeight.w300),
           ),
         ],
       ),
@@ -592,12 +645,16 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             runSpacing: 8,
             children: (_book!['genres'] as List<dynamic>? ?? [])
                 .map((g) {
-                  final String genreName = g is Map ? (g['name'] ?? '') : g.toString();
+                  final String genreName =
+                      g is Map ? (g['name'] ?? '') : g.toString();
                   return Chip(
-                    label: Text(genreName, style: const TextStyle(fontSize: 12, color: accentColor)),
+                    label: Text(genreName,
+                        style: const TextStyle(
+                            fontSize: 12, color: accentColor)),
                     backgroundColor: accentColor.withValues(alpha: 0.1),
                     side: BorderSide.none,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
                   );
                 })
                 .toList(),
@@ -623,8 +680,14 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Widget _buildInfoRow(ThemeProvider theme, String label, String value) {
     return Row(
       children: [
-        Text('$label: ', style: TextStyle(color: theme.textSecondaryColor, fontWeight: FontWeight.w500)),
-        Text(value, style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold)),
+        Text('$label: ',
+            style: TextStyle(
+                color: theme.textSecondaryColor,
+                fontWeight: FontWeight.w500)),
+        Text(value,
+            style: TextStyle(
+                color: theme.textPrimaryColor,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -661,7 +724,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: _backgroundColor,
       child: _tabBar,
