@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/services/admin_service.dart';
+import 'package:prosper/services/user_service.dart';
+import 'package:prosper/constants/api_constants.dart';
 import 'package:prosper/screens/user/user_home.dart';
 
 class AdminProfileScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
 
   String _username = '';
   String _email = '';
+  String? _avatarUrl;
   bool _isLoading = true;
   int _booksCount = 0;
   int _usersCount = 0;
@@ -59,6 +62,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     });
 
     try {
+      final userService = UserService();
+      final profile = await userService.getProfile(widget.token);
+      
       final adminService = AdminService(widget.token);
       final books = await adminService.getBooks();
       if (widget.role == 'ADMIN') {
@@ -66,6 +72,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
         _usersCount = users.length;
       }
       setState(() {
+        _username = profile['nickname'] ?? profile['username'] ?? _username;
+        _email = profile['email'] ?? _email;
+        _avatarUrl = profile['avatarUrl'];
         _booksCount = books.length;
         _isLoading = false;
       });
@@ -273,21 +282,46 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
             height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
+              gradient: _avatarUrl == null ? LinearGradient(
                 colors: [accentColor.withOpacity(0.6), accentColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                _username.isNotEmpty ? _username[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
+              ) : null,
+              color: _avatarUrl != null ? Colors.white : null,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
+              ],
+            ),
+            child: ClipOval(
+              child: _avatarUrl != null
+                  ? Image.network(
+                      ApiConstants.getCoverUrl(_avatarUrl!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Text(
+                          _username.isNotEmpty ? _username[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _username.isNotEmpty ? _username[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
