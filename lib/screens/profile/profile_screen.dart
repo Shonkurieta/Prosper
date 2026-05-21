@@ -34,12 +34,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _isLoading = true;
   int _bookmarksCount = 0;
   int _booksInProgress = 0;
+  late String _currentToken;
 
   static const Color accentColor = Color(0xFFD46A4F);
 
   @override
   void initState() {
     super.initState();
+    _currentToken = widget.token;
     _animController = AnimationController(
       duration: const Duration(milliseconds: 900),
       vsync: this,
@@ -63,8 +65,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final profile = await _userService.getProfile(widget.token);
-      final bookmarks = await _bookmarkService.getBookmarks(widget.token);
+      final profile = await _userService.getProfile(_currentToken);
+      final bookmarks = await _bookmarkService.getBookmarks(_currentToken);
 
       int inProgress = 0;
       for (var bookmark in bookmarks) {
@@ -192,10 +194,13 @@ class _ProfileScreenState extends State<ProfileScreen>
               if (newNickname.isEmpty) return;
               Navigator.pop(context);
               try {
-                final response = await _userService.updateNickname(widget.token, newNickname);
+                final response = await _userService.updateNickname(_currentToken, newNickname);
                 final newToken = response['token'];
                 if (newToken != null) {
                   await _storage.saveToken(newToken);
+                  setState(() {
+                    _currentToken = newToken;
+                  });
                 }
                 _loadData();
                 _showSuccessSnackBar('Никнейм успешно изменён');
@@ -251,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               Navigator.pop(context);
               try {
                 await _userService.changePassword(
-                  widget.token, 
+                  _currentToken, 
                   oldPasswordController.text, 
                   newPasswordController.text
                 );
@@ -292,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (pickedFile != null) {
       try {
         setState(() => _isLoading = true);
-        await _userService.updateAvatar(widget.token, File(pickedFile.path));
+        await _userService.updateAvatar(_currentToken, File(pickedFile.path));
         await _loadData();
         _showSuccessSnackBar('Аватар успешно обновлён');
       } catch (e) {
@@ -519,7 +524,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: ClipOval(
                       child: _profile?['avatarUrl'] != null
                           ? Image.network(
-                              '${ApiConstants.baseUrl}${_profile!['avatarUrl']}',
+                              ApiConstants.getCoverUrl(_profile!['avatarUrl']),
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) => Center(
                                 child: Text(
