@@ -8,6 +8,7 @@ import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/widgets/comments_widget.dart';
+import 'package:prosper/widgets/reviews_widget.dart';
 
 class NovellDetailScreen extends StatefulWidget {
   final String token;
@@ -611,22 +612,10 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   }
 
   Widget _buildReviewsTab(ThemeProvider theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.rate_review_outlined,
-              size: 48,
-              color: theme.textSecondaryColor.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          Text(
-            'Здесь пока нету отзывов, будь первым',
-            style: TextStyle(
-                color: theme.textSecondaryColor,
-                fontWeight: FontWeight.w300),
-          ),
-        ],
-      ),
+    return ReviewsWidget(
+      token: widget.token,
+      bookId: widget.bookId,
+      currentUsername: _currentUsername,
     );
   }
 
