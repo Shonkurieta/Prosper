@@ -150,7 +150,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                 radius: 16,
                 backgroundColor: accentColor.withValues(alpha: 0.1),
                 child: Text(
-                  review['user']['username'][0].toUpperCase(),
+                  review['user']['nickname'][0].toUpperCase(),
                   style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -160,7 +160,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review['user']['username'],
+                      review['user']['nickname'],
                       style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     Text(
