@@ -63,7 +63,7 @@ public class ReviewController {
 
             return ResponseEntity.ok(reviewService.createReview(review));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -75,13 +75,13 @@ public class ReviewController {
             Review review = reviewService.getReviewById(id).orElseThrow();
             
             if (!review.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body("You can only delete your own reviews");
+                return ResponseEntity.status(403).body(Map.of("message", "You can only delete your own reviews"));
             }
             
             reviewService.deleteReview(id);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(Map.of("message", "Deleted successfully"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }

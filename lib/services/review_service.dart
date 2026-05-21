@@ -60,8 +60,13 @@ class ReviewService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        final error = json.decode(response.body);
-        throw Exception(error is String ? error : (error['message'] ?? 'Failed to create review'));
+        try {
+          final error = json.decode(response.body);
+          throw Exception(error['message'] ?? 'Ошибка при создании отзыва');
+        } catch (e) {
+          if (e is Exception) rethrow;
+          throw Exception('Ошибка сервера: ${response.statusCode}');
+        }
       }
     } catch (e) {
       rethrow;
