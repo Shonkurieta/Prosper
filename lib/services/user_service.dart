@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 import '../constants/api_constants.dart';
 
 class UserService {
@@ -124,6 +127,53 @@ class UserService {
       }
     } catch (e) {
       print('Error in changePassword: $e');
+      rethrow;
+    }
+  }
+
+  /// Обновить аватар
+  Future<Map<String, dynamic>> updateAvatar(String token, File imageFile) async {
+    try {
+      print('=== UPDATE AVATAR REQUEST ===');
+      print('URL: $baseUrl/user/avatar');
+      
+      token = token.replaceFirst('Bearer ', '').trim();
+      
+      final uri = Uri.parse('$baseUrl/user/avatar');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      final stream = http.ByteStream(imageFile.openRead());
+      final length = await imageFile.length();
+      
+      final extension = path.extension(imageFile.path).toLowerCase();
+      final mimeType = extension == '.png' ? 'image/png' : 'image/jpeg';
+      
+      final multipartFile = http.MultipartFile(
+        'avatar',
+        stream,
+        length,
+        filename: path.basename(imageFile.path),
+        contentType: MediaType.parse(mimeType),
+      );
+      
+      request.files.add(multipartFile);
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error['message'] ?? 'Ошибка обновления аватара');
+      }
+    } catch (e) {
+      print('Error in updateAvatar: $e');
       rethrow;
     }
   }

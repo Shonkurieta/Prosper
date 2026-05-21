@@ -12,9 +12,18 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
 
 import com.example.prosper.config.JwtUtil;
 import com.example.prosper.model.User;
@@ -53,6 +62,7 @@ public class UserController {
         profile.put("email", user.getEmail());
         profile.put("nickname", user.getNickname());
         profile.put("role", user.getRole());
+        profile.put("avatarUrl", user.getAvatarUrl());
         return ResponseEntity.ok(profile);
     }
 
@@ -123,5 +133,50 @@ public class UserController {
         userRepository.save(user);
         
         return ResponseEntity.ok(Map.of("message", "Пароль успешно изменён"));
+    }
+
+    @PostMapping("/avatar")
+    public ResponseEntity<?> updateAvatar(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("avatar") MultipartFile file) {
+        String identifier = jwtUtil.extractUsername(token.replace("Bearer ", ""));
+        
+        User user = userRepository.findByNickname(identifier)
+                .orElseGet(() -> userRepository.findByEmail(identifier).orElse(null));
+        
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Файл не выбран"));
+        }
+
+        try {
+            String uploadDir = "assets/avatars/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename != null && originalFilename.contains(".") 
+                ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
+                : ".jpg";
+            String fileName = UUID.randomUUID().toString() + extension;
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            String avatarUrl = "/assets/avatars/" + fileName;
+            user.setAvatarUrl(avatarUrl);
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of(
+                "message", "Аватар успешно обновлён",
+                "avatarUrl", avatarUrl
+            ));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body(Map.of("message", "Ошибка при сохранении файла: " + e.getMessage()));
+        }
     }
 }

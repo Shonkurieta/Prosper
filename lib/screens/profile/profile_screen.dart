@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:prosper/services/user_service.dart';
 import 'package:prosper/services/storage_service.dart';
@@ -7,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:prosper/constants/api_constants.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
@@ -160,6 +163,167 @@ class _ProfileScreenState extends State<ProfileScreen>
     return nickname.isNotEmpty ? nickname : username;
   }
 
+  void _showEditNicknameDialog(ThemeProvider theme) {
+    final controller = TextEditingController(text: _getDisplayName());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Сменить никнейм', style: TextStyle(color: theme.textPrimaryColor)),
+        content: TextField(
+          controller: controller,
+          style: TextStyle(color: theme.textPrimaryColor),
+          decoration: InputDecoration(
+            hintText: 'Новый никнейм',
+            hintStyle: TextStyle(color: theme.textSecondaryColor),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.textSecondaryColor)),
+            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: accentColor)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newNickname = controller.text.trim();
+              if (newNickname.isEmpty) return;
+              Navigator.pop(context);
+              try {
+                final response = await _userService.updateNickname(widget.token, newNickname);
+                final newToken = response['token'];
+                if (newToken != null) {
+                  await _storage.saveToken(newToken);
+                }
+                _loadData();
+                _showSuccessSnackBar('Никнейм успешно изменён');
+              } catch (e) {
+                _showErrorSnackBar(e.toString());
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Сохранить', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(ThemeProvider theme) {
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Сменить пароль', style: TextStyle(color: theme.textPrimaryColor)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildPasswordField(oldPasswordController, 'Текущий пароль', theme),
+            _buildPasswordField(newPasswordController, 'Новый пароль', theme),
+            _buildPasswordField(confirmPasswordController, 'Подтвердите пароль', theme),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (newPasswordController.text != confirmPasswordController.text) {
+                _showErrorSnackBar('Пароли не совпадают');
+                return;
+              }
+              if (newPasswordController.text.length < 8) {
+                _showErrorSnackBar('Минимум 8 символов');
+                return;
+              }
+              Navigator.pop(context);
+              try {
+                await _userService.changePassword(
+                  widget.token, 
+                  oldPasswordController.text, 
+                  newPasswordController.text
+                );
+                _showSuccessSnackBar('Пароль успешно изменён');
+              } catch (e) {
+                _showErrorSnackBar(e.toString());
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Сменить', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordField(TextEditingController controller, String hint, ThemeProvider theme) {
+    return TextField(
+      controller: controller,
+      obscureText: true,
+      style: TextStyle(color: theme.textPrimaryColor),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: theme.textSecondaryColor),
+        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.textSecondaryColor)),
+        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: accentColor)),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    
+    if (pickedFile != null) {
+      try {
+        setState(() => _isLoading = true);
+        await _userService.updateAvatar(widget.token, File(pickedFile.path));
+        await _loadData();
+        _showSuccessSnackBar('Аватар успешно обновлён');
+      } catch (e) {
+        setState(() => _isLoading = false);
+        _showErrorSnackBar(e.toString());
+      }
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message.replaceAll('Exception: ', '')),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
@@ -211,7 +375,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                             },
                           ),
 
-                          _buildSectionLabel(theme, 'Настройки'),
+                          _buildSectionLabel(theme, 'Настройки профиля'),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.person_outline_rounded,
+                            title: 'Изменить никнейм',
+                            subtitle: 'Сменить имя пользователя',
+                            onTap: () => _showEditNicknameDialog(theme),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.lock_outline_rounded,
+                            title: 'Изменить пароль',
+                            subtitle: 'Обновить данные для входа',
+                            onTap: () => _showChangePasswordDialog(theme),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMenuItem(
+                            theme: theme,
+                            icon: Icons.photo_camera_outlined,
+                            title: 'Сменить аватар',
+                            subtitle: 'Загрузить новое фото профиля',
+                            onTap: _pickAndUploadAvatar,
+                          ),
+                          const SizedBox(height: 32),
+                          _buildSectionLabel(theme, 'Интерфейс'),
                           const SizedBox(height: 12),
                           _buildMenuItem(
                             theme: theme,
@@ -326,15 +516,32 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Text(
-                        _getInitial(),
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: accentColor,
-                        ),
-                      ),
+                    child: ClipOval(
+                      child: _profile?['avatarUrl'] != null
+                          ? Image.network(
+                              '${ApiConstants.baseUrl}${_profile!['avatarUrl']}',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Center(
+                                child: Text(
+                                  _getInitial(),
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    color: accentColor,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Center(
+                              child: Text(
+                                _getInitial(),
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 12),
