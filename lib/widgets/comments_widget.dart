@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:prosper/services/comment_service.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/constants/api_constants.dart';
 
 class CommentsWidget extends StatefulWidget {
   final String token;
@@ -272,7 +273,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     return list;
   }
 
-  Widget _buildAvatar(String name, ThemeProvider theme, {bool isReply = false}) {
+  Widget _buildAvatar(String name, String? avatarUrl, ThemeProvider theme, {bool isReply = false}) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final color = accentColor;
     final bgColor = theme.isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5);
@@ -285,15 +286,32 @@ class _CommentsWidgetState extends State<CommentsWidget> {
         color: bgColor,
         border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            fontSize: isReply ? 10 : 12,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
+      child: ClipOval(
+        child: avatarUrl != null && avatarUrl.isNotEmpty
+            ? Image.network(
+                ApiConstants.getCoverUrl(avatarUrl),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      fontSize: isReply ? 10 : 12,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ),
+              )
+            : Center(
+                child: Text(
+                  initial,
+                  style: TextStyle(
+                    fontSize: isReply ? 10 : 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -333,7 +351,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildAvatar(author, theme),
+              _buildAvatar(author, comment['user']['avatarUrl'], theme),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -419,7 +437,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildAvatar(replyAuthor, theme, isReply: true),
+                  _buildAvatar(replyAuthor, reply['user']['avatarUrl'], theme, isReply: true),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(

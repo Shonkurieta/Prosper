@@ -20,30 +20,42 @@ class UserHome extends StatefulWidget {
 class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin {
   int _selectedIndex = 1;
   late AnimationController _animController;
-  late List<Widget> _screens;
+  late String _currentToken;
 
   static const Color accentColor = Color(0xFFD46A4F);
 
   @override
   void initState() {
     super.initState();
+    _currentToken = widget.token;
     _animController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     
-    _screens = [
-      HomeScreen(token: widget.token),
-      LibraryScreen(token: widget.token),
-      BookmarksScreen(token: widget.token),
-      NotificationsScreen(token: widget.token),
-      ProfileScreen(token: widget.token),
-    ];
-    
     _animController.forward();
     
     // Устанавливаем текущего пользователя в провайдере уведомлений
     _initUserInNotificationProvider();
+  }
+
+  void _updateToken(String newToken) {
+    setState(() {
+      _currentToken = newToken;
+    });
+  }
+
+  List<Widget> _buildScreens() {
+    return [
+      HomeScreen(token: _currentToken),
+      LibraryScreen(token: _currentToken),
+      BookmarksScreen(token: _currentToken),
+      NotificationsScreen(token: _currentToken),
+      ProfileScreen(
+        token: _currentToken,
+        onTokenUpdated: _updateToken,
+      ),
+    ];
   }
 
   Future<void> _initUserInNotificationProvider() async {
@@ -73,12 +85,13 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    final screens = _buildScreens();
     
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       body: FadeTransition(
         opacity: _animController,
-        child: _screens[_selectedIndex],
+        child: screens[_selectedIndex],
       ),
       bottomNavigationBar: _buildBottomBar(theme),
     );

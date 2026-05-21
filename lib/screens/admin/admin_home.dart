@@ -15,20 +15,33 @@ class AdminHome extends StatefulWidget {
 class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _animController;
-  late List<Widget> _screens;
+  late String _currentToken;
 
   @override
   void initState() {
     super.initState();
+    _currentToken = widget.token;
     _animController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _screens = [
-      ManageNovellsScreen(token: widget.token),
-      ProfileScreen(token: widget.token),
-    ];
     _animController.forward();
+  }
+
+  void _updateToken(String newToken) {
+    setState(() {
+      _currentToken = newToken;
+    });
+  }
+
+  List<Widget> _buildScreens() {
+    return [
+      ManageNovellsScreen(token: _currentToken),
+      ProfileScreen(
+        token: _currentToken,
+        onTokenUpdated: _updateToken,
+      ),
+    ];
   }
 
   @override
@@ -53,7 +66,7 @@ class _AdminHomeState extends State<AdminHome> with SingleTickerProviderStateMix
           backgroundColor: theme.backgroundColor,
           body: FadeTransition(
             opacity: _animController,
-            child: _screens[_selectedIndex],
+            child: _buildScreens()[_selectedIndex],
           ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(

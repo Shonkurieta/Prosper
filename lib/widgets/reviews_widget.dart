@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/theme_provider.dart';
 import '../services/review_service.dart';
+import '../constants/api_constants.dart';
 
 class ReviewsWidget extends StatefulWidget {
   final String token;
@@ -149,9 +150,26 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: accentColor.withValues(alpha: 0.1),
-                child: Text(
-                  review['user']['nickname'][0].toUpperCase(),
-                  style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
+                child: ClipOval(
+                  child: review['user']['avatarUrl'] != null && review['user']['avatarUrl'].isNotEmpty
+                      ? Image.network(
+                          ApiConstants.getCoverUrl(review['user']['avatarUrl']),
+                          fit: BoxFit.cover,
+                          width: 32,
+                          height: 32,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Text(
+                              review['user']['nickname'][0].toUpperCase(),
+                              style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            review['user']['nickname'][0].toUpperCase(),
+                            style: const TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),

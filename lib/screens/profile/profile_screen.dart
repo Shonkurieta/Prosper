@@ -13,8 +13,9 @@ import 'package:prosper/constants/api_constants.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
+  final Function(String)? onTokenUpdated;
 
-  const ProfileScreen({super.key, required this.token});
+  const ProfileScreen({super.key, required this.token, this.onTokenUpdated});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -198,6 +199,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 final newToken = response['token'];
                 if (newToken != null) {
                   await _storage.saveToken(newToken);
+                  
+                  // Обновляем имя пользователя в SharedPreferences, так как оно используется в других экранах
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('username', newNickname);
+                  
+                  if (widget.onTokenUpdated != null) {
+                    widget.onTokenUpdated!(newToken);
+                  }
+                  
                   setState(() {
                     _currentToken = newToken;
                   });
