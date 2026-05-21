@@ -131,7 +131,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
   Widget _buildReviewItem(dynamic review, ThemeProvider theme) {
     final date = DateTime.parse(review['createdAt']);
     final formattedDate = DateFormat('dd.MM.yyyy').format(date);
-    final isOwner = review['user']['username'] == widget.currentUsername;
+    final isOwner = review['user']['nickname'] == widget.currentUsername;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
