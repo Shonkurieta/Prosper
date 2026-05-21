@@ -36,6 +36,15 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "is_banned")
+    private boolean isBanned = false;
+
+    @Column(name = "ban_expires_at")
+    private java.time.LocalDateTime banExpiresAt;
+
+    @Column(name = "google_id")
+    private String googleId;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<UserBook> userBooks;
@@ -95,6 +104,30 @@ public class User {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public boolean isBanned() {
+        return isBanned;
+    }
+
+    public void setBanned(boolean banned) {
+        isBanned = banned;
+    }
+
+    public java.time.LocalDateTime getBanExpiresAt() {
+        return banExpiresAt;
+    }
+
+    public void setBanExpiresAt(java.time.LocalDateTime banExpiresAt) {
+        this.banExpiresAt = banExpiresAt;
+    }
+
+    public String getGoogleId() {
+        return googleId;
+    }
+
+    public void setGoogleId(String googleId) {
+        this.googleId = googleId;
     }
 
     public List<UserBook> getUserBooks() {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:prosper/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/screens/user/user_home.dart';
+import 'package:prosper/screens/admin/admin_main_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
@@ -59,46 +60,64 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     super.dispose();
   }
 
+  Future<void> _handleAuthResponse(Map<String, dynamic> response) async {
+    final token = response['token']?.toString() ?? '';
+    final role = response['role']?.toString() ?? 'USER';
+    final usernameFromServer = response['username']?.toString() ?? '';
+    final emailFromServer = response['email']?.toString() ?? '';
+    final id = response['id'] as int? ?? -1;
+
+    if (token.isEmpty) throw Exception('Токен не получен от сервера');
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+    await prefs.setString('role', role);
+    await prefs.setString('username', usernameFromServer);
+    await prefs.setString('email', emailFromServer);
+    await prefs.setInt('id', id);
+
+    if (!mounted) return;
+
+    Widget nextScreen = (role == 'ADMIN' || role == 'MODERATOR')
+        ? AdminMainScreen(token: token, role: role)
+        : UserHome(token: token);
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => nextScreen),
+      (route) => false,
+    );
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (_passwordController.text != _confirmPasswordController.text) {
       _showError('Пароли не совпадают');
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
-      final username = _usernameController.text.trim();
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-
-      final response = await _authService.register(username, email, password);
-
-      final token = response['token']?.toString() ?? '';
-      final role = response['role']?.toString() ?? 'USER';
-      final usernameFromServer = response['username']?.toString() ?? '';
-      final emailFromServer = response['email']?.toString() ?? '';
-      final id = response['id'] as int? ?? -1;
-
-      if (token.isEmpty) throw Exception('Токен не получен от сервера');
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-      await prefs.setString('role', role);
-      await prefs.setString('username', usernameFromServer);
-      await prefs.setString('email', emailFromServer);
-      await prefs.setInt('id', id);
-
-      if (!mounted) return;
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => UserHome(token: token)),
-        (route) => false,
+      final response = await _authService.register(
+        _usernameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
+      await _handleAuthResponse(response);
     } catch (e) {
-      setState(() => _isLoading = false);
       _showError('Ошибка регистрации: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _authService.loginWithGoogle();
+      await _handleAuthResponse(response);
+    } catch (e) {
+      _showError('Ошибка Google Auth: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -183,6 +202,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                       ),
                       const SizedBox(height: 32),
                       _buildRegisterButton(theme),
+                      const SizedBox(height: 16),
+                      _buildGoogleLoginButton(theme),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -190,6 +211,25 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleLoginButton(ThemeProvider theme) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: _isLoading ? null : _loginWithGoogle,
+        icon: const Icon(Icons.g_mobiledata, size: 32, color: accentColor),
+        label: const Text(
+          'Войти через Google',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: accentColor),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: accentColor),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );

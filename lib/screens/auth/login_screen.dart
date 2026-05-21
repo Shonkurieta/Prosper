@@ -4,6 +4,7 @@ import 'package:prosper/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/screens/user/user_home.dart';
 import 'package:prosper/screens/auth/register_screen.dart';
+import 'package:prosper/screens/auth/forgot_password_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 
@@ -57,70 +58,85 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
+  Future<void> _handleAuthResponse(Map<String, dynamic> response) async {
+    final token = response['token']?.toString() ?? '';
+    final role = response['role']?.toString() ?? 'USER';
+    final usernameFromServer = response['username']?.toString() ?? '';
+    final email = response['email']?.toString() ?? '';
+    final id = response['id'] as int? ?? -1;
+
+    if (token.isEmpty) throw Exception('Токен не получен от сервера');
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+    await prefs.setString('role', role);
+    await prefs.setString('username', usernameFromServer);
+    await prefs.setString('email', email);
+    await prefs.setInt('id', id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Добро пожаловать, $usernameFromServer!'),
+        backgroundColor: accentColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
+
+    Widget nextScreen = (role == 'ADMIN' || role == 'MODERATOR')
+        ? AdminMainScreen(token: token, role: role)
+        : UserHome(token: token);
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => nextScreen),
+      (route) => false,
+    );
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
-      final username = _usernameController.text.trim();
-      final password = _passwordController.text.trim();
-
-      final response = await _authService.login(username, password);
-
-      final token = response['token']?.toString() ?? '';
-      final role = response['role']?.toString() ?? 'USER';
-      final usernameFromServer = response['username']?.toString() ?? '';
-      final email = response['email']?.toString() ?? '';
-      final id = response['id'] as int? ?? -1;
-
-      if (token.isEmpty) throw Exception('Токен не получен от сервера');
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-      await prefs.setString('role', role);
-      await prefs.setString('username', usernameFromServer);
-      await prefs.setString('email', email);
-      await prefs.setInt('id', id);
-
-      if (!mounted) return;
-
-      final theme = context.read<ThemeProvider>();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Добро пожаловать, $usernameFromServer!'),
-          backgroundColor: accentColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(20),
-        ),
+      final response = await _authService.login(
+        _usernameController.text.trim(),
+        _passwordController.text.trim(),
       );
-
-      Widget libraryScreen = (role == 'ADMIN' || role == 'MODERATOR')
-          ? AdminMainScreen(token: token, role: role)
-          : UserHome(token: token);
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => libraryScreen),
-        (route) => false,
-      );
+      await _handleAuthResponse(response);
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (!mounted) return;
-      
-      final theme = context.read<ThemeProvider>();
-      String errorMessage = e.toString().replaceAll('Exception:', '').trim();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: theme.errorColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(20),
-        ),
-      );
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _authService.loginWithGoogle();
+      await _handleAuthResponse(response);
+    } catch (e) {
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(dynamic e) {
+    if (!mounted) return;
+    final theme = context.read<ThemeProvider>();
+    String errorMessage = e.toString().replaceAll('Exception:', '').trim();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: theme.errorColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
   }
 
   @override
@@ -164,6 +180,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(height: 40),
                       _buildLoginButton(theme),
+                      const SizedBox(height: 16),
+                      _buildGoogleLoginButton(theme),
+                      const SizedBox(height: 16),
+                      _buildForgotPasswordLink(theme),
                       const SizedBox(height: 24),
                       _buildRegisterLink(theme),
                     ],
@@ -172,6 +192,40 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleLoginButton(ThemeProvider theme) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: _isLoading ? null : _loginWithGoogle,
+        icon: const Icon(Icons.g_mobiledata, size: 32, color: accentColor),
+        label: const Text(
+          'Войти через Google',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: accentColor),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: accentColor),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForgotPasswordLink(ThemeProvider theme) {
+    return Center(
+      child: TextButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+        ),
+        child: Text(
+          'Забыли пароль?',
+          style: TextStyle(color: theme.textSecondaryColor, fontSize: 14),
         ),
       ),
     );
