@@ -24,6 +24,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   final UserService _userService = UserService();
+  final AuthService _authService = AuthService();
   final StorageService _storage = StorageService();
   final BookmarkService _bookmarkService = BookmarkService();
 
@@ -133,6 +134,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             onPressed: () async {
               Navigator.pop(context);
               context.read<NotificationProvider>().clearOnLogout();
+              // Выходим из Google сессии, если она была
+              await _authService.signOut();
               await _storage.clearToken();
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(

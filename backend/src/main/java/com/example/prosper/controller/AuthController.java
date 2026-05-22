@@ -205,6 +205,48 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
+        try {
+            String username = request.get("username");
+            String password = request.get("password");
+
+            if (username == null || username.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Имя пользователя или email обязательно"));
+            }
+
+            if (password == null || password.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Пароль обязателен"));
+            }
+
+            // Попытка найти пользователя по nickname или email
+            Optional<User> userOpt = userRepository.findByNickname(username);
+            if (userOpt.isEmpty()) {
+                userOpt = userRepository.findByEmail(username);
+            }
+
+            if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
+                User user = userOpt.get();
+                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getNickname());
+                String token = jwtUtil.generateToken(user.getId(), userDetails);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", token);
+                response.put("username", user.getNickname());
+                response.put("email", user.getEmail());
+                response.put("role", user.getRole());
+                response.put("id", user.getId());
+                response.put("avatar_url", user.getAvatarUrl());
+
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Неверное имя пользователя или пароль"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Ошибка входа: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(
             @RequestBody Map<String, String> request

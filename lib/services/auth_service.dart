@@ -88,8 +88,19 @@ class AuthService {
     }
   }
 
+  Future<void> signOut() async {
+    try {
+      await _googleSignIn.signOut();
+      await _googleSignIn.disconnect();
+    } catch (e) {
+      print('Error in signOut: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> loginWithGoogle() async {
     try {
+      // Сначала выходим из текущей сессии Google, чтобы пользователь мог выбрать другой аккаунт
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         throw Exception('Вход через Google отменен');
