@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.prosper.config.JwtUtil;
 import com.example.prosper.model.User;
@@ -247,6 +248,7 @@ public class AuthController {
         }
     }
 
+    @Transactional
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -275,6 +277,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Если email зарегистрирован, код подтверждения отправлен"));
     }
 
+    @Transactional
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
