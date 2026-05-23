@@ -10,6 +10,7 @@ import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:prosper/constants/api_constants.dart';
+import 'package:prosper/services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
