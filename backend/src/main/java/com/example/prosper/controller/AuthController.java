@@ -259,9 +259,13 @@ public class AuthController {
             // Генерируем 6-значный код
             String token = String.format("%06d", new java.util.Random().nextInt(999999));
 
-            // Сохраняем токен в БД
-            tokenRepository.deleteByUser(user); // Удаляем старые токены
-            com.example.prosper.model.PasswordResetToken resetToken = new com.example.prosper.model.PasswordResetToken(token, user);
+            // Сохраняем токен в БД (используем существующий или создаем новый)
+            com.example.prosper.model.PasswordResetToken resetToken = tokenRepository.findByUser(user)
+                    .orElse(new com.example.prosper.model.PasswordResetToken());
+            
+            resetToken.setToken(token);
+            resetToken.setUser(user);
+            resetToken.setExpiryDate(java.time.LocalDateTime.now().plusHours(1));
             tokenRepository.save(resetToken);
 
             // Отправляем на почту
