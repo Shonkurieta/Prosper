@@ -144,6 +144,10 @@ class AuthService {
         body: json.encode({'email': email}),
       );
 
+      if (response.body.isEmpty) {
+        throw Exception('Сервер вернул пустой ответ. Проверьте эндпоинт.');
+      }
+
       final data = json.decode(response.body);
       if (response.statusCode == 200) {
         return data['message'];
@@ -151,6 +155,9 @@ class AuthService {
         throw Exception(data['message'] ?? 'Ошибка запроса сброса пароля');
       }
     } catch (e) {
+      if (e is FormatException) {
+        throw Exception('Ошибка формата данных от сервера. Возможно, эндпоинт не найден.');
+      }
       rethrow;
     }
   }

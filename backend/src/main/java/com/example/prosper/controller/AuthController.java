@@ -247,6 +247,52 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            // Генерируем 6-значный код
+            String token = String.format("%06d", new java.util.Random().nextInt(999999));
+
+            // Сохраняем токен в БД
+            tokenRepository.deleteByUser(user); // Удаляем старые токены
+            com.example.prosper.model.PasswordResetToken resetToken = new com.example.prosper.model.PasswordResetToken(token, user);
+            tokenRepository.save(resetToken);
+
+            // Отправляем на почту
+            try {
+                emailService.sendResetTokenEmail(user.getEmail(), token);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Ошибка отправки письма: " + e.getMessage()));
+            }
+        }
+
+        // Возвращаем успех в любом случае из соображений безопасности
+        return ResponseEntity.ok(Map.of("message", "Если email зарегистрирован, код подтверждения отправлен"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+
+        Optional<com.example.prosper.model.PasswordResetToken> tokenOpt = tokenRepository.findByToken(token);
+        if (tokenOpt.isEmpty() || tokenOpt.get().isExpired()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Неверный или просроченный код"));
+        }
+
+        User user = tokenOpt.get().getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        tokenRepository.delete(tokenOpt.get());
+
+        return ResponseEntity.ok(Map.of("message", "Пароль успешно изменен"));
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(
             @RequestBody Map<String, String> request
