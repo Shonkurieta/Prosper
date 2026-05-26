@@ -104,11 +104,19 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         widget.token,
         widget.bookId,
       );
-      final relatedBookService = RelatedBookService();
-      final relatedBooks = await relatedBookService.getRelatedBooks(
-        widget.token,
-        widget.bookId,
-      );
+
+      // Load related books separately - if it fails, continue without them
+      List<dynamic> relatedBooks = [];
+      try {
+        final relatedBookService = RelatedBookService();
+        relatedBooks = await relatedBookService.getRelatedBooks(
+          widget.token,
+          widget.bookId,
+        );
+      } catch (e) {
+        // Silently fail - related books are optional
+        relatedBooks = [];
+      }
 
       setState(() {
         _book = book;
