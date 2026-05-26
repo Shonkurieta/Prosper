@@ -23,6 +23,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<dynamic> _allBooks = [];
   List<dynamic> _filteredBooks = [];
   Map<int, Map<String, dynamic>> _bookmarksByBookId = {};
+  List<dynamic> _allGenres = [];
+  Set<int> _selectedGenreIds = {};
   bool _isLoading = true;
   bool _isSearching = false;
   
@@ -53,6 +55,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final books = await _bookService.getAllBooks(widget.token);
       final bookmarks = await _bookmarkService.getBookmarks(widget.token);
       
+      final genresSet = <dynamic>{};
+      for (var book in books) {
+        final genres = book['genres'] as List<dynamic>? ?? [];
+        genresSet.addAll(genres);
+      }
+      final genres = genresSet.toList();
+      
       final bookmarksMap = <int, Map<String, dynamic>>{};
       for (var bookmark in bookmarks) {
         final bookId = bookmark['book']?['id'] as int?;
@@ -61,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       
       setState(() {
         _allBooks = books;
+        _allGenres = genres;
         _filteredBooks = books;
         _bookmarksByBookId = bookmarksMap;
         _isLoading = false;
@@ -76,17 +86,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _searchBooks(String query) {
+    _applyFilters(query);
+  }
+
+  void _toggleGenreFilter(int genreId) {
     setState(() {
-      if (query.isEmpty) {
-        _filteredBooks = _allBooks;
+      if (_selectedGenreIds.contains(genreId)) {
+        _selectedGenreIds.remove(genreId);
       } else {
-        _filteredBooks = _allBooks.where((book) {
-          final title = (book['title'] ?? '').toLowerCase();
-          final author = (book['author'] ?? '').toLowerCase();
-          final q = query.toLowerCase();
-          return title.contains(q) || author.contains(q);
-        }).toList();
+        _selectedGenreIds.add(genreId);
       }
+    });
+    _applyFilters(_searchController.text);
+  }
+
+  void _applyFilters(String query) {
+    setState(() {
+      _filteredBooks = _allBooks.where((book) {
+        final title = (book['title'] ?? '').toLowerCase();
+        final author = (book['author'] ?? '').toLowerCase();
+        final q = query.toLowerCase();
+        final matchesSearch = query.isEmpty || title.contains(q) || author.contains(q);
+        
+        bool matchesGenres = true;
+        if (_selectedGenreIds.isNotEmpty) {
+          final bookGenres = (book['genres'] as List<dynamic>? ?? [])
+              .map((g) => g is Map ? g['id'] : g)
+              .toSet();
+          matchesGenres = _selectedGenreIds.every((genreId) => bookGenres.contains(genreId));
+        }
+        
+        return matchesSearch && matchesGenres;
+      }).toList();
     });
   }
 
@@ -103,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             slivers: [
               _buildHeader(theme),
               _buildSearchBar(theme),
+              if (_allGenres.isNotEmpty) _buildGenreFilter(theme),
               _isLoading
                 ? const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: accentColor)))
                 : _buildBookGrid(theme),
@@ -165,6 +197,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenreFilter(ThemeProvider theme) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _allGenres.map((genre) {
+              final genreId = genre is Map ? genre['id'] : genre;
+              final genreName = genre is Map ? genre['name'] : genre.toString();
+              final isSelected = _selectedGenreIds.contains(genreId);
+              
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(genreName),
+                  selected: isSelected,
+                  onSelected: (_) => _toggleGenreFilter(genreId),
+                  backgroundColor: theme.cardColor,
+                  selectedColor: accentColor.withOpacity(0.2),
+                  labelStyle: TextStyle(
+                    color: isSelected ? accentColor : theme.textPrimaryColor,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  side: BorderSide(
+                    color: isSelected ? accentColor : theme.textSecondaryColor.withOpacity(0.2),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ),
       ),

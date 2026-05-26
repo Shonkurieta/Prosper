@@ -9,6 +9,7 @@ import 'package:prosper/providers/notification_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/widgets/comments_widget.dart';
 import 'package:prosper/widgets/reviews_widget.dart';
+import 'package:prosper/services/related_book_service.dart';
 
 class NovellDetailScreen extends StatefulWidget {
   final String token;
@@ -31,6 +32,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
 
   Map<String, dynamic>? _book;
   List<dynamic> _chapters = [];
+  List<dynamic> _relatedBooks = [];
   bool _isLoading = true;
   bool _isBookmarked = false;
   String? _currentStatus;
@@ -102,10 +104,16 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         widget.token,
         widget.bookId,
       );
+      final relatedBookService = RelatedBookService();
+      final relatedBooks = await relatedBookService.getRelatedBooks(
+        widget.token,
+        widget.bookId,
+      );
 
       setState(() {
         _book = book;
         _chapters = chapters;
+        _relatedBooks = relatedBooks;
         _currentChapter = progress['currentChapter'] ?? 1;
         _isBookmarked = progress['isBookmarked'] ?? false;
         _currentStatus = progress['status'];
@@ -660,8 +668,104 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               fontWeight: FontWeight.w300,
             ),
           ),
+          if (_relatedBooks.isNotEmpty) ...
+          [
+            const SizedBox(height: 32),
+            _buildSectionLabel(theme, 'Связанное'),
+            const SizedBox(height: 12),
+            _buildRelatedBooksSection(theme),
+          ],
           const SizedBox(height: 40),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRelatedBooksSection(ThemeProvider theme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _relatedBooks.map((related) {
+          final String relationType = related['relationType'] ?? 'SEQUEL';
+          final String typeLabel = relationType == 'SEQUEL'
+              ? 'Продолжение'
+              : relationType == 'PREQUEL'
+                  ? 'Предыдущая'
+                  : 'Побочная история';
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => NovellDetailScreen(
+                      token: widget.token,
+                      bookId: related['relatedBookId'],
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                width: 140,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: theme.cardColor,
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      child: Image.network(
+                        ApiConstants.getCoverUrl(
+                            related['relatedBookCoverUrl'] ?? ''),
+                        height: 100,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            _buildPlaceholder(theme),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            related['relatedBookTitle'] ?? 'Без названия',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: theme.textPrimaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            typeLabel,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

@@ -4,6 +4,8 @@ import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/providers/notification_provider.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
+import 'package:prosper/screens/novell/novell_detail_screen.dart';
+import 'package:prosper/services/comment_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -17,12 +19,16 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   String _filter = 'Непрочитанные';
   String _currentUsername = 'Гость';
+  List<dynamic> _commentNotifications = [];
+  bool _isLoadingCommentNotifications = true;
   static const Color accentColor = Color(0xFFD46A4F);
+  final CommentNotificationService _commentNotificationService = CommentNotificationService();
 
   @override
   void initState() {
     super.initState();
     _loadUsername();
+    _loadCommentNotifications();
   }
 
   Future<void> _loadUsername() async {
@@ -32,17 +38,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
+  Future<void> _loadCommentNotifications() async {
+    try {
+      final notifications = await _commentNotificationService.getNotifications(widget.token);
+      setState(() {
+        _commentNotifications = notifications;
+        _isLoadingCommentNotifications = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingCommentNotifications = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
     final notificationProvider = context.watch<NotificationProvider>();
     
-    List<AppNotification> filteredNotifications = notificationProvider.notifications;
+    List<AppNotification> chapterNotifications = notificationProvider.notifications;
     if (_filter == 'Все') {
-      filteredNotifications = filteredNotifications.where((n) => n.isRead).toList();
+      // Show all
+    } else if (_filter == 'Непрочитанные') {
+      chapterNotifications = chapterNotifications.where((n) => !n.isRead).toList();
     } else if (_filter == 'Прочитанные') {
-      filteredNotifications = filteredNotifications.where((n) => n.isRead).toList();
+      chapterNotifications = chapterNotifications.where((n) => n.isRead).toList();
     }
+    
+    List<dynamic> allNotifications = [];
+    allNotifications.addAll(chapterNotifications);
+    allNotifications.addAll(_commentNotifications);
+    allNotifications.sort((a, b) {
+      DateTime timeA = a is AppNotification ? a.timestamp : (a['createdAt'] != null ? DateTime.parse(a['createdAt']) : DateTime.now());
+      DateTime timeB = b is AppNotification ? b.timestamp : (b['createdAt'] != null ? DateTime.parse(b['createdAt']) : DateTime.now());
+      return timeB.compareTo(timeA);
+    });
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
@@ -65,14 +94,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           _buildMoreOptions(theme, notificationProvider),
         ],
       ),
-      body: filteredNotifications.isEmpty
+      body: allNotifications.isEmpty
           ? _buildEmptyState(theme)
           : ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 10),
-              itemCount: filteredNotifications.length,
+              itemCount: allNotifications.length,
               itemBuilder: (context, index) {
-                final notification = filteredNotifications[index];
-                return _buildNotificationItem(context, theme, notificationProvider, notification);
+                final notification = allNotifications[index];
+                if (notification is AppNotification) {
+                  return _buildNotificationItem(context, theme, notificationProvider, notification);
+                } else {
+                  return _buildCommentNotificationItem(context, theme, notification);
+                }
               },
             ),
     );
@@ -106,6 +139,107 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Text(value),
             );
           }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommentNotificationItem(BuildContext context, ThemeProvider theme, dynamic notification) {
+    final isRead = notification['isRead'] ?? false;
+    
+    return InkWell(
+      onTap: () {
+        if (!isRead) {
+          _commentNotificationService.markAsRead(widget.token, notification['id']);
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NovellDetailScreen(
+              token: widget.token,
+              bookId: notification['bookId'],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: !isRead ? accentColor.withValues(alpha: 0.05) : Colors.transparent,
+          border: Border(
+            bottom: BorderSide(
+              color: theme.isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(
+                ApiConstants.getCoverUrl(notification['bookCoverUrl'] ?? ''),
+                width: 45,
+                height: 65,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 45,
+                  height: 65,
+                  color: theme.cardColor,
+                  child: Icon(Icons.book, color: theme.textSecondaryColor, size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    notification['bookTitle'] ?? 'Без названия',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.textPrimaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification['commentAuthor'] ?? 'Аноним',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.textSecondaryColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification['commentContent'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.textSecondaryColor.withValues(alpha: 0.6),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!isRead)
+              Container(
+                width: 10,
+                height: 10,
+                decoration: const BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
         ),
       ),
     );

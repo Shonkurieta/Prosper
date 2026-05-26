@@ -8,6 +8,8 @@ class AppNotification {
   final int chapterOrder;
   final int bookId;
   final DateTime timestamp;
+  final String type;
+  final int? relatedEntityId;
   bool isRead;
 
   AppNotification({
@@ -18,6 +20,8 @@ class AppNotification {
     required this.chapterOrder,
     required this.bookId,
     required this.timestamp,
+    this.type = 'NEW_CHAPTER',
+    this.relatedEntityId,
     this.isRead = false,
   });
 }
@@ -52,6 +56,8 @@ class NotificationProvider extends ChangeNotifier {
           chapterOrder: notification.chapterOrder,
           bookId: notification.bookId,
           timestamp: notification.timestamp,
+          type: notification.type,
+          relatedEntityId: notification.relatedEntityId,
           isRead: false,
         );
         
@@ -134,6 +140,21 @@ class NotificationProvider extends ChangeNotifier {
       chapterOrder: chapterOrder,
       bookId: bookId,
       timestamp: DateTime.now(),
+      type: 'NEW_CHAPTER',
+    ));
+  }
+
+  void addReplyNotification(int bookId, String bookTitle, String coverUrl, String commentAuthor, int relatedEntityId) {
+    addNotification(AppNotification(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: '$commentAuthor ответил на ваш комментарий',
+      bookTitle: bookTitle,
+      coverUrl: coverUrl,
+      chapterOrder: 0,
+      bookId: bookId,
+      timestamp: DateTime.now(),
+      type: 'REPLY',
+      relatedEntityId: relatedEntityId,
     ));
   }
 }
