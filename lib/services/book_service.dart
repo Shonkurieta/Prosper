@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class BookService {
-  final String baseUrl = 'http://10.43.13.182:8080/api';
+  final String baseUrl = 'http://10.174.94.182:8080/api';
 
   // Получить все новеллы
   Future<List<dynamic>> getAllBooks(String token) async {
