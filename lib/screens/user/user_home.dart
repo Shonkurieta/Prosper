@@ -8,6 +8,7 @@ import 'package:prosper/providers/notification_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:prosper/screens/ai_assistant_screen.dart';
 
 class UserHome extends StatefulWidget {
   final String token;
@@ -92,6 +93,27 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
       body: FadeTransition(
         opacity: _animController,
         child: screens[_selectedIndex],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => Container(
+              height: MediaQuery.of(context).size.height * 0.9,
+              decoration: BoxDecoration(
+                color: theme.backgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: AiAssistantScreen(token: _currentToken),
+            ),
+          );
+        },
+        backgroundColor: accentColor,
+        shape: const CircleBorder(),
+        elevation: 0,
+        child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
       ),
       bottomNavigationBar: _buildBottomBar(theme),
     );
