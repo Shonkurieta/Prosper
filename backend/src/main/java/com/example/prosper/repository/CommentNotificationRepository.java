@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.example.prosper.model.Comment;
 import com.example.prosper.model.CommentNotification;
 import com.example.prosper.model.User;
 
@@ -13,5 +14,5 @@ public interface CommentNotificationRepository extends JpaRepository<CommentNoti
     List<CommentNotification> findByRecipientOrderByCreatedAtDesc(User recipient);
     List<CommentNotification> findByRecipientAndIsReadFalseOrderByCreatedAtDesc(User recipient);
     long countByRecipientAndIsReadFalse(User recipient);
-    void deleteByRecipientAndComment(User recipient, Long commentId);
+    void deleteByRecipientAndComment(User recipient, Comment comment);
 }
