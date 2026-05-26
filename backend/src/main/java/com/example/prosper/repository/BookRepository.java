@@ -5,9 +5,9 @@ import org.springframework.stereotype.Repository;
 
 import com.example.prosper.model.Book;
 
-import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
-    Optional<Book> findByTitleContainingIgnoreCase(String title);
+    List<Book> findByTitleContainingIgnoreCase(String title);
 }

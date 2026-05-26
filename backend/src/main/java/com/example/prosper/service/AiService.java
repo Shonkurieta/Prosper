@@ -36,12 +36,18 @@ public class AiService {
     private final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
     public Map<String, Object> getChatResponse(String question, String bookTitle, Integer chapterNumber) {
-        Optional<Book> bookOpt = bookRepository.findByTitleContainingIgnoreCase(bookTitle);
-        if (bookOpt.isEmpty()) {
+        List<Book> books = bookRepository.findByTitleContainingIgnoreCase(bookTitle);
+        
+        if (books.isEmpty()) {
             return Map.of("answer", "Новелла с таким названием не найдена. Уточни название.", "sources", Collections.emptyList());
         }
 
-        Book book = bookOpt.get();
+        // Берём точное совпадение если есть, иначе первый результат
+        Book book = books.stream()
+                .filter(b -> b.getTitle().equalsIgnoreCase(bookTitle))
+                .findFirst()
+                .orElse(books.get(0));
+
         List<Chapter> relevantChapters = new ArrayList<>();
 
         if (chapterNumber != null) {
