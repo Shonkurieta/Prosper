@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -34,6 +35,9 @@ public class AiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
+    @Value("${GEMINI_API_KEY:}")
+    private String geminiApiKey;
 
     public Map<String, Object> getChatResponse(String question, String bookTitle, Integer chapterNumber) {
         List<Book> books = bookRepository.findByTitleContainingIgnoreCase(bookTitle);
@@ -98,7 +102,11 @@ public class AiService {
     }
 
     private String callGemini(String question, String context) {
-        String apiKey = System.getenv("GEMINI_API_KEY");
+        String apiKey = geminiApiKey;
+        if (apiKey == null || apiKey.isEmpty()) {
+            apiKey = System.getenv("GEMINI_API_KEY");
+        }
+        
         if (apiKey == null || apiKey.isEmpty()) {
             return "Ошибка: GEMINI_API_KEY не настроен на сервере.";
         }

@@ -33,6 +33,7 @@ services:
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
       - GOOGLE_CLIENT_ID=placeholder
       - GOOGLE_CLIENT_SECRET=placeholder
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./backend/assets:/app/assets
     depends_on:
