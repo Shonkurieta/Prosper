@@ -7,6 +7,7 @@ class ApiConstants {
   static String get authUrl => '$baseUrl/auth';
   static String get adminUrl => '$baseUrl/admin';
   static String get booksUrl => '$baseUrl/books';
+  static String get notificationsUrl => '$baseUrl/notifications';
   
   static String getCoverUrl(String coverPath) {
     final apiBase = _apiBaseUrl;

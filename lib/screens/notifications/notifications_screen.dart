@@ -5,7 +5,7 @@ import 'package:prosper/providers/notification_provider.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/screens/novell/novell_detail_screen.dart';
-import 'package:prosper/services/comment_notification_service.dart';
+import 'package:prosper/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -16,27 +16,18 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> with RouteAware {
+class _NotificationsScreenState extends State<NotificationsScreen> {
   String _filter = 'Непрочитанные';
   String _currentUsername = 'Гость';
-  // Храним как изменяемый список Map, чтобы можно было обновлять isRead локально
-  List<Map<String, dynamic>> _commentNotifications = [];
-  bool _isLoadingCommentNotifications = true;
+  List<dynamic> _notifications = [];
+  bool _isLoading = true;
   static const Color accentColor = Color(0xFFD46A4F);
-  final CommentNotificationService _commentNotificationService = CommentNotificationService();
 
   @override
   void initState() {
     super.initState();
     _loadUsername();
-    _loadCommentNotifications();
-  }
-
-  // Перезагружаем уведомления каждый раз при появлении экрана
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadCommentNotifications();
+    _loadNotifications();
   }
 
   Future<void> _loadUsername() async {
@@ -46,20 +37,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
     });
   }
 
-  Future<void> _loadCommentNotifications() async {
+  Future<void> _loadNotifications() async {
     try {
-      final notifications = await _commentNotificationService.getNotifications(widget.token);
+      final notifications = await NotificationService.getNotifications();
       if (!mounted) return;
       setState(() {
-        // Явно приводим к List<Map<String, dynamic>>
-        _commentNotifications = notifications
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-        _isLoadingCommentNotifications = false;
+        _notifications = notifications;
+        _isLoading = false;
       });
+      // Update unread count in provider
+      context.read<NotificationProvider>().refreshUnreadCount();
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoadingCommentNotifications = false);
+      setState(() => _isLoading = false);
     }
   }
 
@@ -68,39 +58,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
     final theme = context.watch<ThemeProvider>();
     final notificationProvider = context.watch<NotificationProvider>();
 
-    // --- Chapter notifications с фильтром ---
-    List<AppNotification> chapterNotifications = notificationProvider.notifications;
+    List<dynamic> filteredNotifications = _notifications;
     if (_filter == 'Непрочитанные') {
-      chapterNotifications = chapterNotifications.where((n) => !n.isRead).toList();
+      filteredNotifications = _notifications.where((n) => !(n['read'] ?? false)).toList();
     } else if (_filter == 'Прочитанные') {
-      chapterNotifications = chapterNotifications.where((n) => n.isRead).toList();
+      filteredNotifications = _notifications.where((n) => n['read'] ?? false).toList();
     }
-
-    // --- Comment notifications с фильтром (ИСПРАВЛЕНО) ---
-    List<Map<String, dynamic>> filteredCommentNotifications = _commentNotifications;
-    if (_filter == 'Непрочитанные') {
-      filteredCommentNotifications = _commentNotifications
-          .where((n) => !(n['isRead'] ?? false))
-          .toList();
-    } else if (_filter == 'Прочитанные') {
-      filteredCommentNotifications = _commentNotifications
-          .where((n) => n['isRead'] ?? false)
-          .toList();
-    }
-
-    // --- Объединяем и сортируем по дате ---
-    List<dynamic> allNotifications = [];
-    allNotifications.addAll(chapterNotifications);
-    allNotifications.addAll(filteredCommentNotifications);
-    allNotifications.sort((a, b) {
-      DateTime timeA = a is AppNotification
-          ? a.timestamp
-          : (a['createdAt'] != null ? DateTime.parse(a['createdAt']) : DateTime.now());
-      DateTime timeB = b is AppNotification
-          ? b.timestamp
-          : (b['createdAt'] != null ? DateTime.parse(b['createdAt']) : DateTime.now());
-      return timeB.compareTo(timeA);
-    });
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
@@ -123,25 +86,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
           _buildMoreOptions(theme, notificationProvider),
         ],
       ),
-      body: _isLoadingCommentNotifications
+      body: _isLoading
           ? Center(child: CircularProgressIndicator(color: accentColor))
-          : allNotifications.isEmpty
+          : filteredNotifications.isEmpty
               ? _buildEmptyState(theme)
               : RefreshIndicator(
                   color: accentColor,
-                  onRefresh: _loadCommentNotifications,
+                  onRefresh: _loadNotifications,
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    itemCount: allNotifications.length,
+                    itemCount: filteredNotifications.length,
                     itemBuilder: (context, index) {
-                      final notification = allNotifications[index];
-                      if (notification is AppNotification) {
-                        return _buildNotificationItem(
-                            context, theme, notificationProvider, notification);
-                      } else {
-                        return _buildCommentNotificationItem(
-                            context, theme, notification as Map<String, dynamic>);
-                      }
+                      return _buildNotificationItem(context, theme, filteredNotifications[index]);
                     },
                   ),
                 ),
@@ -181,35 +137,47 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
     );
   }
 
-  Widget _buildCommentNotificationItem(
-      BuildContext context, ThemeProvider theme, Map<String, dynamic> notification) {
-    final isRead = notification['isRead'] ?? false;
+  Widget _buildNotificationItem(BuildContext context, ThemeProvider theme, Map<String, dynamic> notification) {
+    final isRead = notification['read'] ?? false;
+    final type = notification['type'];
 
     return InkWell(
       onTap: () async {
-        // ИСПРАВЛЕНО: обновляем isRead локально сразу, без перезагрузки
         if (!isRead) {
           try {
-            await _commentNotificationService.markAsRead(
-                widget.token, notification['id']);
-            if (mounted) {
-              setState(() {
-                notification['isRead'] = true;
-              });
-            }
+            await NotificationService.markAsRead(notification['id']);
+            setState(() {
+              notification['read'] = true;
+            });
+            context.read<NotificationProvider>().decrementUnreadCount();
           } catch (_) {}
         }
 
         if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => NovellDetailScreen(
-              token: widget.token,
-              bookId: notification['bookId'],
+        
+        if (type == 'NEW_CHAPTER' && notification['bookId'] != null && notification['chapterOrder'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ReaderScreen(
+                token: widget.token,
+                bookId: notification['bookId'],
+                chapterOrder: notification['chapterOrder'],
+                currentUsername: _currentUsername,
+              ),
             ),
-          ),
-        );
+          );
+        } else if (notification['bookId'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => NovellDetailScreen(
+                token: widget.token,
+                bookId: notification['bookId'],
+              ),
+            ),
+          );
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -249,7 +217,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    notification['bookTitle'] ?? 'Без названия',
+                    notification['title'] ?? 'Уведомление',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -260,22 +228,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    notification['commentAuthor'] ?? 'Аноним',
-                    maxLines: 1,
+                    notification['message'] ?? '',
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: theme.textSecondaryColor,
                       fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    notification['commentContent'] ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.textSecondaryColor.withValues(alpha: 0.6),
-                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -303,41 +261,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: (value) async {
         if (value == 'mark_all_read') {
-          provider.markAllAsRead();
-          // Помечаем все comment-уведомления прочитанными локально
-          setState(() {
-            for (var n in _commentNotifications) {
-              n['isRead'] = true;
-            }
-          });
-          // Синхронизируем с бэкендом для каждого непрочитанного
-          for (var n in _commentNotifications) {
-            try {
-              await _commentNotificationService.markAsRead(widget.token, n['id']);
-            } catch (_) {}
-          }
+          try {
+            await NotificationService.markAllAsRead();
+            _loadNotifications();
+          } catch (_) {}
         } else if (value == 'delete_all') {
-          provider.removeAllNotifications();
-          // Удаляем все comment-уведомления с бэкенда
-          for (var n in _commentNotifications) {
-            try {
-              await _commentNotificationService.deleteNotification(widget.token, n['id']);
-            } catch (_) {}
-          }
-          setState(() => _commentNotifications.clear());
+          try {
+            await NotificationService.deleteAllNotifications();
+            _loadNotifications();
+          } catch (_) {}
         }
       },
       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-        PopupMenuItem<String>(
-          value: 'settings',
-          child: Row(
-            children: [
-              Icon(Icons.settings_outlined, color: theme.textPrimaryColor, size: 20),
-              const SizedBox(width: 12),
-              Text('Настройки', style: TextStyle(color: theme.textPrimaryColor)),
-            ],
-          ),
-        ),
         PopupMenuItem<String>(
           value: 'mark_all_read',
           child: Row(
@@ -364,120 +299,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> with RouteAwa
     );
   }
 
-  Widget _buildNotificationItem(BuildContext context, ThemeProvider theme,
-      NotificationProvider provider, AppNotification notification) {
-    return InkWell(
-      onTap: () {
-        provider.markAsRead(notification.id);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReaderScreen(
-              token: widget.token,
-              bookId: notification.bookId,
-              chapterOrder: notification.chapterOrder,
-              currentUsername: _currentUsername,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: notification.isRead ? Colors.transparent : accentColor.withValues(alpha: 0.05),
-          border: Border(
-            bottom: BorderSide(
-              color: theme.isDarkMode
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.05),
-              width: 0.5,
-            ),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                ApiConstants.getCoverUrl(notification.coverUrl),
-                width: 45,
-                height: 65,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 45,
-                  height: 65,
-                  color: theme.cardColor,
-                  child: Icon(Icons.book, color: theme.textSecondaryColor, size: 20),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    notification.bookTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.textPrimaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Добавлена глава ${notification.chapterOrder}',
-                    style: TextStyle(
-                      color: theme.textSecondaryColor,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTimestamp(notification.timestamp),
-                    style: TextStyle(
-                      color: theme.textSecondaryColor.withValues(alpha: 0.6),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (!notification.isRead)
-              Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  color: accentColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatTimestamp(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'только что';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} мин. назад';
-    if (diff.inHours < 24) return '${diff.inHours} ч. назад';
-    return '${dt.day}.${dt.month}.${dt.year}';
-  }
-
   Widget _buildEmptyState(ThemeProvider theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none_rounded,
-              size: 80, color: theme.textSecondaryColor.withValues(alpha: 0.2)),
+          Icon(Icons.notifications_none, size: 80, color: theme.textSecondaryColor.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           Text(
             'Уведомлений пока нет',

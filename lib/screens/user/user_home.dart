@@ -60,12 +60,8 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
   }
 
   Future<void> _initUserInNotificationProvider() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Используем id пользователя как стабильный идентификатор
-    final userId = prefs.getInt('id')?.toString();
-    
     if (mounted) {
-      context.read<NotificationProvider>().setCurrentUser(userId);
+      context.read<NotificationProvider>().refreshUnreadCount();
     }
   }
 

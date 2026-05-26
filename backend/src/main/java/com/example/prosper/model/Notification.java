@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,8 +15,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "comment_notifications")
-public class CommentNotification {
+@Table(name = "notifications")
+public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,18 +24,29 @@ public class CommentNotification {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "userBooks"})
     private User recipient;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "comment_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private Comment comment;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationType type;
+
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "message", columnDefinition = "TEXT")
+    private String message;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_comment_id")
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private Comment parentComment;
+    @JoinColumn(name = "book_id")
+    private Book book;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chapter_id")
+    private Chapter chapter;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "comment_id")
+    private Comment comment;
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
@@ -41,14 +54,7 @@ public class CommentNotification {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public CommentNotification() {
-        this.createdAt = LocalDateTime.now();
-    }
-
-    public CommentNotification(User recipient, Comment comment, Comment parentComment) {
-        this.recipient = recipient;
-        this.comment = comment;
-        this.parentComment = parentComment;
+    public Notification() {
         this.createdAt = LocalDateTime.now();
     }
 
@@ -59,11 +65,23 @@ public class CommentNotification {
     public User getRecipient() { return recipient; }
     public void setRecipient(User recipient) { this.recipient = recipient; }
 
+    public NotificationType getType() { return type; }
+    public void setType(NotificationType type) { this.type = type; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+
+    public Book getBook() { return book; }
+    public void setBook(Book book) { this.book = book; }
+
+    public Chapter getChapter() { return chapter; }
+    public void setChapter(Chapter chapter) { this.chapter = chapter; }
+
     public Comment getComment() { return comment; }
     public void setComment(Comment comment) { this.comment = comment; }
-
-    public Comment getParentComment() { return parentComment; }
-    public void setParentComment(Comment parentComment) { this.parentComment = parentComment; }
 
     public boolean isRead() { return isRead; }
     public void setRead(boolean read) { isRead = read; }

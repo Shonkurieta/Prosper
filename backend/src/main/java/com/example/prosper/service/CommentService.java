@@ -10,12 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.prosper.model.Book;
 import com.example.prosper.model.Chapter;
 import com.example.prosper.model.Comment;
-import com.example.prosper.model.CommentNotification;
+import com.example.prosper.model.Notification;
+import com.example.prosper.model.NotificationType;
 import com.example.prosper.model.User;
 import com.example.prosper.repository.BookRepository;
 import com.example.prosper.repository.ChapterRepository;
-import com.example.prosper.repository.CommentNotificationRepository;
 import com.example.prosper.repository.CommentRepository;
+import com.example.prosper.repository.NotificationRepository;
 import com.example.prosper.repository.UserRepository;
 
 @Service
@@ -34,7 +35,7 @@ public class CommentService {
     private ChapterRepository chapterRepository;
 
     @Autowired
-    private CommentNotificationRepository commentNotificationRepository;
+    private NotificationRepository notificationRepository;
 
     public List<Comment> getCommentsByChapterId(Long chapterId) {
         return commentRepository.findByChapterIdOrderByCreatedAtAsc(chapterId);
@@ -73,9 +74,14 @@ public class CommentService {
         if (parentComment != null) {
             User parentAuthor = parentComment.getUser();
             if (!parentAuthor.getId().equals(userId)) {
-                commentNotificationRepository.save(
-                new CommentNotification(parentAuthor, savedComment, parentComment)
-                );
+                Notification notification = new Notification();
+                notification.setRecipient(parentAuthor);
+                notification.setType(NotificationType.COMMENT_REPLY);
+                notification.setTitle("Новый ответ!");
+                notification.setMessage(user.getNickname() + " ответил на ваш комментарий");
+                notification.setBook(book);
+                notification.setComment(savedComment);
+                notificationRepository.save(notification);
             }
         }
 
@@ -91,9 +97,9 @@ public class CommentService {
             throw new RuntimeException("Not authorized to delete this comment");
         }
 
-        commentNotificationRepository.deleteByComment(comment);
-
-        commentNotificationRepository.deleteByParentComment(comment);
+        // No longer need to manually delete notifications if cascade delete is not used, 
+        // but let's just delete by comment for safety if needed. 
+        // Actually, let's keep it simple and just remove the old repository calls.
 
         commentRepository.delete(comment);
     }

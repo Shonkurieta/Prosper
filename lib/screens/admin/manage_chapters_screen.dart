@@ -458,17 +458,6 @@ class _ManageChaptersScreenState extends State<ManageChaptersScreen>
                     if (res.statusCode == 200 || res.statusCode == 201) {
                       Navigator.pop(ctx);
                       _loadChapters();
-                      if (chapter == null) {
-                        context.read<NotificationProvider>().addNotification(AppNotification(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          title: "Добавлена новая глава",
-                          bookTitle: widget.bookTitle,
-                          coverUrl: widget.bookCover,
-                          chapterOrder: int.parse(order),
-                          bookId: widget.bookId,
-                          timestamp: DateTime.now(),
-                        ));
-                      }
                       _showSnackBar(chapter == null ? 'Глава добавлена' : 'Сохранено');
                     } else {
                       _showSnackBar('Ошибка: ${res.statusCode}', isError: true);

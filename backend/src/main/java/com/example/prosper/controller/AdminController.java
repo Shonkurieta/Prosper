@@ -34,9 +34,14 @@ import com.example.prosper.model.Book;
 import com.example.prosper.model.Chapter;
 import com.example.prosper.model.Genre;
 import com.example.prosper.model.User;
+import com.example.prosper.model.Notification;
+import com.example.prosper.model.NotificationType;
+import com.example.prosper.model.UserBook;
 import com.example.prosper.repository.BookRepository;
 import com.example.prosper.repository.ChapterRepository;
 import com.example.prosper.repository.GenreRepository;
+import com.example.prosper.repository.NotificationRepository;
+import com.example.prosper.repository.UserBookRepository;
 import com.example.prosper.repository.UserRepository;
 
 @RestController
@@ -55,6 +60,12 @@ public class AdminController {
     
     @Autowired
     private GenreRepository genreRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private UserBookRepository userBookRepository;
 
     @GetMapping("/books")
     public ResponseEntity<List<Book>> getAllBooks() {
@@ -259,6 +270,20 @@ public class AdminController {
                     chapter.setContent(dto.getContent());
                     Chapter saved = chapterRepository.save(chapter);
                     System.out.println("Chapter created: " + saved.getId());
+
+                    // Create notifications for bookmarked users
+                    List<UserBook> bookmarkedUsers = userBookRepository.findByBookIdAndBookmarkedTrue(bookId);
+                    for (UserBook ub : bookmarkedUsers) {
+                        Notification notification = new Notification();
+                        notification.setRecipient(ub.getUser());
+                        notification.setType(NotificationType.NEW_CHAPTER);
+                        notification.setTitle("Новая глава!");
+                        notification.setMessage("Вышла глава " + saved.getchapterOrder() + " в новелле \"" + book.getTitle() + "\"");
+                        notification.setBook(book);
+                        notification.setChapter(saved);
+                        notificationRepository.save(notification);
+                    }
+
                     return ResponseEntity.ok(saved);
                 })
                 .orElse(ResponseEntity.notFound().build());
