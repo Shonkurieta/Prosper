@@ -6,11 +6,9 @@ class AiService {
   static Future<Map<String, dynamic>> sendMessage({
     required String token,
     required String question,
-    required String bookTitle,
-    int? chapterNumber,
   }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/ai/chat');
-    
+
     final response = await http.post(
       url,
       headers: {
@@ -19,8 +17,6 @@ class AiService {
       },
       body: jsonEncode({
         'question': question,
-        'bookTitle': bookTitle,
-        'chapterNumber': chapterNumber,
       }),
     );
 

@@ -1,5 +1,4 @@
 package com.example.prosper.repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -17,4 +16,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, Long> {
 
     @Query(value = "SELECT * FROM chapters WHERE book_id = :bookId AND search_vector @@ to_tsquery('russian', :query) ORDER BY ts_rank(search_vector, to_tsquery('russian', :query)) DESC LIMIT 5", nativeQuery = true)
     List<Chapter> searchChaptersByFts(@Param("bookId") Long bookId, @Param("query") String query);
+
+    @Query(value = "SELECT * FROM chapters WHERE book_id = :bookId AND title ~ CONCAT('Глава ', :num, ' ') LIMIT 1", nativeQuery = true)
+    Optional<Chapter> findByBookIdAndChapterTitleNumber(@Param("bookId") Long bookId, @Param("num") int num);  
 }

@@ -31,36 +31,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // Basic parsing for "in novel [Title]" and "chapter [Number]"
-    // This is a simple heuristic; the user can also just type.
-    String bookTitle = "";
-    int? chapterNumber;
-
-    // RegEx to find "в новелле '...'" or "в новелле ..."
-    final bookRegex = RegExp(r"в новелле ['" + '"' + r"]?([^'" + '"' + r",\?\!]+)['" + '"' + r"]?", caseSensitive: false);
-    final bookMatch = bookRegex.firstMatch(text);
-    if (bookMatch != null) {
-      bookTitle = bookMatch.group(1)!.trim();
-    }
-
-    // RegEx to find "главе \d+"
-    final chapterRegex = RegExp(r"главе (\d+)", caseSensitive: false);
-    final chapterMatch = chapterRegex.firstMatch(text);
-    if (chapterMatch != null) {
-      chapterNumber = int.tryParse(chapterMatch.group(1)!);
-    }
-
-    // If not found by regex, the backend logic expects bookTitle. 
-    // For this simple UI, we'll ask user to specify if we can't find it, 
-    // or just send the whole thing and let backend handle or fail gracefully.
-    // However, the spec says "bookTitle" is mandatory in the API.
-    
-    if (bookTitle.isEmpty) {
-      // Fallback: use the whole question as bookTitle if it's short, or just warn.
-      // In a real app, maybe pick the currently reading book.
-      // For now, let's just send what we have.
-    }
-
     setState(() {
       _messages.add({"role": "user", "text": text});
       _isLoading = true;
@@ -72,8 +42,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       final response = await AiService.sendMessage(
         token: widget.token,
         question: text,
-        bookTitle: bookTitle,
-        chapterNumber: chapterNumber,
       );
 
       setState(() {
@@ -157,8 +125,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
           const SizedBox(height: 8),
-          _exampleItem("Что случилось с Артуром в новелле 'Тень меча'?", isDark),
-          _exampleItem("Что произошло в главе 7 новеллы 'Тень меча'?", isDark),
+          _exampleItem("Что случилось с Артуром в Тени меча?", isDark),
+          _exampleItem("Что было в 7 главе Преподобного Гу?", isDark),
+          _exampleItem("Кто такой Фан Юань из Преподобный Гу", isDark),
         ],
       ),
     );
