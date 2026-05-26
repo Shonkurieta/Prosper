@@ -87,7 +87,7 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
   Future<void> _fetchAllBooks() async {
     try {
       final svc = AdminService(widget.token);
-      final books = await svc.getAllBooks();
+      final books = await svc.getBooks();
       if (mounted) {
         setState(() {
           _allBooks = books;
