@@ -6,10 +6,11 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,9 +22,6 @@ import com.example.prosper.model.User;
 import com.example.prosper.repository.CommentNotificationRepository;
 import com.example.prosper.repository.CommentRepository;
 import com.example.prosper.repository.UserRepository;
-import com.example.prosper.security.JwtTokenProvider;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/comment-notifications")
@@ -38,22 +36,17 @@ public class CommentNotificationController {
     @Autowired
     private CommentRepository commentRepository;
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
-
-    private User getCurrentUser(HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-            String username = jwtTokenProvider.getUsernameFromToken(token);
-            return userRepository.findByUsername(username).orElse(null);
+    private User getCurrentUser(UserDetails userDetails) {
+        if (userDetails == null) {
+            return null;
         }
-        return null;
+        return userRepository.findByNickname(userDetails.getUsername()).orElse(null);
     }
 
     @GetMapping
-    public ResponseEntity<List<CommentNotificationDTO>> getNotifications(HttpServletRequest request) {
-        User user = getCurrentUser(request);
+    public ResponseEntity<List<CommentNotificationDTO>> getNotifications(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -67,8 +60,9 @@ public class CommentNotificationController {
     }
 
     @GetMapping("/unread")
-    public ResponseEntity<List<CommentNotificationDTO>> getUnreadNotifications(HttpServletRequest request) {
-        User user = getCurrentUser(request);
+    public ResponseEntity<List<CommentNotificationDTO>> getUnreadNotifications(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -82,8 +76,8 @@ public class CommentNotificationController {
     }
 
     @GetMapping("/unread-count")
-    public ResponseEntity<Long> getUnreadCount(HttpServletRequest request) {
-        User user = getCurrentUser(request);
+    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -93,8 +87,8 @@ public class CommentNotificationController {
     }
 
     @PutMapping("/{id}/read")
-    public ResponseEntity<Void> markAsRead(@PathVariable Long id, HttpServletRequest request) {
-        User user = getCurrentUser(request);
+    public ResponseEntity<Void> markAsRead(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -110,8 +104,8 @@ public class CommentNotificationController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNotification(@PathVariable Long id, HttpServletRequest request) {
-        User user = getCurrentUser(request);
+    public ResponseEntity<Void> deleteNotification(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -131,10 +125,10 @@ public class CommentNotificationController {
 
         return new CommentNotificationDTO(
                 notification.getId(),
-                notification.getRecipient().getUsername(),
+                notification.getRecipient().getNickname(),
                 comment.getId(),
                 comment.getContent(),
-                comment.getUser().getUsername(),
+                comment.getUser().getNickname(),
                 parentComment != null ? parentComment.getId() : null,
                 parentComment != null ? parentComment.getContent() : null,
                 comment.getBook() != null ? comment.getBook().getId() : null,
