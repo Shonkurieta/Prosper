@@ -10,9 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.prosper.model.Book;
 import com.example.prosper.model.Chapter;
 import com.example.prosper.model.Comment;
+import com.example.prosper.model.CommentNotification;
 import com.example.prosper.model.User;
 import com.example.prosper.repository.BookRepository;
 import com.example.prosper.repository.ChapterRepository;
+import com.example.prosper.repository.CommentNotificationRepository;
 import com.example.prosper.repository.CommentRepository;
 import com.example.prosper.repository.UserRepository;
 
@@ -31,13 +33,14 @@ public class CommentService {
     @Autowired
     private ChapterRepository chapterRepository;
 
+    @Autowired
+    private CommentNotificationRepository commentNotificationRepository;
+
     public List<Comment> getCommentsByChapterId(Long chapterId) {
-        // Возвращаем ВСЕ комментарии включая ответы
         return commentRepository.findByChapterIdOrderByCreatedAtAsc(chapterId);
     }
 
     public List<Comment> getCommentsByBookId(Long bookId) {
-        // Возвращаем комментарии к книге (где глава NULL)
         return commentRepository.findByBookIdAndChapterIsNullOrderByCreatedAtAsc(bookId);
     }
 
@@ -65,8 +68,18 @@ public class CommentService {
                     .orElseThrow(() -> new RuntimeException("Parent comment not found"));
         }
 
-        Comment comment = new Comment(user, book, chapter, parentComment, content);
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(new Comment(user, book, chapter, parentComment, content));
+
+        if (parentComment != null) {
+            User parentAuthor = parentComment.getUser();
+            if (!parentAuthor.getId().equals(userId)) {
+                commentNotificationRepository.save(
+                new CommentNotification(parentAuthor, savedComment, parentComment)
+                );
+            }
+        }
+
+        return savedComment;
     }
 
     @Transactional
@@ -77,6 +90,10 @@ public class CommentService {
         if (!comment.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to delete this comment");
         }
+
+        commentNotificationRepository.deleteByComment(comment);
+
+        commentNotificationRepository.deleteByParentComment(comment);
 
         commentRepository.delete(comment);
     }

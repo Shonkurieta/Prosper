@@ -16,10 +16,11 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen> with RouteAware {
   String _filter = 'Непрочитанные';
   String _currentUsername = 'Гость';
-  List<dynamic> _commentNotifications = [];
+  // Храним как изменяемый список Map, чтобы можно было обновлять isRead локально
+  List<Map<String, dynamic>> _commentNotifications = [];
   bool _isLoadingCommentNotifications = true;
   static const Color accentColor = Color(0xFFD46A4F);
   final CommentNotificationService _commentNotificationService = CommentNotificationService();
@@ -28,6 +29,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _loadUsername();
+    _loadCommentNotifications();
+  }
+
+  // Перезагружаем уведомления каждый раз при появлении экрана
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadCommentNotifications();
   }
 
@@ -41,11 +49,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _loadCommentNotifications() async {
     try {
       final notifications = await _commentNotificationService.getNotifications(widget.token);
+      if (!mounted) return;
       setState(() {
-        _commentNotifications = notifications;
+        // Явно приводим к List<Map<String, dynamic>>
+        _commentNotifications = notifications
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
         _isLoadingCommentNotifications = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoadingCommentNotifications = false);
     }
   }
@@ -54,22 +67,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
     final notificationProvider = context.watch<NotificationProvider>();
-    
+
+    // --- Chapter notifications с фильтром ---
     List<AppNotification> chapterNotifications = notificationProvider.notifications;
-    if (_filter == 'Все') {
-      // Show all
-    } else if (_filter == 'Непрочитанные') {
+    if (_filter == 'Непрочитанные') {
       chapterNotifications = chapterNotifications.where((n) => !n.isRead).toList();
     } else if (_filter == 'Прочитанные') {
       chapterNotifications = chapterNotifications.where((n) => n.isRead).toList();
     }
-    
+
+    // --- Comment notifications с фильтром (ИСПРАВЛЕНО) ---
+    List<Map<String, dynamic>> filteredCommentNotifications = _commentNotifications;
+    if (_filter == 'Непрочитанные') {
+      filteredCommentNotifications = _commentNotifications
+          .where((n) => !(n['isRead'] ?? false))
+          .toList();
+    } else if (_filter == 'Прочитанные') {
+      filteredCommentNotifications = _commentNotifications
+          .where((n) => n['isRead'] ?? false)
+          .toList();
+    }
+
+    // --- Объединяем и сортируем по дате ---
     List<dynamic> allNotifications = [];
     allNotifications.addAll(chapterNotifications);
-    allNotifications.addAll(_commentNotifications);
+    allNotifications.addAll(filteredCommentNotifications);
     allNotifications.sort((a, b) {
-      DateTime timeA = a is AppNotification ? a.timestamp : (a['createdAt'] != null ? DateTime.parse(a['createdAt']) : DateTime.now());
-      DateTime timeB = b is AppNotification ? b.timestamp : (b['createdAt'] != null ? DateTime.parse(b['createdAt']) : DateTime.now());
+      DateTime timeA = a is AppNotification
+          ? a.timestamp
+          : (a['createdAt'] != null ? DateTime.parse(a['createdAt']) : DateTime.now());
+      DateTime timeB = b is AppNotification
+          ? b.timestamp
+          : (b['createdAt'] != null ? DateTime.parse(b['createdAt']) : DateTime.now());
       return timeB.compareTo(timeA);
     });
 
@@ -94,20 +123,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           _buildMoreOptions(theme, notificationProvider),
         ],
       ),
-      body: allNotifications.isEmpty
-          ? _buildEmptyState(theme)
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              itemCount: allNotifications.length,
-              itemBuilder: (context, index) {
-                final notification = allNotifications[index];
-                if (notification is AppNotification) {
-                  return _buildNotificationItem(context, theme, notificationProvider, notification);
-                } else {
-                  return _buildCommentNotificationItem(context, theme, notification);
-                }
-              },
-            ),
+      body: _isLoadingCommentNotifications
+          ? Center(child: CircularProgressIndicator(color: accentColor))
+          : allNotifications.isEmpty
+              ? _buildEmptyState(theme)
+              : RefreshIndicator(
+                  color: accentColor,
+                  onRefresh: _loadCommentNotifications,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    itemCount: allNotifications.length,
+                    itemBuilder: (context, index) {
+                      final notification = allNotifications[index];
+                      if (notification is AppNotification) {
+                        return _buildNotificationItem(
+                            context, theme, notificationProvider, notification);
+                      } else {
+                        return _buildCommentNotificationItem(
+                            context, theme, notification as Map<String, dynamic>);
+                      }
+                    },
+                  ),
+                ),
     );
   }
 
@@ -144,14 +181,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildCommentNotificationItem(BuildContext context, ThemeProvider theme, dynamic notification) {
+  Widget _buildCommentNotificationItem(
+      BuildContext context, ThemeProvider theme, Map<String, dynamic> notification) {
     final isRead = notification['isRead'] ?? false;
-    
+
     return InkWell(
-      onTap: () {
+      onTap: () async {
+        // ИСПРАВЛЕНО: обновляем isRead локально сразу, без перезагрузки
         if (!isRead) {
-          _commentNotificationService.markAsRead(widget.token, notification['id']);
+          try {
+            await _commentNotificationService.markAsRead(
+                widget.token, notification['id']);
+            if (mounted) {
+              setState(() {
+                notification['isRead'] = true;
+              });
+            }
+          } catch (_) {}
         }
+
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -168,7 +217,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: !isRead ? accentColor.withValues(alpha: 0.05) : Colors.transparent,
           border: Border(
             bottom: BorderSide(
-              color: theme.isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+              color: theme.isDarkMode
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05),
               width: 0.5,
             ),
           ),
@@ -250,11 +301,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       icon: Icon(Icons.more_vert, color: theme.textPrimaryColor),
       color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (value) {
+      onSelected: (value) async {
         if (value == 'mark_all_read') {
           provider.markAllAsRead();
+          // Помечаем все comment-уведомления прочитанными локально
+          setState(() {
+            for (var n in _commentNotifications) {
+              n['isRead'] = true;
+            }
+          });
+          // Синхронизируем с бэкендом для каждого непрочитанного
+          for (var n in _commentNotifications) {
+            try {
+              await _commentNotificationService.markAsRead(widget.token, n['id']);
+            } catch (_) {}
+          }
         } else if (value == 'delete_all') {
           provider.removeAllNotifications();
+          // Удаляем все comment-уведомления с бэкенда
+          for (var n in _commentNotifications) {
+            try {
+              await _commentNotificationService.deleteNotification(widget.token, n['id']);
+            } catch (_) {}
+          }
+          setState(() => _commentNotifications.clear());
         }
       },
       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -274,7 +344,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             children: [
               Icon(Icons.done_all, color: theme.textPrimaryColor, size: 20),
               const SizedBox(width: 12),
-              Text('Отметить всё прочитанным', style: TextStyle(color: theme.textPrimaryColor)),
+              Text('Отметить всё прочитанным',
+                  style: TextStyle(color: theme.textPrimaryColor)),
             ],
           ),
         ),
@@ -282,9 +353,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           value: 'delete_all',
           child: Row(
             children: [
-              Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+              const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
               const SizedBox(width: 12),
-              Text('Удалить все уведомления', style: const TextStyle(color: Colors.redAccent)),
+              const Text('Удалить все уведомления',
+                  style: TextStyle(color: Colors.redAccent)),
             ],
           ),
         ),
@@ -292,7 +364,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildNotificationItem(BuildContext context, ThemeProvider theme, NotificationProvider provider, AppNotification notification) {
+  Widget _buildNotificationItem(BuildContext context, ThemeProvider theme,
+      NotificationProvider provider, AppNotification notification) {
     return InkWell(
       onTap: () {
         provider.markAsRead(notification.id);
@@ -314,7 +387,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: notification.isRead ? Colors.transparent : accentColor.withValues(alpha: 0.05),
           border: Border(
             bottom: BorderSide(
-              color: theme.isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+              color: theme.isDarkMode
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05),
               width: 0.5,
             ),
           ),
@@ -322,7 +397,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Обложка слева
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: Image.network(
@@ -339,7 +413,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
             const SizedBox(width: 16),
-            // Информация справа
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +476,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none_rounded, size: 80, color: theme.textSecondaryColor.withValues(alpha: 0.2)),
+          Icon(Icons.notifications_none_rounded,
+              size: 80, color: theme.textSecondaryColor.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           Text(
             'Уведомлений пока нет',

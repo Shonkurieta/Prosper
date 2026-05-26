@@ -284,7 +284,7 @@ public class AdminController {
 
     @DeleteMapping("/books/{bookId}/chapters/{chapterId}")
     public ResponseEntity<?> deleteChapter(@PathVariable Long bookId, @PathVariable Long chapterId) {
-        System.out.println("🗑 [AdminController] DELETE /api/admin/books/" + bookId + "/chapters/" + chapterId);
+        System.out.println("[AdminController] DELETE /api/admin/books/" + bookId + "/chapters/" + chapterId);
         return chapterRepository.findById(chapterId)
                 .map(chapter -> {
                     chapterRepository.delete(chapter);
@@ -336,7 +336,7 @@ public class AdminController {
 
     @PutMapping("/users/{id}/role")
     public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        System.out.println("✏️ [AdminController] PUT /api/admin/users/" + id + "/role");
+        System.out.println("[AdminController] PUT /api/admin/users/" + id + "/role");
         String newRole = body.get("role");
         
         if (newRole == null || newRole.isEmpty()) {

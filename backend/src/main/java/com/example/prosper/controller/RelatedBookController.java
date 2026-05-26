@@ -6,7 +6,15 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.prosper.dto.RelatedBookDTO;
 import com.example.prosper.model.Book;
@@ -26,10 +34,6 @@ public class RelatedBookController {
     @Autowired
     private BookRepository bookRepository;
 
-    /**
-     * GET /api/related-books/{bookId}
-     * Получить все связанные новеллы для книги
-     */
     @GetMapping("/{bookId}")
     public ResponseEntity<List<RelatedBookDTO>> getRelatedBooks(@PathVariable Long bookId) {
         List<RelatedBook> relatedBooks = relatedBookRepository.findByBookId(bookId);
@@ -39,11 +43,6 @@ public class RelatedBookController {
         return ResponseEntity.ok(dtos);
     }
 
-    /**
-     * POST /api/related-books
-     * Создать связь между двумя новеллами
-     * Body: { "bookId": 1, "relatedBookId": 2, "relationType": "SEQUEL" }
-     */
     @PostMapping
     public ResponseEntity<?> createRelatedBook(
             @RequestBody RelatedBookDTO dto) {
@@ -64,10 +63,6 @@ public class RelatedBookController {
         }
     }
 
-    /**
-     * DELETE /api/related-books/{bookId}/{relatedBookId}
-     * Удалить связь между двумя новеллами
-     */
     @DeleteMapping("/{bookId}/{relatedBookId}")
     public ResponseEntity<?> deleteRelatedBook(
             @PathVariable Long bookId,
@@ -80,10 +75,7 @@ public class RelatedBookController {
         }
     }
 
-    /**
-     * PUT /api/related-books/{id}
-     * Обновить тип связи
-     */
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updateRelatedBook(
             @PathVariable Long id,

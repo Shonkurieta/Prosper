@@ -35,8 +35,6 @@ public class JwtFilter extends OncePerRequestFilter {
         
         final String authHeader = request.getHeader("Authorization");
         
-        // Если заголовка нет или он не начинается с Bearer, просто идем дальше по цепочке.
-        // Spring Security сам решит, пускать ли анонимного пользователя на основе SecurityConfig.
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -61,7 +59,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Логируем ошибку, но не прерываем цепочку, чтобы Spring Security мог вернуть 401/403 если доступ закрыт
             System.err.println("JWT Filter error: " + e.getMessage());
         }
         

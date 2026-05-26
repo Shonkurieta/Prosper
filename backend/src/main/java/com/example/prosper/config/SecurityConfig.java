@@ -50,14 +50,11 @@ public class SecurityConfig {
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
 
-                // Разрешаем GET для комментариев всем пользователям
                 .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                 
-                // Для POST/DELETE комментариев требуется аутентификация
                 .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
 
-                // Правила для админки и профиля
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")
                 .requestMatchers("/api/bookmarks/**").authenticated()

@@ -94,7 +94,6 @@ public class BookmarkController {
             try {
                 bookmarkStatus = BookmarkStatus.valueOf(status.toUpperCase());
             } catch (IllegalArgumentException e) {
-                // Fallback or log
             }
         }
 
@@ -156,7 +155,7 @@ public class BookmarkController {
                     UserBook newUserBook = new UserBook();
                     newUserBook.setUser(user);
                     newUserBook.setBook(book);
-                    newUserBook.setBookmarked(false); // Не добавляем в закладки автоматически при чтении
+                    newUserBook.setBookmarked(false); 
                     newUserBook.setStatus(BookmarkStatus.READING);
                     newUserBook.setCurrentChapter(1);
                     return newUserBook;
@@ -171,11 +170,7 @@ public class BookmarkController {
         } else {
             System.out.println("Warning: No currentChapter in request body");
         }
-        
-        // Если пользователь уже добавил книгу в закладки (например, "В планах"), 
-        // мы не должны менять статус на "Читаю" автоматически при обновлении прогресса.
-        // Но если книга еще не в закладках, мы оставляем статус READING по умолчанию.
-        
+
         UserBook saved = userBookRepository.save(userBook);
         System.out.println("Progress saved successfully");
         
