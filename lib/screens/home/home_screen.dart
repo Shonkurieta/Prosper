@@ -207,33 +207,154 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _allGenres.map((genre) {
-              final genreId = genre is Map ? genre['id'] : genre;
-              final genreName = genre is Map ? genre['name'] : genre.toString();
-              final isSelected = _selectedGenreIds.contains(genreId);
-              
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(genreName),
-                  selected: isSelected,
-                  onSelected: (_) => _toggleGenreFilter(genreId),
-                  backgroundColor: theme.cardColor,
-                  selectedColor: accentColor.withOpacity(0.2),
-                  labelStyle: TextStyle(
-                    color: isSelected ? accentColor : theme.textPrimaryColor,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  side: BorderSide(
-                    color: isSelected ? accentColor : theme.textSecondaryColor.withOpacity(0.2),
+        child: GestureDetector(
+          onTap: () => _showGenreFilterModal(theme),
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accentColor.withOpacity(0.2)),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 16),
+                Icon(Icons.tune_rounded, color: accentColor, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selectedGenreIds.isEmpty
+                        ? 'Выбрать жанры'
+                        : '${_selectedGenreIds.length} жанр${_selectedGenreIds.length == 1 ? '' : 'ов'} выбрано',
+                    style: TextStyle(
+                      color: _selectedGenreIds.isEmpty
+                          ? theme.textSecondaryColor.withOpacity(0.5)
+                          : accentColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              );
-            }).toList(),
+                Icon(Icons.arrow_forward_ios_rounded, color: theme.textSecondaryColor, size: 16),
+                const SizedBox(width: 16),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showGenreFilterModal(ThemeProvider theme) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Выбрать жанры',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimaryColor,
+                        ),
+                      ),
+                      if (_selectedGenreIds.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedGenreIds.clear());
+                            _applyFilters(_searchController.text);
+                            Navigator.pop(context);
+                          },
+                          child: Text(
+                            'Очистить',
+                            style: TextStyle(
+                              color: accentColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _allGenres.map((genre) {
+                      final genreId = genre is Map ? genre['id'] : genre;
+                      final genreName = genre is Map ? genre['name'] : genre.toString();
+                      final isSelected = _selectedGenreIds.contains(genreId);
+
+                      return GestureDetector(
+                        onTap: () => _toggleGenreFilter(genreId),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? accentColor : theme.cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? accentColor : theme.textSecondaryColor.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Text(
+                            genreName,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : theme.textPrimaryColor,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    _applyFilters(_searchController.text);
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Применить',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

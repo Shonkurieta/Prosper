@@ -32,6 +32,8 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
 
   List<Genre> _availableGenres = [];
   List<String> _selectedGenres = [];
+  List<dynamic> _allBooks = [];
+  List<Map<String, dynamic>> _selectedRelatedBooks = [];
 
   static const Color accentColor = Color(0xFFD46A4F);
 
@@ -55,6 +57,7 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
     
     _animController.forward();
     _fetchGenres();
+    _fetchAllBooks();
   }
 
   @override
@@ -78,6 +81,20 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
       }
     } catch (e) {
       if (mounted) setState(() => _loadingGenres = false);
+    }
+  }
+
+  Future<void> _fetchAllBooks() async {
+    try {
+      final svc = AdminService(widget.token);
+      final books = await svc.getAllBooks();
+      if (mounted) {
+        setState(() {
+          _allBooks = books;
+        });
+      }
+    } catch (e) {
+      // Silently fail
     }
   }
 
@@ -262,6 +279,10 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
                               icon: Icons.description_outlined,
                               maxLines: 6,
                             ),
+                            const SizedBox(height: 24),
+                            _buildSectionLabel(theme, 'Связанные новеллы'),
+                            const SizedBox(height: 12),
+                            _buildRelatedBooksSelector(theme),
                             const SizedBox(height: 40),
                             _buildSubmitButton(theme),
                             const SizedBox(height: 40),
@@ -426,6 +447,191 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
             ),
             const Icon(Icons.chevron_right, color: accentColor, size: 20),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRelatedBooksSelector(ThemeProvider theme) {
+    return InkWell(
+      onTap: () => _showRelatedBooksModal(theme),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accentColor.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.link_outlined, color: accentColor, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _selectedRelatedBooks.isEmpty
+                    ? 'Добавить связанные новеллы'
+                    : '${_selectedRelatedBooks.length} связанн${_selectedRelatedBooks.length == 1 ? "ая" : "ых"}',
+                style: TextStyle(
+                  color: _selectedRelatedBooks.isEmpty
+                      ? theme.textSecondaryColor.withOpacity(0.4)
+                      : theme.textPrimaryColor,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: accentColor, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRelatedBooksModal(ThemeProvider theme) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: theme.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Связанные новеллы',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textPrimaryColor,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Icon(Icons.close, color: theme.textSecondaryColor),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: _allBooks.length,
+                  itemBuilder: (context, index) {
+                    final book = _allBooks[index];
+                    final bookId = book['id'];
+                    final isSelected = _selectedRelatedBooks.any((b) => b['id'] == bookId);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: GestureDetector(
+                        onTap: () {
+                          setDialogState(() {
+                            if (isSelected) {
+                              _selectedRelatedBooks.removeWhere((b) => b['id'] == bookId);
+                            } else {
+                              _selectedRelatedBooks.add(book);
+                            }
+                          });
+                          setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? accentColor.withOpacity(0.1) : theme.cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? accentColor : theme.textSecondaryColor.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: theme.backgroundColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: book['coverUrl'] != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(book['coverUrl'], fit: BoxFit.cover),
+                                      )
+                                    : Center(
+                                        child: Icon(Icons.book_outlined, color: theme.textSecondaryColor),
+                                      ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      book['title'] ?? 'Новелла',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.textPrimaryColor,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      book['author'] ?? 'Неизвестный автор',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.textSecondaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_circle, color: accentColor, size: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Готово',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
