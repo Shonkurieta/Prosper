@@ -5,20 +5,24 @@ import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
-import 'package:prosper/providers/notification_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:prosper/widgets/comments_widget.dart';
 import 'package:prosper/widgets/reviews_widget.dart';
 import 'package:prosper/services/related_book_service.dart';
+import 'package:prosper/services/rating_service.dart';
 
 class NovellDetailScreen extends StatefulWidget {
   final String token;
   final int bookId;
+  final int initialTab;
+  final int? scrollToCommentId;
 
   const NovellDetailScreen({
     super.key,
     required this.token,
     required this.bookId,
+    this.initialTab = 0,
+    this.scrollToCommentId,
   });
 
   @override
@@ -33,6 +37,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Map<String, dynamic>? _book;
   List<dynamic> _chapters = [];
   List<dynamic> _relatedBooks = [];
+  Map<String, dynamic>? _ratingData;
   bool _isLoading = true;
   bool _isBookmarked = false;
   String? _currentStatus;
@@ -63,13 +68,17 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
 
     _tabController = TabController(length: 4, vsync: this);
 
-    // ← Убираем клавиатуру при смене таба
     _tabController.addListener(() {
       FocusManager.instance.primaryFocus?.unfocus();
     });
 
+    if (widget.initialTab != 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _tabController.animateTo(widget.initialTab);
+      });
+    }
+
     _loadBookDetails();
-    _initUserInNotificationProvider();
     _loadUsername();
   }
 
@@ -78,14 +87,6 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     setState(() {
       _currentUsername = prefs.getString('username') ?? 'Гость';
     });
-  }
-
-  Future<void> _initUserInNotificationProvider() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getInt('id')?.toString();
-    if (mounted) {
-      context.read<NotificationProvider>().setCurrentUser(userId);
-    }
   }
 
   @override
@@ -105,7 +106,6 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         widget.bookId,
       );
 
-      // Load related books separately - if it fails, continue without them
       List<dynamic> relatedBooks = [];
       try {
         final relatedBookService = RelatedBookService();
@@ -114,14 +114,21 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           widget.bookId,
         );
       } catch (e) {
-        // Silently fail - related books are optional
         relatedBooks = [];
+      }
+
+      Map<String, dynamic>? ratingData;
+      try {
+        ratingData = await RatingService.getRating(widget.token, widget.bookId);
+      } catch (e) {
+        ratingData = null;
       }
 
       setState(() {
         _book = book;
         _chapters = chapters;
         _relatedBooks = relatedBooks;
+        _ratingData = ratingData;
         _currentChapter = progress['currentChapter'] ?? 1;
         _isBookmarked = progress['isBookmarked'] ?? false;
         _currentStatus = progress['status'];
@@ -197,9 +204,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                     status['name']!,
                     style: TextStyle(
                       color: isSelected ? accentColor : theme.textPrimaryColor,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   onTap: () {
@@ -210,8 +216,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               }),
               if (_isBookmarked)
                 ListTile(
-                  leading:
-                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  leading: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent),
                   title: const Text('Удалить из закладок',
                       style: TextStyle(color: Colors.redAccent)),
                   onTap: () {
@@ -250,6 +256,45 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         );
       }
     }
+  }
+
+  Future<void> _subscribe() async {
+    final theme = context.read<ThemeProvider>();
+    try {
+      await _bookmarkService.addBookmark(
+        widget.token,
+        widget.bookId,
+        status: BookmarkService.READING,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+                'Подписаны! Вы будете получать уведомления о новых главах'),
+            backgroundColor: theme.successColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      _loadBookDetails();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка подписки: $e')),
+        );
+      }
+    }
+  }
+
+  void _showSubscribedInfo() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Вы подписаны. Уведомления о новых главах включены'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _removeBookmark() async {
@@ -297,8 +342,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.backgroundColor,
-        body:
-            const Center(child: CircularProgressIndicator(color: accentColor)),
+        body: const Center(
+            child: CircularProgressIndicator(color: accentColor)),
       );
     }
 
@@ -309,8 +354,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon:
-                const Icon(Icons.arrow_back_ios_new, color: accentColor),
+            icon: const Icon(Icons.arrow_back_ios_new, color: accentColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -320,8 +364,6 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       );
     }
 
-    // ← GestureDetector с HitTestBehavior.translucent — убирает клавиатуру
-    // при тапе на любую область экрана, не перехватывая другие события
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       behavior: HitTestBehavior.translucent,
@@ -452,6 +494,241 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     );
   }
 
+  String _formatRatingCount(int count) {
+    if (count < 1000) return '$count';
+    final k = count / 1000;
+    if (k < 10) return '${k.toStringAsFixed(1)}к';
+    return '${k.toStringAsFixed(0)}к';
+  }
+
+    void _showRatingModal() {
+    final userRating = _ratingData?['userRating'] as int?;
+    int selectedRating = userRating ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Dialog(
+              backgroundColor: context.read<ThemeProvider>().cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                    color: context.read<ThemeProvider>().borderColor, width: 1),
+              ),
+              // Ограничиваем максимальную ширину диалога
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(ctx).size.width * 0.9,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Заголовок
+                      Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: accentColor,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Оценка тайтла',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: context
+                                  .read<ThemeProvider>()
+                                  .textPrimaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Адаптивные звёздочки через LayoutBuilder
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Считаем доступную ширину и вычисляем размер иконки
+                          final availableWidth = constraints.maxWidth;
+                          // 10 звёздочек + горизонтальные паддинги (2*2=4 на каждую)
+                          final starSize =
+                              ((availableWidth - 10 * 4) / 10).clamp(18.0, 32.0);
+
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(10, (i) {
+                              final starNum = i + 1;
+                              final isActive = starNum <= selectedRating;
+                              return GestureDetector(
+                                onTap: () => setModalState(
+                                    () => selectedRating = starNum),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Icon(
+                                    isActive
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    color: isActive
+                                        ? accentColor
+                                        : context
+                                            .read<ThemeProvider>()
+                                            .textSecondaryColor
+                                            .withValues(alpha: 0.4),
+                                    size: starSize,
+                                  ),
+                                ),
+                              );
+                            }),
+                          );
+                        },
+                      ),
+
+                      if (selectedRating > 0) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '$selectedRating / 10',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: accentColor,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+
+                      // Кнопки
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: Text(
+                              'Отмена',
+                              style: TextStyle(
+                                  color: context.read<ThemeProvider>().textPrimaryColor),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: ElevatedButton(
+                              onPressed: selectedRating == 0
+                                  ? null
+                                  : () async {
+                                      Navigator.of(ctx).pop();
+                                      try {
+                                        final result = await RatingService.rateBook(
+                                          widget.token,
+                                          widget.bookId,
+                                          selectedRating,
+                                        );
+                                        setState(() => _ratingData = result);
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Ошибка: $e')),
+                                          );
+                                        }
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accentColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Text(
+                                userRating != null ? 'Изменить' : 'Оценить',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRatingBlock(ThemeProvider theme) {
+    final avg = (_ratingData?['averageRating'] as num?);
+    final count = (_ratingData?['ratingCount'] as num?)?.toInt() ?? 0;
+    final userRating = _ratingData?['userRating'] as int?;
+
+    return GestureDetector(
+      onTap: _showRatingModal,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: theme.borderColor, width: 0.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              userRating != null ? Icons.star : Icons.star_border,
+              color: accentColor,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              avg != null ? avg.toStringAsFixed(1) : '—',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: theme.textPrimaryColor,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '(${_formatRatingCount(count)})',
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.textSecondaryColor,
+              ),
+            ),
+            if (userRating != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Вы: $userRating',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: accentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildConstantArea(ThemeProvider theme) {
     return Column(
       children: [
@@ -464,6 +741,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             color: theme.textPrimaryColor,
           ),
         ),
+        const SizedBox(height: 12),
+        _buildRatingBlock(theme),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -489,31 +768,22 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Consumer<NotificationProvider>(
-                builder: (context, notificationProvider, child) {
-                  final isSubscribed =
-                      notificationProvider.isSubscribed(widget.bookId);
-                  return OutlinedButton.icon(
-                    onPressed: () {
-                      notificationProvider
-                          .toggleSubscription(widget.bookId);
-                    },
-                    icon: Icon(
-                      isSubscribed
-                          ? Icons.notifications_active
-                          : Icons.notifications_none,
-                      size: 18,
-                    ),
-                    label: const Text('Подписаться'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: accentColor,
-                      side: const BorderSide(color: accentColor),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                  );
-                },
+              child: OutlinedButton.icon(
+                onPressed: _isBookmarked ? _showSubscribedInfo : _subscribe,
+                icon: Icon(
+                  _isBookmarked
+                      ? Icons.notifications_active
+                      : Icons.notifications_none,
+                  size: 18,
+                ),
+                label: Text(_isBookmarked ? 'Подписан' : 'Подписаться'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: accentColor,
+                  side: const BorderSide(color: accentColor),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
           ],
@@ -533,11 +803,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               elevation: 0,
             ),
             child: Text(
-              _currentChapter > 1
-                  ? 'Продолжить чтение'
-                  : 'Начать чтение',
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.bold),
+              _currentChapter > 1 ? 'Продолжить чтение' : 'Начать чтение',
+              style:
+                  const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -588,8 +856,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                     child: Text(
                       '${chapter['chapterOrder']}',
                       style: TextStyle(
-                        color:
-                            isCurrent ? Colors.white : theme.textSecondaryColor,
+                        color: isCurrent
+                            ? Colors.white
+                            : theme.textSecondaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -599,8 +868,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    chapter['title'] ??
-                        'Глава ${chapter['chapterOrder']}',
+                    chapter['title'] ?? 'Глава ${chapter['chapterOrder']}',
                     style: TextStyle(
                       color: theme.textPrimaryColor,
                       fontWeight:
@@ -624,6 +892,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
       token: widget.token,
       bookId: widget.bookId,
       currentUsername: _currentUsername,
+      scrollToCommentId: widget.scrollToCommentId,
     );
   }
 
@@ -676,8 +945,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               fontWeight: FontWeight.w300,
             ),
           ),
-          if (_relatedBooks.isNotEmpty) ...
-          [
+          if (_relatedBooks.isNotEmpty) ...[
             const SizedBox(height: 32),
             _buildSectionLabel(theme, 'Связанное'),
             const SizedBox(height: 12),
@@ -808,7 +1076,8 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Widget _buildPlaceholder(ThemeProvider theme) {
     return Container(
       color: theme.cardColor,
-      child: const Center(child: Icon(Icons.book, color: accentColor, size: 40)),
+      child:
+          const Center(child: Icon(Icons.book, color: accentColor, size: 40)),
     );
   }
 }

@@ -50,7 +50,7 @@ public class CommentService {
     }
 
     @Transactional
-    public Comment addComment(Long userId, Long bookId, Long chapterId, Long parentCommentId, String content) {
+    public Comment addComment(Long userId, Long bookId, Long chapterId, Long parentCommentId, String content, String replyToNickname) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -69,13 +69,22 @@ public class CommentService {
                     .orElseThrow(() -> new RuntimeException("Parent comment not found"));
         }
 
-        Comment savedComment = commentRepository.save(new Comment(user, book, chapter, parentComment, content));
+        Comment newComment = new Comment(user, book, chapter, parentComment, content);
+        if (replyToNickname != null && !replyToNickname.isBlank()) {
+            newComment.setReplyToNickname(replyToNickname);
+        }
+        Comment savedComment = commentRepository.save(newComment);
 
         if (parentComment != null) {
-            User parentAuthor = parentComment.getUser();
-            if (!parentAuthor.getId().equals(userId)) {
+            // Notify the person being replied to: replyToNickname if set (reply-to-reply),
+            // otherwise the root comment author.
+            User notifyUser = parentComment.getUser();
+            if (replyToNickname != null && !replyToNickname.isBlank()) {
+                notifyUser = userRepository.findByNickname(replyToNickname).orElse(notifyUser);
+            }
+            if (!notifyUser.getId().equals(userId)) {
                 Notification notification = new Notification();
-                notification.setRecipient(parentAuthor);
+                notification.setRecipient(notifyUser);
                 notification.setType(NotificationType.COMMENT_REPLY);
                 notification.setTitle("Новый ответ!");
                 notification.setMessage(user.getNickname() + " ответил на ваш комментарий");

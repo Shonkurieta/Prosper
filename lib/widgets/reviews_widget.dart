@@ -353,9 +353,20 @@ class _AddReviewModalState extends State<AddReviewModal> {
   bool _agreed = false;
   bool _isSubmitting = false;
 
+  int get _minLength => _type == 'REVIEW' ? 500 : 3000;
+  bool get _isContentValid => _controller.text.length >= _minLength;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    final currentLength = _controller.text.length;
+    final remaining = _minLength - currentLength;
 
     return Container(
       decoration: BoxDecoration(
@@ -408,10 +419,40 @@ class _AddReviewModalState extends State<AddReviewModal> {
             TextField(
               controller: _controller,
               maxLines: 5,
+              onChanged: (_) => setState(() {}),
               style: TextStyle(color: theme.textPrimaryColor),
               decoration: theme.getInputDecoration(
                 hintText: _type == 'REVIEW' ? 'Минимум 500 символов' : 'Минимум 3000 символов',
               ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Сообщение об ошибке — только если есть текст и он не достигает минимума
+                if (!_isContentValid && currentLength > 0)
+                  Expanded(
+                    child: Text(
+                      'Ещё ${remaining} симв.',
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                // Счётчик символов
+                Text(
+                  '$currentLength / $_minLength',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _isContentValid
+                        ? Colors.green
+                        : currentLength > 0
+                            ? Colors.redAccent
+                            : theme.textSecondaryColor.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Row(
@@ -433,7 +474,7 @@ class _AddReviewModalState extends State<AddReviewModal> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_agreed && !_isSubmitting) ? _submit : null,
+                onPressed: (_agreed && !_isSubmitting && _isContentValid) ? _submit : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFD46A4F),
                   foregroundColor: Colors.white,
@@ -442,7 +483,11 @@ class _AddReviewModalState extends State<AddReviewModal> {
                   disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
                 ),
                 child: _isSubmitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
                     : const Text('Опубликовать', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
@@ -467,7 +512,10 @@ class _AddReviewModalState extends State<AddReviewModal> {
           child: Center(
             child: Text(
               label,
-              style: TextStyle(color: isSelected ? Colors.white : theme.textPrimaryColor, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: isSelected ? Colors.white : theme.textPrimaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),

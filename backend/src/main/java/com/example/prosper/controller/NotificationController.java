@@ -38,6 +38,7 @@ public class NotificationController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<NotificationDTO>> getNotifications(@AuthenticationPrincipal UserDetails userDetails) {
         User user = getCurrentUser(userDetails);
         if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

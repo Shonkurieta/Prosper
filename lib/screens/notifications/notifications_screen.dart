@@ -16,7 +16,7 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen> with WidgetsBindingObserver {
   String _filter = 'Непрочитанные';
   String _currentUsername = 'Гость';
   List<dynamic> _notifications = [];
@@ -26,8 +26,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUsername();
     _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadNotifications();
+    }
   }
 
   Future<void> _loadUsername() async {
@@ -45,12 +59,95 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _notifications = notifications;
         _isLoading = false;
       });
-      // Update unread count in provider
       context.read<NotificationProvider>().refreshUnreadCount();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
+  }
+
+  void _showConfirmDialog({
+    required String title,
+    required String message,
+    required VoidCallback onConfirm,
+    ThemeProvider? theme,
+  }) {
+    final t = theme ?? context.read<ThemeProvider>();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: t.cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: t.borderColor, width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: t.textPrimaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: t.textSecondaryColor,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('Отмена', style: TextStyle(color: t.textPrimaryColor)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      onConfirm();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Подтвердить'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -72,10 +169,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         elevation: 0,
         title: Text(
           'Уведомления',
-          style: TextStyle(
-            color: theme.textPrimaryColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: theme.textPrimaryColor, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new, color: theme.textPrimaryColor, size: 20),
@@ -88,19 +182,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: accentColor))
-          : filteredNotifications.isEmpty
-              ? _buildEmptyState(theme)
-              : RefreshIndicator(
-                  color: accentColor,
-                  onRefresh: _loadNotifications,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    itemCount: filteredNotifications.length,
-                    itemBuilder: (context, index) {
-                      return _buildNotificationItem(context, theme, filteredNotifications[index]);
-                    },
-                  ),
-                ),
+          : RefreshIndicator(
+              color: accentColor,
+              onRefresh: _loadNotifications,
+              child: filteredNotifications.isEmpty
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: _buildEmptyState(theme),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      itemCount: filteredNotifications.length,
+                      itemBuilder: (context, index) {
+                        return _buildNotificationItem(context, theme, filteredNotifications[index]);
+                      },
+                    ),
+            ),
     );
   }
 
@@ -119,18 +219,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           icon: Icon(Icons.keyboard_arrow_down, color: theme.textSecondaryColor, size: 20),
           style: TextStyle(color: theme.textPrimaryColor, fontSize: 14),
           onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() {
-                _filter = newValue;
-              });
-            }
+            if (newValue != null) setState(() => _filter = newValue);
           },
           items: <String>['Все', 'Непрочитанные', 'Прочитанные']
               .map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
+            return DropdownMenuItem<String>(value: value, child: Text(value));
           }).toList(),
         ),
       ),
@@ -146,15 +239,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         if (!isRead) {
           try {
             await NotificationService.markAsRead(notification['id']);
-            setState(() {
-              notification['read'] = true;
-            });
+            setState(() => notification['read'] = true);
             context.read<NotificationProvider>().decrementUnreadCount();
           } catch (_) {}
         }
 
         if (!mounted) return;
-        
+
         if (type == 'NEW_CHAPTER' && notification['bookId'] != null && notification['chapterOrder'] != null) {
           Navigator.push(
             context,
@@ -164,6 +255,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 bookId: notification['bookId'],
                 chapterOrder: notification['chapterOrder'],
                 currentUsername: _currentUsername,
+              ),
+            ),
+          );
+        } else if (type == 'COMMENT_REPLY' && notification['bookId'] != null) {
+          // Переход к конкретному комментарию во вкладке "Комментарии"
+          final commentId = notification['commentId'] as int?;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => NovellDetailScreen(
+                token: widget.token,
+                bookId: notification['bookId'],
+                initialTab: 2,
+                scrollToCommentId: commentId,
               ),
             ),
           );
@@ -231,10 +336,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     notification['message'] ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.textSecondaryColor,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: theme.textSecondaryColor, fontSize: 14),
                   ),
                 ],
               ),
@@ -243,10 +345,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               Container(
                 width: 10,
                 height: 10,
-                decoration: const BoxDecoration(
-                  color: accentColor,
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(color: accentColor, shape: BoxShape.circle),
               ),
           ],
         ),
@@ -259,17 +358,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       icon: Icon(Icons.more_vert, color: theme.textPrimaryColor),
       color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (value) async {
+      onSelected: (value) {
         if (value == 'mark_all_read') {
-          try {
-            await NotificationService.markAllAsRead();
-            _loadNotifications();
-          } catch (_) {}
+          _showConfirmDialog(
+            title: 'Отметить всё прочитанным?',
+            message: 'Все уведомления будут помечены как прочитанные.',
+            theme: theme,
+            onConfirm: () async {
+              try {
+                await NotificationService.markAllAsRead();
+                _loadNotifications();
+              } catch (_) {}
+            },
+          );
         } else if (value == 'delete_all') {
-          try {
-            await NotificationService.deleteAllNotifications();
-            _loadNotifications();
-          } catch (_) {}
+          _showConfirmDialog(
+            title: 'Удалить все уведомления?',
+            message: 'Это действие нельзя отменить.',
+            theme: theme,
+            onConfirm: () async {
+              try {
+                await NotificationService.deleteAllNotifications();
+                _loadNotifications();
+              } catch (_) {}
+            },
+          );
         }
       },
       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -279,19 +392,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             children: [
               Icon(Icons.done_all, color: theme.textPrimaryColor, size: 20),
               const SizedBox(width: 12),
-              Text('Отметить всё прочитанным',
-                  style: TextStyle(color: theme.textPrimaryColor)),
+              Text('Отметить всё прочитанным', style: TextStyle(color: theme.textPrimaryColor)),
             ],
           ),
         ),
         PopupMenuItem<String>(
           value: 'delete_all',
-          child: Row(
+          child: const Row(
             children: [
-              const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-              const SizedBox(width: 12),
-              const Text('Удалить все уведомления',
-                  style: TextStyle(color: Colors.redAccent)),
+              Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+              SizedBox(width: 12),
+              Text('Удалить все уведомления', style: TextStyle(color: Colors.redAccent)),
             ],
           ),
         ),

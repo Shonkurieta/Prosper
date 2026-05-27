@@ -9,6 +9,7 @@ class CommentsWidget extends StatefulWidget {
   final int bookId;
   final int? chapterId;
   final String currentUsername;
+  final int? scrollToCommentId;
 
   const CommentsWidget({
     super.key,
@@ -16,6 +17,7 @@ class CommentsWidget extends StatefulWidget {
     required this.bookId,
     this.chapterId,
     required this.currentUsername,
+    this.scrollToCommentId,
   });
 
   @override
@@ -23,30 +25,26 @@ class CommentsWidget extends StatefulWidget {
 }
 
 class _CommentsWidgetState extends State<CommentsWidget> {
-  // ============ СЕРВИС И КОНТРОЛЛЕР ============
   final CommentService _commentService = CommentService();
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  // ============ СОСТОЯНИЕ ============
   List<Map<String, dynamic>> _comments = [];
   bool _isLoading = false;
   bool _isSubmitting = false;
 
-  // Сортировка: 'new' или 'top'
   String _sortMode = 'new';
 
-  // Локальное хранилище лайков
   final Map<String, bool> _liked = {};
   final Map<String, int> _likeCounts = {};
 
-  // Какие ответы раскрыты
+  // true = показать все ответы, false = показать только первый
   final Map<int, bool> _expandedReplies = {};
 
-  // Ответ на комментарий
-  int? _replyingToId;
-  String? _replyingToAuthor;
+  int? _replyingToId;         // ID корневого комментария
+  String? _replyingToAuthor;  // Ник автора для показа пользователю
+  String? _replyToNickname;   // Ник для отправки на бэкенд (только при ответе на ответ)
 
   static const Color accentColor = Color(0xFFD46A4F);
 
@@ -71,7 +69,6 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     super.dispose();
   }
 
-  // ============ ЗАГРУЗКА КОММЕНТАРИЕВ ============
   Future<void> _loadComments() async {
     setState(() => _isLoading = true);
     try {
@@ -118,6 +115,12 @@ class _CommentsWidgetState extends State<CommentsWidget> {
           }
         }
       });
+
+      if (widget.scrollToCommentId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToComment(widget.scrollToCommentId!);
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +132,45 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     }
   }
 
-  // ============ ОТПРАВКА КОММЕНТАРИЯ ============
+  void _scrollToComment(int commentId) {
+    final sorted = _sortedComments;
+    int? rootId;
+    int rootIndex = -1;
+
+    for (int i = 0; i < sorted.length; i++) {
+      final c = sorted[i];
+      if (c['id'] == commentId) {
+        rootId = commentId;
+        rootIndex = i;
+        break;
+      }
+      final replyList = c['replies'] as List? ?? [];
+      for (final reply in replyList) {
+        if (reply['id'] == commentId) {
+          rootId = c['id'] as int;
+          rootIndex = i;
+          break;
+        }
+      }
+      if (rootId != null) break;
+    }
+
+    if (rootId == null || rootIndex < 0) return;
+
+    setState(() => _expandedReplies[rootId!] = true);
+
+    if (!_scrollController.hasClients) return;
+    const headerHeight = 130.0;
+    const avgCommentHeight = 90.0;
+    final offset = (headerHeight + rootIndex * avgCommentHeight)
+        .clamp(0.0, _scrollController.position.maxScrollExtent);
+    _scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+    );
+  }
+
   Future<void> _submitComment() async {
     if (_inputController.text.trim().isEmpty) return;
 
@@ -141,12 +182,14 @@ class _CommentsWidgetState extends State<CommentsWidget> {
         widget.chapterId,
         _inputController.text.trim(),
         parentCommentId: _replyingToId,
+        replyToNickname: _replyToNickname,
       );
       _inputController.clear();
       FocusManager.instance.primaryFocus?.unfocus();
       setState(() {
         _replyingToId = null;
         _replyingToAuthor = null;
+        _replyToNickname = null;
       });
       await _loadComments();
     } catch (e) {
@@ -160,7 +203,6 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     }
   }
 
-  // ============ УДАЛЕНИЕ КОММЕНТАРИЯ ============
   Future<void> _deleteComment(int commentId) async {
     try {
       await _commentService.deleteComment(widget.token, commentId);
@@ -275,7 +317,6 @@ class _CommentsWidgetState extends State<CommentsWidget> {
 
   Widget _buildAvatar(String name, String? avatarUrl, ThemeProvider theme, {bool isReply = false}) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final color = accentColor;
     final bgColor = theme.isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5);
 
     return Container(
@@ -284,7 +325,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: bgColor,
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2), width: 1),
       ),
       child: ClipOval(
         child: avatarUrl != null && avatarUrl.isNotEmpty
@@ -297,7 +338,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                     style: TextStyle(
                       fontSize: isReply ? 10 : 12,
                       fontWeight: FontWeight.w600,
-                      color: color,
+                      color: accentColor,
                     ),
                   ),
                 ),
@@ -308,7 +349,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                   style: TextStyle(
                     fontSize: isReply ? 10 : 12,
                     fontWeight: FontWeight.w600,
-                    color: color,
+                    color: accentColor,
                   ),
                 ),
               ),
@@ -334,6 +375,93 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     );
   }
 
+  // Один ответ — отображение с @упоминанием и кнопкой "Ответить"
+  Widget _buildReplyItem(
+    Map<String, dynamic> reply,
+    int rootCommentId,
+    int replyIndex,
+    ThemeProvider theme,
+  ) {
+    final replyId = reply['id'] as int;
+    final replyAuthor = reply['user']['nickname'] ?? 'Аноним';
+    final replyToNickname = reply['replyToNickname'] as String?;
+    final replyContent = reply['content'] ?? '';
+    final isOwnReply = replyAuthor == widget.currentUsername;
+    final rKey = 'r_${rootCommentId}_$replyIndex';
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 44, bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAvatar(replyAuthor, reply['user']['avatarUrl'], theme, isReply: true),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      replyAuthor,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textPrimaryColor),
+                    ),
+                    if (isOwnReply)
+                      GestureDetector(
+                        onTap: () => _showDeleteConfirmationDialog(replyId, theme),
+                        child: Icon(Icons.close, size: 12, color: theme.textSecondaryColor.withValues(alpha: 0.4)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      if (replyToNickname != null)
+                        TextSpan(
+                          text: '@$replyToNickname ',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: accentColor,
+                          ),
+                        ),
+                      TextSpan(
+                        text: replyContent,
+                        style: TextStyle(fontSize: 12, color: theme.textSecondaryColor, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    _buildLikeButton(rKey, theme),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _replyingToId = rootCommentId;
+                        _replyingToAuthor = replyAuthor;
+                        _replyToNickname = replyAuthor;
+                        _expandedReplies[rootCommentId] = true;
+                        _focusNode.requestFocus();
+                      }),
+                      child: Text(
+                        'Ответить',
+                        style: TextStyle(fontSize: 11, color: theme.textSecondaryColor, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildComment(Map<String, dynamic> comment, ThemeProvider theme) {
     final id = comment['id'] as int;
     final author = comment['user']['nickname'] ?? 'Аноним';
@@ -342,6 +470,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     final isOwn = author == widget.currentUsername;
     final replies = (comment['replies'] as List<dynamic>?) ?? [];
     final isExpanded = _expandedReplies[id] ?? false;
+    final extraCount = replies.length - 1; // сколько скрыто
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,6 +529,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                           onTap: () => setState(() {
                             _replyingToId = id;
                             _replyingToAuthor = author;
+                            _replyToNickname = null; // ответ на корневой — без @упоминания
                             _focusNode.requestFocus();
                           }),
                           child: Text(
@@ -407,16 +537,6 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                             style: TextStyle(fontSize: 11, color: theme.textSecondaryColor, fontWeight: FontWeight.w500),
                           ),
                         ),
-                        if (replies.isNotEmpty) ...[
-                          const SizedBox(width: 16),
-                          GestureDetector(
-                            onTap: () => setState(() => _expandedReplies[id] = !isExpanded),
-                            child: Text(
-                              isExpanded ? 'Скрыть' : '${replies.length} ответа',
-                              style: const TextStyle(fontSize: 11, color: accentColor, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -425,54 +545,57 @@ class _CommentsWidgetState extends State<CommentsWidget> {
             ],
           ),
         ),
-        if (isExpanded)
-          ...replies.asMap().entries.map((entry) {
-            final i = entry.key;
-            final reply = entry.value as Map<String, dynamic>;
-            final replyAuthor = reply['user']['nickname'] ?? 'Аноним';
-            final isOwnReply = replyAuthor == widget.currentUsername;
 
-            return Padding(
-              padding: const EdgeInsets.only(left: 44, bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildAvatar(replyAuthor, reply['user']['avatarUrl'], theme, isReply: true),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              replyAuthor,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textPrimaryColor),
-                            ),
-                            if (isOwnReply)
-                              GestureDetector(
-                                onTap: () => _showDeleteConfirmationDialog(reply['id'] as int, theme),
-                                child: Icon(Icons.close, size: 12, color: theme.textSecondaryColor.withValues(alpha: 0.4)),
-                              ),
-                          ],
-                        ),
-                        Text(
-                          reply['content'] ?? '',
-                          style: TextStyle(fontSize: 12, color: theme.textSecondaryColor, height: 1.4),
-                        ),
-                        const SizedBox(height: 4),
-                        _buildLikeButton('r_${id}_$i', theme),
-                      ],
-                    ),
-                  ),
-                ],
+        // Первый ответ (всегда показываем если есть)
+        if (replies.isNotEmpty)
+          _buildReplyItem(replies[0] as Map<String, dynamic>, id, 0, theme),
+
+        // Кнопка «Показать ещё N ответов» (если ответов > 1 и ветка не раскрыта)
+        if (replies.length > 1 && !isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(left: 44, bottom: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _expandedReplies[id] = true),
+              child: Text(
+                'Показать ещё $extraCount ${_replyWord(extraCount)}',
+                style: const TextStyle(fontSize: 12, color: accentColor, fontWeight: FontWeight.w500),
               ),
-            );
-          }),
+            ),
+          ),
+
+        // Остальные ответы (индексы 1..N) когда раскрыто
+        if (isExpanded && replies.length > 1)
+          ...replies.asMap().entries.skip(1).map((entry) =>
+            _buildReplyItem(entry.value as Map<String, dynamic>, id, entry.key, theme),
+          ),
+
+        // Кнопка «Скрыть» когда ветка раскрыта и ответов > 1
+        if (isExpanded && replies.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(left: 44, bottom: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _expandedReplies[id] = false),
+              child: const Text(
+                'Скрыть',
+                style: TextStyle(fontSize: 12, color: accentColor, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+
         Divider(color: theme.borderColor, height: 1, thickness: 0.5),
       ],
     );
+  }
+
+  String _replyWord(int count) {
+    if (count % 100 >= 11 && count % 100 <= 14) return 'ответов';
+    switch (count % 10) {
+      case 1: return 'ответ';
+      case 2:
+      case 3:
+      case 4: return 'ответа';
+      default: return 'ответов';
+    }
   }
 
   String _formatDate(String dateString) {
@@ -528,10 +651,8 @@ class _CommentsWidgetState extends State<CommentsWidget> {
           controller: _scrollController,
           physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          // Количество элементов: 1 (кнопки) + 1 (поле ввода) + список комментариев
           itemCount: 2 + sortedComments.length,
           itemBuilder: (context, index) {
-            // 1. Кнопки сортировки
             if (index == 0) {
               return Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 8),
@@ -544,7 +665,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                 ),
               );
             }
-            // 2. Поле ввода
+
             if (index == 1) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -557,11 +678,15 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                         padding: const EdgeInsets.only(bottom: 6, left: 4),
                         child: Row(
                           children: [
-                            Text('Ответ для $_replyingToAuthor', 
+                            Text('Ответ для $_replyingToAuthor',
                               style: const TextStyle(fontSize: 11, color: accentColor, fontWeight: FontWeight.w600)),
                             const SizedBox(width: 8),
                             GestureDetector(
-                              onTap: () => setState(() { _replyingToId = null; _replyingToAuthor = null; }),
+                              onTap: () => setState(() {
+                                _replyingToId = null;
+                                _replyingToAuthor = null;
+                                _replyToNickname = null;
+                              }),
                               child: Icon(Icons.cancel, size: 14, color: theme.textSecondaryColor),
                             ),
                           ],
@@ -601,15 +726,14 @@ class _CommentsWidgetState extends State<CommentsWidget> {
                 ),
               );
             }
-            
-            // 3. Список комментариев
+
             if (_isLoading && index == 2) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 32),
                 child: Center(child: CircularProgressIndicator(color: accentColor, strokeWidth: 2)),
               );
             }
-            
+
             if (sortedComments.isEmpty && index == 2) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
@@ -621,7 +745,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
             if (commentIndex < sortedComments.length) {
               return _buildComment(sortedComments[commentIndex], theme);
             }
-            
+
             return const SizedBox.shrink();
           },
         ),

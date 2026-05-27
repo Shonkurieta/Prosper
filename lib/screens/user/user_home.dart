@@ -18,7 +18,7 @@ class UserHome extends StatefulWidget {
   State<UserHome> createState() => _UserHomeState();
 }
 
-class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin {
+class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _selectedIndex = 1;
   late AnimationController _animController;
   late String _currentToken;
@@ -35,8 +35,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     );
     
     _animController.forward();
-    
-    // Устанавливаем текущего пользователя в провайдере уведомлений
+    WidgetsBinding.instance.addObserver(this);
     _initUserInNotificationProvider();
   }
 
@@ -67,8 +66,16 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<NotificationProvider>().refreshUnreadCount();
+    }
   }
 
   void _onItemTapped(int index) {

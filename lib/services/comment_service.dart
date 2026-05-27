@@ -75,6 +75,7 @@ class CommentService {
     int? chapterId,
     String content, {
     int? parentCommentId,
+    String? replyToNickname,
   }) async {
     final url = '${ApiConstants.baseUrl}/comments';
 
@@ -88,6 +89,7 @@ class CommentService {
         'chapterId': chapterId,
         'content': content,
         if (parentCommentId != null) 'parentCommentId': parentCommentId,
+        if (replyToNickname != null) 'replyToNickname': replyToNickname,
       };
 
       print('>>> [CommentService] PAYLOAD: $payload');

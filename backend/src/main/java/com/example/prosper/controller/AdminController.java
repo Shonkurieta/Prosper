@@ -271,8 +271,8 @@ public class AdminController {
                     Chapter saved = chapterRepository.save(chapter);
                     System.out.println("Chapter created: " + saved.getId());
 
-                    // Create notifications for bookmarked users
-                    List<UserBook> bookmarkedUsers = userBookRepository.findByBookIdAndBookmarkedTrue(bookId);
+                    // Create notifications for all readers of this book
+                    List<UserBook> bookmarkedUsers = userBookRepository.findByBookId(bookId);
                     for (UserBook ub : bookmarkedUsers) {
                         Notification notification = new Notification();
                         notification.setRecipient(ub.getUser());

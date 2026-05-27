@@ -6,7 +6,7 @@ import '../constants/api_constants.dart';
 class NotificationService {
   static Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = prefs.getString('token');
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',

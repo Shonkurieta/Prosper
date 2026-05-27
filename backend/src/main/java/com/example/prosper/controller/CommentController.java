@@ -54,8 +54,9 @@ public class CommentController {
         Long chapterId = payload.get("chapterId") != null ? ((Number) payload.get("chapterId")).longValue() : null;
         String content = (String) payload.get("content");
         Long parentCommentId = payload.get("parentCommentId") != null ? ((Number) payload.get("parentCommentId")).longValue() : null;
+        String replyToNickname = payload.get("replyToNickname") != null ? (String) payload.get("replyToNickname") : null;
 
-        Comment newComment = commentService.addComment(user.getId(), bookId, chapterId, parentCommentId, content);
+        Comment newComment = commentService.addComment(user.getId(), bookId, chapterId, parentCommentId, content, replyToNickname);
         return new ResponseEntity<>(newComment, HttpStatus.CREATED);
     }
 

@@ -43,6 +43,9 @@ public class Comment {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "reply_to_nickname")
+    private String replyToNickname;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -78,6 +81,9 @@ public class Comment {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    public String getReplyToNickname() { return replyToNickname; }
+    public void setReplyToNickname(String replyToNickname) { this.replyToNickname = replyToNickname; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
