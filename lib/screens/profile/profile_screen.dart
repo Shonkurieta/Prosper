@@ -4,6 +4,7 @@ import 'package:prosper/services/user_service.dart';
 import 'package:prosper/services/storage_service.dart';
 import 'package:prosper/services/bookmark_service.dart';
 import 'package:prosper/screens/auth/login_screen.dart';
+import 'package:prosper/screens/auth/register_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
@@ -37,6 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _isLoading = true;
   int _bookmarksCount = 0;
   int _booksInProgress = 0;
+  int _completedCount = 0;
   late String _currentToken;
 
   static const Color accentColor = Color(0xFFD46A4F);
@@ -66,15 +68,21 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _loadData() async {
     if (!mounted) return;
+    if (widget.token.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final profile = await _userService.getProfile(_currentToken);
       final bookmarks = await _bookmarkService.getBookmarks(_currentToken);
 
       int inProgress = 0;
+      int completed = 0;
       for (var bookmark in bookmarks) {
         final status = bookmark['status'] as String?;
         if (status == BookmarkService.READING) inProgress++;
+        if (status == BookmarkService.COMPLETED) completed++;
       }
 
       if (mounted) {
@@ -82,6 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _profile = profile;
           _bookmarksCount = bookmarks.length;
           _booksInProgress = inProgress;
+          _completedCount = completed;
           _isLoading = false;
         });
       }
@@ -346,6 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    if (widget.token.isEmpty) return _buildGuestScreen(theme);
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       body: _isLoading
@@ -361,9 +371,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                           _buildStatsRow(theme),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
 
                           // Кнопка возврата в админку
                           FutureBuilder<SharedPreferences>(
@@ -382,10 +392,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         icon: Icons.admin_panel_settings_outlined,
                                         title: 'Вернуться в управление',
                                         subtitle: 'Выйти из режима читателя',
-                                        color: Colors.green,
+                                        color: Colors.teal,
                                         onTap: () => Navigator.of(context).pop(),
                                       ),
-                                      const SizedBox(height: 32),
+                                      const SizedBox(height: 28),
                                     ],
                                   );
                                 }
@@ -394,7 +404,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             },
                           ),
 
-                          _buildSectionLabel(theme, 'Настройки профиля'),
+                          _buildSectionLabel(theme, 'Профиль'),
                           const SizedBox(height: 12),
                           _buildMenuItem(
                             theme: theme,
@@ -411,15 +421,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             subtitle: 'Обновить данные для входа',
                             onTap: () => _showChangePasswordDialog(theme),
                           ),
-                          const SizedBox(height: 12),
-                          _buildMenuItem(
-                            theme: theme,
-                            icon: Icons.photo_camera_outlined,
-                            title: 'Сменить аватар',
-                            subtitle: 'Загрузить новое фото профиля',
-                            onTap: _pickAndUploadAvatar,
-                          ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
                           _buildSectionLabel(theme, 'Интерфейс'),
                           const SizedBox(height: 12),
                           _buildMenuItem(
@@ -428,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 ? Icons.light_mode_outlined
                                 : Icons.dark_mode_outlined,
                             title: theme.isDarkMode ? 'Светлая тема' : 'Тёмная тема',
-                            subtitle: 'Переключить оформление',
+                            subtitle: 'Переключить оформление приложения',
                             onTap: () => theme.toggleTheme(),
                             trailing: Switch(
                               value: theme.isDarkMode,
@@ -459,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               );
                             },
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
                           _buildSectionLabel(theme, 'Аккаунт'),
                           const SizedBox(height: 12),
                           _buildMenuItem(
@@ -467,10 +469,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                             icon: Icons.logout_rounded,
                             title: 'Выйти из системы',
                             subtitle: 'Завершить текущую сессию',
-                            color: Colors.redAccent,
+                            color: theme.errorColor,
                             onTap: _logout,
                           ),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 48),
                         ]),
                       ),
                     ),
@@ -482,107 +484,92 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSliverHeader(ThemeProvider theme) {
-    return SliverAppBar(
-      expandedHeight: 220,
-      backgroundColor: theme.backgroundColor,
-      automaticallyImplyLeading: false,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    accentColor,
-                    accentColor.withOpacity(0.8),
+    return SliverToBoxAdapter(
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          border: Border(bottom: BorderSide(color: theme.borderColor)),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              children: [
+                // Avatar
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 3),
+                      ),
+                      child: ClipOval(
+                        child: _profile?['avatarUrl'] != null
+                            ? Image.network(
+                                ApiConstants.getCoverUrl(_profile!['avatarUrl']),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _buildAvatarFallback(),
+                              )
+                            : _buildAvatarFallback(),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickAndUploadAvatar,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: theme.cardColor, width: 2),
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ),
-            Positioned.fill(
-              child: Opacity(
-                opacity: 0.1,
-                child: CustomPaint(painter: GridPainter()),
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: theme.backgroundColor,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                const SizedBox(height: 14),
+                Text(
+                  _getDisplayName(),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textPrimaryColor,
+                    letterSpacing: -0.4,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 3),
+                Text(
+                  _profile?['email'] ?? '',
+                  style: TextStyle(fontSize: 13, color: theme.textSecondaryColor),
+                ),
+              ],
             ),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: _profile?['avatarUrl'] != null
-                          ? Image.network(
-                              ApiConstants.getCoverUrl(_profile!['avatarUrl']),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Center(
-                                child: Text(
-                                  _getInitial(),
-                                  style: const TextStyle(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.bold,
-                                    color: accentColor,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : Center(
-                              child: Text(
-                                _getInitial(),
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  color: accentColor,
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _getDisplayName(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    _profile?['email'] ?? '',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarFallback() {
+    return Container(
+      color: accentColor.withValues(alpha: 0.12),
+      child: Center(
+        child: Text(
+          _getInitial(),
+          style: const TextStyle(
+            fontSize: 36,
+            fontWeight: FontWeight.w800,
+            color: accentColor,
+          ),
         ),
       ),
     );
@@ -591,59 +578,52 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildStatsRow(ThemeProvider theme) {
     return Row(
       children: [
-        Expanded(
-          child: _buildStatCard(
-            theme,
-            '$_bookmarksCount',
-            'В закладках',
-            Icons.bookmarks_outlined,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            theme,
-            '$_booksInProgress',
-            'Читаю',
-            Icons.menu_book_rounded,
-          ),
-        ),
+        Expanded(child: _buildStatCard(theme, '$_bookmarksCount', 'Закладки', Icons.bookmarks_outlined)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildStatCard(theme, '$_booksInProgress', 'Читаю', Icons.menu_book_rounded)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildStatCard(theme, '$_completedCount', 'Прочитано', Icons.check_circle_outline_rounded)),
       ],
     );
   }
 
   Widget _buildStatCard(ThemeProvider theme, String value, String label, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.borderColor),
+        boxShadow: [theme.cardShadow],
       ),
       child: Column(
         children: [
-          Icon(icon, color: accentColor, size: 28),
-          const SizedBox(height: 12),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: accentColor, size: 19),
+          ),
+          const SizedBox(height: 10),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
               color: theme.textPrimaryColor,
+              letterSpacing: -0.3,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.textSecondaryColor,
-            ),
+            style: TextStyle(fontSize: 11, color: theme.textSecondaryColor),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -651,14 +631,27 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSectionLabel(ThemeProvider theme, String label) {
-    return Text(
-      label,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: theme.textSecondaryColor,
-        letterSpacing: 1.2,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+            color: accentColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
+            color: theme.textSecondaryColor,
+          ),
+        ),
+      ],
     );
   }
 
@@ -671,61 +664,122 @@ class _ProfileScreenState extends State<ProfileScreen>
     Widget? trailing,
     Color? color,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: ListTile(
+    final iconColor = color ?? accentColor;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: (color ?? accentColor).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.borderColor),
+            boxShadow: [theme.cardShadow],
           ),
-          child: Icon(icon, color: color ?? accentColor, size: 24),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: theme.textPrimaryColor,
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+                    ),
+                  ],
+                ),
+              ),
+              trailing ??
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: theme.textSecondaryColor.withValues(alpha: 0.4),
+                  ),
+            ],
           ),
         ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: theme.textSecondaryColor,
+      ),
+    );
+  }
+
+  Widget _buildGuestScreen(ThemeProvider theme) {
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: accentColor.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.person_outline_rounded, color: accentColor, size: 48),
+                ),
+                const SizedBox(height: 24),
+                Text('Вы не авторизованы',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                Text('Войдите или зарегистрируйтесь, чтобы получить доступ к профилю',
+                    style: TextStyle(fontSize: 14, color: theme.textSecondaryColor, height: 1.5),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.push(
+                        context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor, foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Войти', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.push(
+                        context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: accentColor), foregroundColor: accentColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Зарегистрироваться', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        trailing: trailing ?? Icon(
-          Icons.chevron_right_rounded,
-          color: theme.textSecondaryColor.withOpacity(0.5),
         ),
       ),
     );
   }
 }
 
-class GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 1;
-
-    for (double i = 0; i < size.width; i += 30) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 30) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}

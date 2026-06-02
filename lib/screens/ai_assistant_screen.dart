@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:prosper/providers/theme_provider.dart';
 import '../services/ai_service.dart';
 
 class AiAssistantScreen extends StatefulWidget {
@@ -9,11 +11,32 @@ class AiAssistantScreen extends StatefulWidget {
   State<AiAssistantScreen> createState() => _AiAssistantScreenState();
 }
 
-class _AiAssistantScreenState extends State<AiAssistantScreen> {
+class _AiAssistantScreenState extends State<AiAssistantScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
+  late AnimationController _loadingController;
+
+  static const Color accentColor = Color(0xFFD46A4F);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _loadingController.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -27,14 +50,14 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     });
   }
 
-  Future<void> _sendMessage() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+  Future<void> _sendMessage([String? predefined]) async {
+    final text = predefined ?? _controller.text.trim();
+    if (text.isEmpty || _isLoading) return;
 
     setState(() {
-      _messages.add({"role": "user", "text": text});
+      _messages.add({'role': 'user', 'text': text});
       _isLoading = true;
-      _controller.clear();
+      if (predefined == null) _controller.clear();
     });
     _scrollToBottom();
 
@@ -43,20 +66,19 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         token: widget.token,
         question: text,
       );
-
       setState(() {
         _messages.add({
-          "role": "assistant",
-          "text": response["answer"],
-          "sources": response["sources"]
+          'role': 'assistant',
+          'text': response['answer'],
+          'sources': response['sources'],
         });
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _messages.add({
-          "role": "assistant",
-          "text": "Произошла ошибка при получении ответа. Попробуйте позже."
+          'role': 'assistant',
+          'text': 'Произошла ошибка при получении ответа. Попробуйте позже.',
         });
         _isLoading = false;
       });
@@ -66,112 +88,347 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFFD46A4F);
-
+    final theme = context.watch<ThemeProvider>();
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: theme.backgroundColor,
         elevation: 0,
-        title: Text(
-          'Ассистент Prosper',
-          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18),
-        ),
         leading: IconButton(
-          icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(Icons.close_rounded, color: theme.textPrimaryColor),
           onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.auto_stories_rounded, color: accentColor, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ассистент Prosper',
+                  style: TextStyle(
+                    color: theme.textPrimaryColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Спроси о любой новелле',
+                  style: TextStyle(
+                    color: theme.textSecondaryColor,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(
+            height: 1,
+            color: theme.textSecondaryColor.withOpacity(0.1),
+          ),
         ),
       ),
       body: Column(
         children: [
           Expanded(
             child: _messages.isEmpty
-                ? _buildInitialState(isDark)
+                ? _buildWelcomeScreen(theme)
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      final isUser = msg["role"] == "user";
-                      return _buildMessage(msg, isUser, isDark, primaryColor);
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildMessage(_messages[index], theme),
                   ),
           ),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text("• • •", style: TextStyle(fontSize: 20, color: Colors.grey)),
-            ),
-          _buildInputArea(isDark, primaryColor),
+          if (_isLoading) _buildLoadingIndicator(theme),
+          _buildInputArea(theme),
         ],
       ),
     );
   }
 
-  Widget _buildInitialState(bool isDark) {
-    return Center(
+  Widget _buildWelcomeScreen(ThemeProvider theme) {
+    const examples = [
+      'Что случилось с Артуром в Тени меча?',
+      'Что было в 7 главе Преподобного Гу?',
+      'Кто такой Фан Юань из Преподобный Гу?',
+    ];
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Привет! Спроси меня о любой новелле.',
-            style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 16),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Например:',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          _exampleItem("Что случилось с Артуром в Тени меча?", isDark),
-          _exampleItem("Что было в 7 главе Преподобного Гу?", isDark),
-          _exampleItem("Кто такой Фан Юань из Преподобный Гу", isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _exampleItem(String text, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Text(
-        '- "$text"',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 14),
-      ),
-    );
-  }
-
-  Widget _buildMessage(Map<String, dynamic> msg, bool isUser, bool isDark, Color primaryColor) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              border: isUser ? Border.all(color: primaryColor) : null,
-              borderRadius: BorderRadius.circular(8),
+              color: accentColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(24),
             ),
-            child: Text(
-              msg["text"],
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              color: accentColor,
+              size: 40,
             ),
           ),
-          if (!isUser && msg["sources"] != null && (msg["sources"] as List).isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 4),
-              child: Text(
-                _formatSources(msg["sources"]),
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
+          const SizedBox(height: 20),
+          Text(
+            'Привет! Я Prosper Assistant',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: theme.textPrimaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Задай вопрос о любой новелле — отвечу по содержанию глав',
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.textSecondaryColor,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'ПРИМЕРЫ ВОПРОСОВ',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.3,
+                color: theme.textSecondaryColor,
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          ...examples.map((e) => _buildExampleChip(e, theme)),
         ],
       ),
+    );
+  }
+
+  Widget _buildExampleChip(String text, ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GestureDetector(
+        onTap: () => _sendMessage(text),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accentColor.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.lightbulb_outline_rounded,
+                color: accentColor,
+                size: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.textPrimaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: theme.textSecondaryColor,
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessage(Map<String, dynamic> msg, ThemeProvider theme) {
+    final isUser = msg['role'] == 'user';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser) ...[
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.auto_stories_rounded,
+                color: accentColor,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isUser
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isUser ? accentColor : theme.cardColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isUser ? 18 : 4),
+                      bottomRight: Radius.circular(isUser ? 4 : 18),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    msg['text'] ?? '',
+                    style: TextStyle(
+                      color: isUser ? Colors.white : theme.textPrimaryColor,
+                      fontSize: 15,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                if (!isUser &&
+                    msg['sources'] != null &&
+                    (msg['sources'] as List).isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.menu_book_rounded,
+                          size: 12,
+                          color: theme.textSecondaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _formatSources(msg['sources'] as List),
+                            style: TextStyle(
+                              color: theme.textSecondaryColor,
+                              fontSize: 11,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (isUser) const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator(ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              color: accentColor,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
+                bottomRight: Radius.circular(18),
+                bottomLeft: Radius.circular(4),
+              ),
+            ),
+            child: _buildPulsingDots(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPulsingDots() {
+    return AnimatedBuilder(
+      animation: _loadingController,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            final phase = (_loadingController.value + i / 3) % 1.0;
+            final t = phase < 0.5 ? phase * 2 : (1.0 - phase) * 2;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Opacity(
+                opacity: 0.3 + 0.7 * t,
+                child: Transform.scale(
+                  scale: 0.6 + 0.4 * t,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: accentColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 
@@ -180,31 +437,63 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     return 'Источник: "${first["bookTitle"]}" — ${first["chapterTitle"]}';
   }
 
-  Widget _buildInputArea(bool isDark, Color primaryColor) {
+  Widget _buildInputArea(ThemeProvider theme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      decoration: BoxDecoration(
+        color: theme.backgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: theme.textSecondaryColor.withOpacity(0.1),
+          ),
+        ),
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
-              controller: _controller,
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              decoration: InputDecoration(
-                hintText: 'Задай вопрос...',
-                hintStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor),
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(24),
               ),
-              onSubmitted: (_) => _sendMessage(),
+              child: TextField(
+                controller: _controller,
+                style: TextStyle(color: theme.textPrimaryColor, fontSize: 15),
+                maxLines: 4,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                decoration: InputDecoration(
+                  hintText: 'Задай вопрос о новелле...',
+                  hintStyle: TextStyle(color: theme.textSecondaryColor),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (_) => _sendMessage(),
+              ),
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.arrow_forward, color: primaryColor),
-            onPressed: _sendMessage,
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _isLoading ? null : () => _sendMessage(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _isLoading
+                    ? accentColor.withOpacity(0.35)
+                    : accentColor,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_upward_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
           ),
         ],
       ),

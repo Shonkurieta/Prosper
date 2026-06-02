@@ -5,6 +5,8 @@ import 'package:prosper/providers/notification_provider.dart';
 import 'package:prosper/constants/api_constants.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/screens/novell/novell_detail_screen.dart';
+import 'package:prosper/screens/auth/login_screen.dart';
+import 'package:prosper/screens/auth/register_screen.dart';
 import 'package:prosper/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -153,6 +155,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with WidgetsB
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    if (widget.token.isEmpty) return _buildGuestScreen(theme);
     final notificationProvider = context.watch<NotificationProvider>();
 
     List<dynamic> filteredNotifications = _notifications;
@@ -422,6 +425,66 @@ class _NotificationsScreenState extends State<NotificationsScreen> with WidgetsB
             style: TextStyle(color: theme.textSecondaryColor, fontSize: 16),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGuestScreen(ThemeProvider theme) {
+    const accentColor = Color(0xFFD46A4F);
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: accentColor.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(Icons.notifications_outlined, color: accentColor, size: 48),
+                ),
+                const SizedBox(height: 24),
+                Text('Авторизуйтесь',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.textPrimaryColor),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                Text(
+                  'чтобы получать уведомления о новых главах и ответах на комментарии',
+                  style: TextStyle(fontSize: 14, color: theme.textSecondaryColor, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor, foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Войти', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: accentColor), foregroundColor: accentColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Зарегистрироваться', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

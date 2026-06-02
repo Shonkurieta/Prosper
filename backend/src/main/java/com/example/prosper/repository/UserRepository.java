@@ -11,10 +11,12 @@ import com.example.prosper.model.User;
 public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findByNickname(String nickname);
-    
+
     Optional<User> findByEmail(String email);
-    
+
     Optional<User> findByGoogleId(String googleId);
-    
+
     Optional<User> findById(Long id);
+
+    long countByRole(String role);
 }

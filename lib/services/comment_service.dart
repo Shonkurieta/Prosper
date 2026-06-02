@@ -116,6 +116,20 @@ class CommentService {
     }
   }
 
+  Future<void> toggleLike(String token, int commentId, bool isLike) async {
+    final url = '${ApiConstants.baseUrl}/comments/$commentId/like';
+    try {
+      await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'isLike': isLike}),
+      );
+    } catch (_) {}
+  }
+
   Future<void> deleteComment(
     String token,
     int commentId,

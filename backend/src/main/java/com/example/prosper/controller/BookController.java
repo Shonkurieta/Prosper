@@ -1,18 +1,17 @@
 package com.example.prosper.controller;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.example.prosper.dto.ChapterDTO;
+import com.example.prosper.dto.RecentChapterDTO;
 import com.example.prosper.model.Book;
 import com.example.prosper.model.Chapter;
 import com.example.prosper.repository.BookRepository;
@@ -34,21 +33,19 @@ public class BookController {
         return ResponseEntity.ok(bookRepository.findAll());
     }
 
+    @GetMapping("/newest")
+    public ResponseEntity<List<Book>> getNewestBooks(
+            @RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(bookRepository.findAllByOrderByIdDesc(PageRequest.of(0, limit)));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<Book>> searchBooks(
             @RequestParam(required = false, defaultValue = "") String query) {
-        
         if (query == null || query.trim().isEmpty()) {
             return ResponseEntity.ok(bookRepository.findAll());
         }
-
-        List<Book> books = bookRepository.findAll().stream()
-                .filter(book -> 
-                    book.getTitle().toLowerCase().contains(query.toLowerCase()) ||
-                    book.getAuthor().toLowerCase().contains(query.toLowerCase()))
-                .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(books);
+        return ResponseEntity.ok(bookRepository.searchByTitleOrAuthor(query));
     }
 
     @GetMapping("/{id}")
@@ -62,12 +59,7 @@ public class BookController {
     public ResponseEntity<List<ChapterDTO>> getBookChapters(@PathVariable Long bookId) {
         List<Chapter> chapters = chapterRepository.findByBookIdOrderByChapterOrderAsc(bookId);
         List<ChapterDTO> chapterDTOs = chapters.stream()
-                .map(ch -> new ChapterDTO(
-                        ch.getId(),
-                        ch.getchapterOrder(),
-                        ch.getTitle(),
-                        null 
-                ))
+                .map(ch -> new ChapterDTO(ch.getId(), ch.getchapterOrder(), ch.getTitle(), null))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(chapterDTOs);
     }
@@ -78,11 +70,25 @@ public class BookController {
             @PathVariable int chapterOrder) {
         return chapterRepository.findByBookIdAndChapterOrder(bookId, chapterOrder)
                 .map(ch -> ResponseEntity.ok(new ChapterDTO(
-                        ch.getId(),
-                        ch.getchapterOrder(),
-                        ch.getTitle(),
-                        ch.getContent()
-                )))
+                        ch.getId(), ch.getchapterOrder(), ch.getTitle(), ch.getContent())))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/chapters/recent")
+    public ResponseEntity<List<RecentChapterDTO>> getRecentChapters(
+            @RequestParam(defaultValue = "20") int limit) {
+        // JPQL query fetches only summary fields (no content), sorted by id desc
+        List<RecentChapterDTO> all = chapterRepository.findAllSummariesOrderByIdDesc();
+
+        // Keep only the latest chapter per book (first occurrence wins — already sorted by id desc)
+        Map<Long, RecentChapterDTO> latestByBook = new LinkedHashMap<>();
+        for (RecentChapterDTO ch : all) {
+            latestByBook.putIfAbsent(ch.getBookId(), ch);
+        }
+
+        List<RecentChapterDTO> result = latestByBook.values().stream()
+                .limit(limit)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(result);
     }
 }

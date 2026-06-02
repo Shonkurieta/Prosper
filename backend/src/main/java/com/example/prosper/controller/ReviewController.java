@@ -6,13 +6,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.example.prosper.model.Book;
 import com.example.prosper.model.Review;
@@ -34,9 +28,25 @@ public class ReviewController {
     @Autowired
     private BookRepository bookRepository;
 
+    private Long resolveUserId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return null;
+        }
+        return userRepository.findByNickname(authentication.getName())
+                .map(User::getId).orElse(null);
+    }
+
     @GetMapping("/book/{bookId}")
-    public List<Review> getReviews(@PathVariable Long bookId) {
-        return reviewService.getReviewsByBook(bookId);
+    public List<Review> getReviews(@PathVariable Long bookId, Authentication authentication) {
+        return reviewService.getReviewsByBook(bookId, resolveUserId(authentication));
+    }
+
+    @GetMapping("/recent")
+    public List<Review> getRecentReviews(
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication) {
+        return reviewService.getRecentReviews(limit, resolveUserId(authentication));
     }
 
     @PostMapping
@@ -68,6 +78,7 @@ public class ReviewController {
             Review review = new Review();
             review.setUser(user);
             review.setBook(book);
+            review.setTitle((String) payload.get("title"));
             review.setContent((String) payload.get("content"));
             review.setType(Review.ReviewType.valueOf(rawType.toString()));
             review.setRating(Integer.valueOf(rawRating.toString()));
@@ -102,6 +113,37 @@ public class ReviewController {
             reviewService.deleteReview(id);
             return ResponseEntity.ok(Map.of("message", "Deleted successfully"));
 
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<?> toggleLike(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> payload,
+            Authentication authentication) {
+        try {
+            Long userId = resolveUserId(authentication);
+            if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+
+            boolean isLike = Boolean.parseBoolean(payload.get("isLike").toString());
+            Boolean result = reviewService.toggleLike(id, userId, isLike);
+            return ResponseEntity.ok(Map.of("userLikeStatus", result == null ? "null" : result.toString()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/view")
+    public ResponseEntity<?> recordView(
+            @PathVariable Long id,
+            Authentication authentication) {
+        try {
+            Long userId = resolveUserId(authentication);
+            if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+            boolean isNew = reviewService.recordView(id, userId);
+            return ResponseEntity.ok(Map.of("isNew", isNew));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

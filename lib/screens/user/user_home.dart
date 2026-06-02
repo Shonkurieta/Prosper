@@ -59,7 +59,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
   }
 
   Future<void> _initUserInNotificationProvider() async {
-    if (mounted) {
+    if (mounted && _currentToken.isNotEmpty) {
       context.read<NotificationProvider>().refreshUnreadCount();
     }
   }
@@ -73,7 +73,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
+    if (state == AppLifecycleState.resumed && mounted && _currentToken.isNotEmpty) {
       context.read<NotificationProvider>().refreshUnreadCount();
     }
   }

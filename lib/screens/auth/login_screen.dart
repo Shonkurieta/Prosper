@@ -7,6 +7,7 @@ import 'package:prosper/screens/auth/register_screen.dart';
 import 'package:prosper/screens/auth/forgot_password_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
+import 'package:prosper/providers/notification_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -186,6 +187,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       _buildForgotPasswordLink(theme),
                       const SizedBox(height: 24),
                       _buildRegisterLink(theme),
+                      const SizedBox(height: 16),
+                      _buildGuestButton(theme),
                     ],
                   ),
                 ),
@@ -369,6 +372,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestButton(ThemeProvider theme) {
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const UserHome(token: '')),
+            (route) => false,
+          );
+        },
+        child: Text(
+          'Читать без регистрации',
+          style: TextStyle(color: theme.textSecondaryColor, fontSize: 14),
         ),
       ),
     );

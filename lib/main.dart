@@ -83,8 +83,8 @@ class _MyAppState extends State<MyApp> {
         startScreen = UserHome(token: token!);
       }
     } else {
-      print('🔓 Не авторизован, показываем LoginScreen');
-      startScreen = const LoginScreen();
+      print('🔓 Не авторизован, показываем гостевой режим');
+      startScreen = const UserHome(token: '');
     }
 
     return Consumer<ThemeProvider>(

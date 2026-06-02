@@ -98,31 +98,26 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
 
   Future<void> _loadBookDetails() async {
     try {
-      final book = await _bookService.getBookById(widget.token, widget.bookId);
-      final chapters =
-          await _bookService.getBookChapters(widget.token, widget.bookId);
-      final progress = await _bookmarkService.getProgress(
-        widget.token,
-        widget.bookId,
-      );
+      final relatedBookService = RelatedBookService();
+
+      // Launch all 5 requests simultaneously — none awaited until all are in flight
+      final bookFuture = _bookService.getBookById(widget.token, widget.bookId);
+      final chaptersFuture = _bookService.getBookChapters(widget.token, widget.bookId);
+      final progressFuture = widget.token.isEmpty
+          ? Future.value(<String, dynamic>{})
+          : _bookmarkService.getProgress(widget.token, widget.bookId);
+      final relatedFuture = relatedBookService.getRelatedBooks(widget.token, widget.bookId);
+      final ratingFuture = RatingService.getRating(widget.token, widget.bookId);
+
+      final book = await bookFuture;
+      final chapters = await chaptersFuture;
+      final progress = await progressFuture;
 
       List<dynamic> relatedBooks = [];
-      try {
-        final relatedBookService = RelatedBookService();
-        relatedBooks = await relatedBookService.getRelatedBooks(
-          widget.token,
-          widget.bookId,
-        );
-      } catch (e) {
-        relatedBooks = [];
-      }
+      try { relatedBooks = await relatedFuture; } catch (_) {}
 
       Map<String, dynamic>? ratingData;
-      try {
-        ratingData = await RatingService.getRating(widget.token, widget.bookId);
-      } catch (e) {
-        ratingData = null;
-      }
+      try { ratingData = await ratingFuture; } catch (_) {}
 
       setState(() {
         _book = book;
@@ -748,7 +743,10 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _showBookmarkCategories,
+                onPressed: widget.token.isEmpty
+                    ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Войдите в аккаунт, чтобы добавлять новеллы в закладки')))
+                    : _showBookmarkCategories,
                 icon: Icon(
                   _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   size: 18,
@@ -769,7 +767,10 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _isBookmarked ? _showSubscribedInfo : _subscribe,
+                onPressed: widget.token.isEmpty
+                    ? () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Войдите в аккаунт, чтобы подписываться на обновления')))
+                    : (_isBookmarked ? _showSubscribedInfo : _subscribe),
                 icon: Icon(
                   _isBookmarked
                       ? Icons.notifications_active

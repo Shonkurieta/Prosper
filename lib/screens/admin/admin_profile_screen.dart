@@ -36,15 +36,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
   void initState() {
     super.initState();
     _animController = AnimationController(
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
     _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.04),
+      begin: const Offset(0, 0.03),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
-    _animController.forward();
     _loadData();
   }
 
@@ -64,7 +63,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     try {
       final userService = UserService();
       final profile = await userService.getProfile(widget.token);
-      
+
       final adminService = AdminService(widget.token);
       final books = await adminService.getBooks();
       if (widget.role == 'ADMIN') {
@@ -78,8 +77,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
         _booksCount = books.length;
         _isLoading = false;
       });
+      _animController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
+      _animController.forward();
     }
   }
 
@@ -87,26 +88,28 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     final theme = context.read<ThemeProvider>();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Выход', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Вы уверены, что хотите выйти из аккаунта?'),
+        title: Text('Выход из системы',
+            style: TextStyle(fontWeight: FontWeight.w700, color: theme.textPrimaryColor)),
+        content: Text('Вы уверены, что хотите выйти из аккаунта?',
+            style: TextStyle(color: theme.textSecondaryColor)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Отмена', style: TextStyle(color: theme.textSecondaryColor)),
           ),
           ElevatedButton(
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
               if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: theme.errorColor,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -130,31 +133,28 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                 position: _slideAnimation,
                 child: CustomScrollView(
                   slivers: [
-                    _buildSliverHeader(theme),
+                    _buildHeader(theme),
                     SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
-                          const SizedBox(height: 20),
                           _buildStatsRow(theme),
-                          const SizedBox(height: 32),
-                          _buildSectionLabel(theme, 'Управление'),
+                          const SizedBox(height: 28),
+                          _buildSectionLabel(theme, 'УПРАВЛЕНИЕ'),
                           const SizedBox(height: 12),
                           _buildMenuItem(
                             theme: theme,
-                            icon: Icons.book_outlined,
+                            icon: Icons.chrome_reader_mode_outlined,
                             title: 'Режим читателя',
-                            subtitle: 'Просмотр новелл',
-                            color: Colors.green,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) => UserHome(token: widget.token)),
-                              );
-                            },
+                            subtitle: 'Просмотр приложения как пользователь',
+                            color: Colors.teal,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => UserHome(token: widget.token)),
+                            ),
                           ),
-                          const SizedBox(height: 32),
-                          _buildSectionLabel(theme, 'Настройки'),
+                          const SizedBox(height: 28),
+                          _buildSectionLabel(theme, 'НАСТРОЙКИ'),
                           const SizedBox(height: 12),
                           _buildMenuItem(
                             theme: theme,
@@ -162,7 +162,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                                 ? Icons.light_mode_outlined
                                 : Icons.dark_mode_outlined,
                             title: theme.isDarkMode ? 'Светлая тема' : 'Тёмная тема',
-                            subtitle: 'Сменить оформление',
+                            subtitle: 'Переключить оформление приложения',
                             onTap: () => theme.toggleTheme(),
                             trailing: Switch(
                               value: theme.isDarkMode,
@@ -175,8 +175,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                             theme: theme,
                             icon: Icons.logout_rounded,
                             title: 'Выйти из аккаунта',
-                            subtitle: 'Завершить сессию',
-                            color: Colors.redAccent,
+                            subtitle: 'Завершить текущую сессию',
+                            color: theme.errorColor,
                             onTap: _logout,
                           ),
                           const SizedBox(height: 48),
@@ -190,159 +190,204 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     );
   }
 
-  Widget _buildSliverHeader(ThemeProvider theme) {
+  Widget _buildHeader(ThemeProvider theme) {
     return SliverToBoxAdapter(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Background banner
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.08),
-            ),
-            child: CustomPaint(
-              painter: _GridPatternPainter(accentColor.withOpacity(0.06)),
-              size: Size.infinite,
-            ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          border: Border(
+            bottom: BorderSide(color: theme.borderColor, width: 1),
           ),
-
-          // Role chip — top right
-          Positioned(
-            top: 52,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                widget.role == 'ADMIN' ? 'ADMIN' : 'MOD',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.5,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: _avatarUrl == null
+                            ? const LinearGradient(
+                                colors: [Color(0xFFE07560), Color(0xFFD46A4F)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        border: Border.all(color: theme.borderColor, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: _avatarUrl != null
+                            ? Image.network(
+                                ApiConstants.getCoverUrl(_avatarUrl!),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _buildAvatarInitial(),
+                              )
+                            : _buildAvatarInitial(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Name + email
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            _username,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: theme.textPrimaryColor,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _email,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: theme.textSecondaryColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 10),
+                          // Role badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: widget.role == 'ADMIN'
+                                  ? accentColor.withValues(alpha: 0.12)
+                                  : const Color(0xFF5B8CDB).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: widget.role == 'ADMIN'
+                                    ? accentColor.withValues(alpha: 0.3)
+                                    : const Color(0xFF5B8CDB).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              widget.role == 'ADMIN' ? 'Администратор' : 'Модератор',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                                color: widget.role == 'ADMIN'
+                                    ? accentColor
+                                    : const Color(0xFF5B8CDB),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarInitial() {
+    return Center(
+      child: Text(
+        _username.isNotEmpty ? _username[0].toUpperCase() : '?',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(ThemeProvider theme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              theme: theme,
+              icon: Icons.auto_stories_outlined,
+              label: 'Новелл',
+              value: '$_booksCount',
+              color: accentColor,
             ),
           ),
-
-          // Bottom card that overlaps banner
-          Positioned(
-            bottom: -60,
-            left: 20,
-            right: 20,
-            child: _buildProfileCard(theme),
-          ),
-
-          // Top label
-          Positioned(
-            top: 52,
-            left: 20,
-            child: Text(
-              'Профиль',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                color: theme.textPrimaryColor,
+          if (widget.role == 'ADMIN') ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                theme: theme,
+                icon: Icons.people_outline_rounded,
+                label: 'Пользователей',
+                value: '$_usersCount',
+                color: const Color(0xFF5B8CDB),
               ),
             ),
-          ),
-
-          // Spacer so the sliver has correct height
-          const SizedBox(height: 260),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildProfileCard(ThemeProvider theme) {
+  Widget _buildStatCard({
+    required ThemeProvider theme,
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: accentColor.withOpacity(0.15)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.borderColor),
+        boxShadow: [theme.cardShadow],
       ),
       child: Row(
         children: [
-          // Avatar
           Container(
-            width: 64,
-            height: 64,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: _avatarUrl == null ? LinearGradient(
-                colors: [accentColor.withOpacity(0.6), accentColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ) : null,
-              color: _avatarUrl != null ? Colors.white : null,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: ClipOval(
-              child: _avatarUrl != null
-                  ? Image.network(
-                      ApiConstants.getCoverUrl(_avatarUrl!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Center(
-                        child: Text(
-                          _username.isNotEmpty ? _username[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        _username.isNotEmpty ? _username[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _username,
+                  value,
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
                     color: theme.textPrimaryColor,
-                    letterSpacing: -0.3,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 3),
                 Text(
-                  _email,
+                  label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: theme.textSecondaryColor,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -355,108 +400,24 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     );
   }
 
-  Widget _buildStatsRow(ThemeProvider theme) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 68),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              theme: theme,
-              icon: Icons.auto_stories_outlined,
-              label: 'Новелл',
-              value: '$_booksCount',
-              accent: accentColor,
-            ),
-          ),
-          if (widget.role == 'ADMIN') ...[
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                theme: theme,
-                icon: Icons.people_outline_rounded,
-                label: 'Пользователей',
-                value: '$_usersCount',
-                accent: const Color(0xFF5B8CDB),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-  required ThemeProvider theme,
-  required IconData icon,
-  required String label,
-  required String value,
-  required Color accent,
-}) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-    decoration: BoxDecoration(
-      color: theme.cardColor,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: accent.withOpacity(0.15)),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: accent.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: accent, size: 22),
-        ),
-        const SizedBox(width: 12),
-        Expanded(                          // ← вот это критично
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: theme.textPrimaryColor,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
   Widget _buildSectionLabel(ThemeProvider theme, String label) {
     return Row(
       children: [
         Container(
-          width: 4,
-          height: 16,
+          width: 3,
+          height: 14,
           decoration: BoxDecoration(
             color: accentColor,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
+            letterSpacing: 1.4,
             color: theme.textSecondaryColor,
           ),
         ),
@@ -478,21 +439,22 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: iconColor.withOpacity(0.12)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.borderColor),
+            boxShadow: [theme.cardShadow],
           ),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
@@ -506,47 +468,31 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                       title,
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: theme.textPrimaryColor,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.textSecondaryColor,
+                      ),
                     ),
                   ],
                 ),
               ),
               trailing ??
-                  Icon(Icons.chevron_right_rounded,
-                      size: 20, color: theme.textSecondaryColor.withOpacity(0.4)),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: theme.textSecondaryColor.withValues(alpha: 0.4),
+                  ),
             ],
           ),
         ),
       ),
     );
   }
-}
-
-// Subtle grid pattern for the header banner
-class _GridPatternPainter extends CustomPainter {
-  final Color color;
-  _GridPatternPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1;
-    const step = 28.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GridPatternPainter old) => old.color != color;
 }

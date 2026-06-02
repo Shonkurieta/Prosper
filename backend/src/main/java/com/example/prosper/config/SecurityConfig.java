@@ -50,10 +50,13 @@ public class SecurityConfig {
                 .requestMatchers("/covers/**").permitAll()
                 .requestMatchers("/assets/**").permitAll()
 
+                .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
-                
+
                 .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/reviews/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").authenticated()
 
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "MODERATOR")

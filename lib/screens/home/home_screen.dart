@@ -54,7 +54,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
     try {
       final books = await _bookService.getAllBooks(widget.token);
-      final bookmarks = await _bookmarkService.getBookmarks(widget.token);
+      final bookmarks = widget.token.isNotEmpty
+          ? await _bookmarkService.getBookmarks(widget.token)
+          : <dynamic>[];
 
       // FIX 1: Deduplicate genres by ID to prevent duplicates
       final genresMap = <dynamic, dynamic>{};

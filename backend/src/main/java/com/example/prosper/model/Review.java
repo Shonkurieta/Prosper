@@ -38,10 +38,20 @@ public class Review {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "title")
+    private String title;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-
+    @jakarta.persistence.Transient
+    private int likeCount;
+    @jakarta.persistence.Transient
+    private int dislikeCount;
+    @jakarta.persistence.Transient
+    private int viewCount;
+    @jakarta.persistence.Transient
+    private Boolean userLikeStatus;
 
     public enum ReviewType {
         REVIEW, CRITIQUE
@@ -80,5 +90,18 @@ public class Review {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
+    public int getLikeCount() { return likeCount; }
+    public void setLikeCount(int likeCount) { this.likeCount = likeCount; }
+
+    public int getDislikeCount() { return dislikeCount; }
+    public void setDislikeCount(int dislikeCount) { this.dislikeCount = dislikeCount; }
+
+    public int getViewCount() { return viewCount; }
+    public void setViewCount(int viewCount) { this.viewCount = viewCount; }
+
+    public Boolean getUserLikeStatus() { return userLikeStatus; }
+    public void setUserLikeStatus(Boolean userLikeStatus) { this.userLikeStatus = userLikeStatus; }
 }

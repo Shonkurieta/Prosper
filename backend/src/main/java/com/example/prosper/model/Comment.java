@@ -49,6 +49,13 @@ public class Comment {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @jakarta.persistence.Transient
+    private int likeCount;
+    @jakarta.persistence.Transient
+    private int dislikeCount;
+    @jakarta.persistence.Transient
+    private Boolean userLikeStatus;
+
     // Constructors
     public Comment() {
         this.createdAt = LocalDateTime.now();
@@ -87,4 +94,13 @@ public class Comment {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public int getLikeCount() { return likeCount; }
+    public void setLikeCount(int likeCount) { this.likeCount = likeCount; }
+
+    public int getDislikeCount() { return dislikeCount; }
+    public void setDislikeCount(int dislikeCount) { this.dislikeCount = dislikeCount; }
+
+    public Boolean getUserLikeStatus() { return userLikeStatus; }
+    public void setUserLikeStatus(Boolean userLikeStatus) { this.userLikeStatus = userLikeStatus; }
 }

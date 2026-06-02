@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class BookService {
-  final String baseUrl = 'http://10.174.94.182:8080/api';
+  final String baseUrl = 'http://10.31.206.182:8080/api';
 
   // Получить все новеллы
   Future<List<dynamic>> getAllBooks(String token) async {
@@ -15,7 +15,7 @@ class BookService {
         Uri.parse('$baseUrl/books'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
       );
 
@@ -358,9 +358,49 @@ class BookService {
     }
   }
 
-  // Alias для совместимости (для обычных пользователей)
   Future<List<dynamic>> fetchBooks(String token) async {
     return getAllBooks(token);
+  }
+
+  Future<List<dynamic>> getNewestBooks(String token, {int limit = 6}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/books/newest?limit=$limit'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) return data;
+      }
+      return getAllBooks(token).then((all) {
+        final sorted = List.from(all)..sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+        return sorted.take(limit).toList();
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getRecentChapters(String token, {int limit = 20}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/books/chapters/recent?limit=$limit'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) return data;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 
   // Поиск новелл
@@ -374,7 +414,7 @@ class BookService {
         Uri.parse('$baseUrl/books/search?query=${Uri.encodeComponent(query)}'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
       );
 
