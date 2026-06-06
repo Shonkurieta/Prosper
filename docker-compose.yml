@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: prosper
     ports:
-      - "5432:5432"
+      - "5433:5432"   # 5433 на хосте → 5432 внутри контейнера
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
@@ -34,10 +34,33 @@ services:
       - GOOGLE_CLIENT_ID=placeholder
       - GOOGLE_CLIENT_SECRET=placeholder
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ML_SERVICE_URL=http://ml-service:8001
     volumes:
       - ./backend/assets:/app/assets
+    depends_on:
+      - db
+      - ml-service
+    restart: unless-stopped
+  ml-service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: prosper_ml
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=prosper
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
     depends_on:
       - db
     restart: unless-stopped
 volumes:
   pgdata:
+  huggingface_cache:

@@ -3,16 +3,16 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class BookService {
-  final String baseUrl = 'http://10.31.206.182:8080/api';
+  final String baseUrl = 'http://100.102.22.123:8080/api';
 
   // Получить все новеллы
-  Future<List<dynamic>> getAllBooks(String token) async {
+  Future<List<dynamic>> getAllBooks(String token, {String sort = 'rating'}) async {
     try {
       print('=== GET ALL BOOKS REQUEST ===');
-      print('URL: $baseUrl/books');
+      print('URL: $baseUrl/books?sort=$sort');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/books'),
+        Uri.parse('$baseUrl/books?sort=${Uri.encodeComponent(sort)}'),
         headers: {
           'Content-Type': 'application/json',
           if (token.isNotEmpty) 'Authorization': 'Bearer $token',

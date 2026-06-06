@@ -23,6 +23,7 @@ import com.example.prosper.model.BookmarkStatus;
 import com.example.prosper.model.User;
 import com.example.prosper.model.UserBook;
 import com.example.prosper.repository.BookRepository;
+import com.example.prosper.repository.ChapterRepository;
 import com.example.prosper.repository.UserBookRepository;
 import com.example.prosper.repository.UserRepository;
 
@@ -38,6 +39,9 @@ public class BookmarkController {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private ChapterRepository chapterRepository;
 
     @GetMapping
     public ResponseEntity<List<UserBook>> getBookmarks(
@@ -70,10 +74,17 @@ public class BookmarkController {
             response.put("isBookmarked", true);
             response.put("currentChapter", userBook.getCurrentChapter());
             response.put("status", userBook.getStatus().name());
+            response.put("isSubscribed", userBook.isSubscribed());
+        } else if (userBook != null) {
+            response.put("isBookmarked", false);
+            response.put("currentChapter", userBook.getCurrentChapter());
+            response.put("status", BookmarkStatus.READING.name());
+            response.put("isSubscribed", userBook.isSubscribed());
         } else {
             response.put("isBookmarked", false);
             response.put("currentChapter", 1);
             response.put("status", BookmarkStatus.READING.name());
+            response.put("isSubscribed", false);
         }
         return ResponseEntity.ok(response);
     }
@@ -192,7 +203,75 @@ public class BookmarkController {
 
         userBook.setBookmarked(false);
         userBookRepository.save(userBook);
-        
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{bookId}/subscribe")
+    public ResponseEntity<?> subscribe(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long bookId
+    ) {
+        User user = userRepository.findByNickname(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new RuntimeException("Book not found"));
+
+        UserBook userBook = userBookRepository.findByUserAndBook(user, book)
+                .orElseGet(() -> {
+                    UserBook newUserBook = new UserBook();
+                    newUserBook.setUser(user);
+                    newUserBook.setBook(book);
+                    newUserBook.setCurrentChapter(1);
+                    newUserBook.setStatus(BookmarkStatus.READING);
+                    newUserBook.setBookmarked(false);
+                    return newUserBook;
+                });
+
+        userBook.setSubscribed(true);
+        return ResponseEntity.ok(userBookRepository.save(userBook));
+    }
+
+    @DeleteMapping("/{bookId}/subscribe")
+    public ResponseEntity<Void> unsubscribe(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long bookId
+    ) {
+        User user = userRepository.findByNickname(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new RuntimeException("Book not found"));
+
+        userBookRepository.findByUserAndBook(user, book).ifPresent(userBook -> {
+            userBook.setSubscribed(false);
+            userBookRepository.save(userBook);
+        });
+
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Marks the book as COMPLETED in the user's bookmarks.
+     * Called by the Flutter client when the user opens the last chapter.
+     * Does nothing if the book is not bookmarked, or is already COMPLETED.
+     */
+    @PutMapping("/{bookId}/complete")
+    public ResponseEntity<Void> markAsCompleted(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long bookId
+    ) {
+        User user = userRepository.findByNickname(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new RuntimeException("Book not found"));
+
+        userBookRepository.findByUserAndBook(user, book).ifPresent(userBook -> {
+            if (userBook.isBookmarked() && userBook.getStatus() != BookmarkStatus.COMPLETED) {
+                userBook.setStatus(BookmarkStatus.COMPLETED);
+                userBookRepository.save(userBook);
+            }
+        });
+
         return ResponseEntity.ok().build();
     }
 }

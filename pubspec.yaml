@@ -54,6 +54,34 @@ flutter:
         - asset: backend/assets/fonts/Merriweather-Black.ttf
           weight: 900
 
+    - family: EBGaramond
+      fonts:
+        - asset: backend/assets/fonts/EBGaramond-VariableFont_wght.ttf
+
+    - family: Georgia
+      fonts:
+        - asset: backend/assets/fonts/georgia.ttf
+
+    - family: Helvetica
+      fonts:
+        - asset: backend/assets/fonts/helvetica_regular.otf
+
+    - family: NotoSans
+      fonts:
+        - asset: "backend/assets/fonts/NotoSans-VariableFont_wdth,wght.ttf"
+
+    - family: Oswald
+      fonts:
+        - asset: backend/assets/fonts/Oswald-VariableFont_wght.ttf
+
+    - family: Roboto
+      fonts:
+        - asset: "backend/assets/fonts/Roboto-VariableFont_wdth,wght.ttf"
+
+    - family: ZAriaText
+      fonts:
+        - asset: backend/assets/fonts/zAriaTextG3-Regular.otf
+
 flutter_launcher_icons:
   android: true
   image_path: "backend/assets/icon/icon.png"

@@ -40,6 +40,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Map<String, dynamic>? _ratingData;
   bool _isLoading = true;
   bool _isBookmarked = false;
+  bool _isSubscribed = false;
   String? _currentStatus;
   int _currentChapter = 1;
   String _currentUsername = 'Гость';
@@ -126,6 +127,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
         _ratingData = ratingData;
         _currentChapter = progress['currentChapter'] ?? 1;
         _isBookmarked = progress['isBookmarked'] ?? false;
+        _isSubscribed = progress['isSubscribed'] ?? false;
         _currentStatus = progress['status'];
         _isLoading = false;
       });
@@ -256,12 +258,9 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   Future<void> _subscribe() async {
     final theme = context.read<ThemeProvider>();
     try {
-      await _bookmarkService.addBookmark(
-        widget.token,
-        widget.bookId,
-        status: BookmarkService.READING,
-      );
+      await _bookmarkService.subscribe(widget.token, widget.bookId);
       if (mounted) {
+        setState(() => _isSubscribed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
@@ -272,7 +271,6 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
           ),
         );
       }
-      _loadBookDetails();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -282,14 +280,28 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
     }
   }
 
-  void _showSubscribedInfo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Вы подписаны. Уведомления о новых главах включены'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-      ),
-    );
+  Future<void> _unsubscribe() async {
+    final theme = context.read<ThemeProvider>();
+    try {
+      await _bookmarkService.unsubscribe(widget.token, widget.bookId);
+      if (mounted) {
+        setState(() => _isSubscribed = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Вы отписались от уведомлений'),
+            backgroundColor: theme.warningColor,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка отписки: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _removeBookmark() async {
@@ -770,14 +782,14 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
                 onPressed: widget.token.isEmpty
                     ? () => ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Войдите в аккаунт, чтобы подписываться на обновления')))
-                    : (_isBookmarked ? _showSubscribedInfo : _subscribe),
+                    : (_isSubscribed ? _unsubscribe : _subscribe),
                 icon: Icon(
-                  _isBookmarked
+                  _isSubscribed
                       ? Icons.notifications_active
                       : Icons.notifications_none,
                   size: 18,
                 ),
-                label: Text(_isBookmarked ? 'Подписан' : 'Подписаться'),
+                label: Text(_isSubscribed ? 'Подписан' : 'Подписаться'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: accentColor,
                   side: const BorderSide(color: accentColor),

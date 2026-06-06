@@ -164,7 +164,20 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
         widget.bookId,
         _currentChapter,
       );
-      
+
+      // Автоматически переводим в «Прочитано» при открытии последней главы.
+      // Только если книга в закладках; ошибки — тихо.
+      if (widget.token.isNotEmpty && chapters.isNotEmpty) {
+        final maxOrder = chapters
+            .map<int>((c) => (c['chapterOrder'] as num).toInt())
+            .reduce((a, b) => a > b ? a : b);
+        if (_currentChapter == maxOrder) {
+          _bookmarkService
+              .markAsCompleted(widget.token, widget.bookId)
+              .catchError((_) {});
+        }
+      }
+
       await _progressService.saveProgress(
         bookId: widget.bookId,
         chapterOrder: _currentChapter,
@@ -548,20 +561,89 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
                       ),
                     ),
                     const SizedBox(height: 28),
-                    Text(
-                      'Шрифт',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: theme.textPrimaryColor,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Шрифт',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: theme.textPrimaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.backgroundColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.borderColor.withOpacity(0.5),
+                                width: 1,
+                              ),
+                            ),
+                            child: DropdownButton<String>(
+                              value: fontProvider.fontFamily,
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              dropdownColor: theme.cardColor,
+                              icon: const Icon(Icons.keyboard_arrow_down,
+                                  color: accentColor, size: 20),
+                              // Кнопка показывает имя текущего шрифта тем же шрифтом
+                              selectedItemBuilder: (ctx) =>
+                                  FontProvider.allFonts.map((font) {
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    FontProvider.getFontDisplayName(font),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: font == FontProvider.defaultFont
+                                          ? null
+                                          : font,
+                                      fontSize: 14,
+                                      color: accentColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  fontProvider.setFontFamily(value);
+                                  setModalState(() {});
+                                  setState(() {});
+                                }
+                              },
+                              items: FontProvider.allFonts.map((font) {
+                                final isSelected =
+                                    fontProvider.fontFamily == font;
+                                return DropdownMenuItem<String>(
+                                  value: font,
+                                  child: Text(
+                                    FontProvider.getFontDisplayName(font),
+                                    style: TextStyle(
+                                      fontFamily:
+                                          font == FontProvider.defaultFont
+                                              ? null
+                                              : font,
+                                      fontSize: 14,
+                                      color: isSelected
+                                          ? accentColor
+                                          : theme.textPrimaryColor,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    _buildFontOption(theme, fontProvider, FontProvider.defaultFont, setModalState),
-                    _buildFontOption(theme, fontProvider, FontProvider.timesNewRoman, setModalState),
-                    _buildFontOption(theme, fontProvider, FontProvider.montserrat, setModalState),
-                    _buildFontOption(theme, fontProvider, FontProvider.cormorantGaramond, setModalState),
-                    _buildFontOption(theme, fontProvider, FontProvider.merriweather, setModalState),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -570,53 +652,6 @@ class _ReaderScreenState extends State<ReaderScreen> with TickerProviderStateMix
           },
         );
       },
-    );
-  }
-
-  Widget _buildFontOption(
-    ThemeProvider theme,
-    FontProvider fontProvider,
-    String font,
-    StateSetter setModalState,
-  ) {
-    final isSelected = fontProvider.fontFamily == font;
-
-    return InkWell(
-      onTap: () {
-        fontProvider.setFontFamily(font);
-        setModalState(() {});
-        setState(() {});
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? accentColor.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? accentColor : theme.borderColor.withOpacity(0.3),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                FontProvider.getFontDisplayName(font),
-                style: TextStyle(
-                  fontFamily: font == FontProvider.defaultFont ? null : font,
-                  fontSize: 16,
-                  color: isSelected ? accentColor : theme.textPrimaryColor,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: accentColor, size: 20),
-          ],
-        ),
-      ),
     );
   }
 

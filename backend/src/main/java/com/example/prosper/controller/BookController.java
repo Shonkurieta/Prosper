@@ -14,6 +14,7 @@ import com.example.prosper.dto.ChapterDTO;
 import com.example.prosper.dto.RecentChapterDTO;
 import com.example.prosper.model.Book;
 import com.example.prosper.model.Chapter;
+import com.example.prosper.repository.BookRatingRepository;
 import com.example.prosper.repository.BookRepository;
 import com.example.prosper.repository.ChapterRepository;
 
@@ -28,24 +29,68 @@ public class BookController {
     @Autowired
     private ChapterRepository chapterRepository;
 
+    @Autowired
+    private BookRatingRepository bookRatingRepository;
+
+    // Строит Map<bookId, avgRating> за один SQL-запрос
+    private Map<Long, Double> loadAvgRatings() {
+        return bookRatingRepository.getAverageRatingsForAllBooks()
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> Math.round((Double) row[1] * 10.0) / 10.0
+                ));
+    }
+
+    // Превращает Book в Map и добавляет поле averageRating
+    private Map<String, Object> toMap(Book book, Map<Long, Double> avgRatings) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",            book.getId());
+        m.put("title",         book.getTitle());
+        m.put("author",        book.getAuthor());
+        m.put("description",   book.getDescription());
+        m.put("coverUrl",      book.getCoverUrl());
+        m.put("genres",        book.getGenres());
+        m.put("averageRating", avgRatings.getOrDefault(book.getId(), 0.0));
+        return m;
+    }
+
     @GetMapping
-    public ResponseEntity<List<Book>> getAllBooks() {
-        return ResponseEntity.ok(bookRepository.findAll());
+    public ResponseEntity<List<Map<String, Object>>> getAllBooks(
+            @RequestParam(defaultValue = "rating") String sort) {
+        List<Book> books;
+        switch (sort) {
+            case "chapters":   books = bookRepository.findAllOrderByChapterCountDesc(); break;
+            case "title_asc":  books = bookRepository.findAllByOrderByTitleAsc();       break;
+            case "title_desc": books = bookRepository.findAllByOrderByTitleDesc();      break;
+            default:           books = bookRepository.findAllOrderByAvgRatingDesc();    break;
+        }
+        Map<Long, Double> avgRatings = loadAvgRatings();
+        return ResponseEntity.ok(books.stream()
+                .map(b -> toMap(b, avgRatings))
+                .collect(Collectors.toList()));
     }
 
     @GetMapping("/newest")
-    public ResponseEntity<List<Book>> getNewestBooks(
+    public ResponseEntity<List<Map<String, Object>>> getNewestBooks(
             @RequestParam(defaultValue = "6") int limit) {
-        return ResponseEntity.ok(bookRepository.findAllByOrderByIdDesc(PageRequest.of(0, limit)));
+        List<Book> books = bookRepository.findAllByOrderByIdDesc(PageRequest.of(0, limit));
+        Map<Long, Double> avgRatings = loadAvgRatings();
+        return ResponseEntity.ok(books.stream()
+                .map(b -> toMap(b, avgRatings))
+                .collect(Collectors.toList()));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Book>> searchBooks(
+    public ResponseEntity<List<Map<String, Object>>> searchBooks(
             @RequestParam(required = false, defaultValue = "") String query) {
-        if (query == null || query.trim().isEmpty()) {
-            return ResponseEntity.ok(bookRepository.findAll());
-        }
-        return ResponseEntity.ok(bookRepository.searchByTitleOrAuthor(query));
+        List<Book> books = (query == null || query.trim().isEmpty())
+                ? bookRepository.findAll()
+                : bookRepository.searchByTitleOrAuthor(query);
+        Map<Long, Double> avgRatings = loadAvgRatings();
+        return ResponseEntity.ok(books.stream()
+                .map(b -> toMap(b, avgRatings))
+                .collect(Collectors.toList()));
     }
 
     @GetMapping("/{id}")
@@ -77,15 +122,11 @@ public class BookController {
     @GetMapping("/chapters/recent")
     public ResponseEntity<List<RecentChapterDTO>> getRecentChapters(
             @RequestParam(defaultValue = "20") int limit) {
-        // JPQL query fetches only summary fields (no content), sorted by id desc
         List<RecentChapterDTO> all = chapterRepository.findAllSummariesOrderByIdDesc();
-
-        // Keep only the latest chapter per book (first occurrence wins — already sorted by id desc)
         Map<Long, RecentChapterDTO> latestByBook = new LinkedHashMap<>();
         for (RecentChapterDTO ch : all) {
             latestByBook.putIfAbsent(ch.getBookId(), ch);
         }
-
         List<RecentChapterDTO> result = latestByBook.values().stream()
                 .limit(limit)
                 .collect(Collectors.toList());

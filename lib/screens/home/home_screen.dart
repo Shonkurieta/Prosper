@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<dynamic> _allGenres = [];
   Set<int> _selectedGenreIds = {};
   bool _isLoading = true;
+  String _currentSort = 'rating';
 
   late AnimationController _headerAnimController;
   late AnimationController _contentAnimController;
@@ -53,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final books = await _bookService.getAllBooks(widget.token);
+      final books = await _bookService.getAllBooks(widget.token, sort: _currentSort);
       final bookmarks = widget.token.isNotEmpty
           ? await _bookmarkService.getBookmarks(widget.token)
           : <dynamic>[];
@@ -78,10 +79,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() {
         _allBooks = books;
         _allGenres = genres;
-        _filteredBooks = books;
         _bookmarksByBookId = bookmarksMap;
         _isLoading = false;
       });
+      _applyFilters(_searchController.text);
 
       _headerAnimController.forward();
       Future.delayed(const Duration(milliseconds: 200), () {
@@ -143,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             slivers: [
               _buildHeader(theme),
               _buildSearchBar(theme),
-              if (_allGenres.isNotEmpty) _buildGenreFilter(theme),
+              _buildFilterSortRow(theme),
               _isLoading
                   ? const SliverFillRemaining(
                       child: Center(
@@ -223,50 +224,101 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildGenreFilter(ThemeProvider theme) {
+  String _sortLabel(String sort) {
+    switch (sort) {
+      case 'chapters':   return 'По главам';
+      case 'title_asc':  return 'А → Я';
+      case 'title_desc': return 'Я → А';
+      default:           return 'По рейтингу';
+    }
+  }
+
+  Widget _buildFilterSortRow(ThemeProvider theme) {
+    final bool hasFilter = _selectedGenreIds.isNotEmpty;
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: GestureDetector(
-          onTap: () => _showGenreFilterModal(theme),
-          child: Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: accentColor.withOpacity(0.2)),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                const Icon(Icons.tune_rounded, color: accentColor, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _selectedGenreIds.isEmpty
-                        ? 'Выбрать жанры'
-                        : '${_selectedGenreIds.length} жанр${_selectedGenreIds.length == 1 ? '' : 'ов'} выбрано',
-                    style: TextStyle(
-                      color: _selectedGenreIds.isEmpty
-                          ? theme.textSecondaryColor.withOpacity(0.5)
-                          : accentColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+        child: Row(
+          children: [
+            // Кнопка Фильтр
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _showGenreFilterModal(theme),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: hasFilter
+                        ? accentColor.withOpacity(0.08)
+                        : theme.cardColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: hasFilter
+                          ? accentColor
+                          : theme.textSecondaryColor.withOpacity(0.2),
                     ),
                   ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.tune_rounded,
+                          color: hasFilter
+                              ? accentColor
+                              : theme.textSecondaryColor,
+                          size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        hasFilter
+                            ? '${_selectedGenreIds.length} жанр${_selectedGenreIds.length == 1 ? '' : 'ов'}'
+                            : 'Фильтр',
+                        style: TextStyle(
+                          color: hasFilter
+                              ? accentColor
+                              : theme.textSecondaryColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded,
-                    color: theme.textSecondaryColor, size: 16),
-                const SizedBox(width: 16),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            // Кнопка Сортировка (всегда акцентная)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _showSortModal(theme),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: accentColor),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.sort_rounded,
+                          color: accentColor, size: 18),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _sortLabel(_currentSort),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: accentColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -456,6 +508,88 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _showSortModal(ThemeProvider theme) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: theme.backgroundColor,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.textSecondaryColor.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Сортировка',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _sortOption(theme, context, 'rating',      'По популярности',       Icons.star_rounded),
+                  _sortOption(theme, context, 'chapters',    'По количеству глав',    Icons.format_list_numbered_rounded),
+                  _sortOption(theme, context, 'title_asc',   'По названию А → Я',     Icons.sort_by_alpha_rounded),
+                  _sortOption(theme, context, 'title_desc',  'По названию Я → А',     Icons.sort_by_alpha_rounded),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _sortOption(ThemeProvider theme, BuildContext sheetContext,
+      String key, String label, IconData icon) {
+    final bool selected = _currentSort == key;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      leading: Icon(icon,
+          color: selected ? accentColor : theme.textSecondaryColor, size: 22),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selected ? accentColor : theme.textPrimaryColor,
+          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 15,
+        ),
+      ),
+      trailing: selected
+          ? const Icon(Icons.check_rounded, color: accentColor)
+          : null,
+      onTap: () {
+        Navigator.pop(sheetContext);
+        if (_currentSort != key) {
+          setState(() => _currentSort = key);
+          _loadData();
+        }
+      },
+    );
+  }
+
   Widget _buildBookGrid(ThemeProvider theme) {
     if (_filteredBooks.isEmpty) {
       return SliverFillRemaining(
@@ -487,35 +621,116 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildBookCard(ThemeProvider theme, dynamic book) {
     final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
+    final int bookId = book['id'] as int;
+
+    // Рейтинг
+    final double rating = ((book['averageRating'] ?? 0) as num).toDouble();
+    final bool showRating = rating > 0;
+    final Color ratingColor = rating >= 8
+        ? const Color(0xFF4CAF50)   // зелёный
+        : rating >= 6
+            ? const Color(0xFFFFB300) // жёлтый
+            : const Color(0xFFE53935); // красный
+
+    // Закладка
+    final bookmark = _bookmarksByBookId[bookId];
+    final String? bookmarkStatus = bookmark?['status'] as String?;
+    final bool showBookmark = bookmarkStatus != null;
+    final String bookmarkLabel = showBookmark
+        ? _bookmarkShortLabel(bookmarkStatus!)
+        : '';
+
     return GestureDetector(
       onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
               builder: (_) => NovellDetailScreen(
-                  token: widget.token, bookId: book['id']))),
+                  token: widget.token, bookId: bookId))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3))
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: coverUrl.isNotEmpty
-                    ? Image.network(coverUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder())
-                    : _buildPlaceholder(),
-              ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // ── обложка (не-Positioned — задаёт размер Stack) ──────
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3))
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: coverUrl.isNotEmpty
+                        ? Image.network(coverUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (_, __, ___) => _buildPlaceholder())
+                        : _buildPlaceholder(),
+                  ),
+                ),
+
+                // ── бейдж рейтинга (выходит за левый край) ────────────
+                if (showRating)
+                  Positioned(
+                    top: 8,
+                    left: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: ratingColor,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(6),
+                          bottomRight: Radius.circular(6),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.25),
+                              blurRadius: 4,
+                              offset: const Offset(1, 1))
+                        ],
+                      ),
+                      child: Text(
+                        rating % 1 == 0
+                            ? rating.toInt().toString()
+                            : rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+
+                // ── бейдж закладки (правый верхний угол) ──────────────
+                if (showBookmark)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: accentColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        bookmarkLabel,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 6),
@@ -532,19 +747,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             book['author'] ?? 'Автор неизвестен',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style:
-                TextStyle(fontSize: 10, color: theme.textSecondaryColor),
+            style: TextStyle(fontSize: 10, color: theme.textSecondaryColor),
           ),
         ],
       ),
     );
   }
 
+  /// Короткий русский лейбл для бейджа закладки
+  String _bookmarkShortLabel(String status) {
+    switch (status) {
+      case 'READING':    return 'Читаю';
+      case 'COMPLETED':  return 'Прочитано';
+      case 'FAVORITE':   return 'Любимое';
+      case 'DROPPED':    return 'Брошено';
+      case 'PLANNED':    return 'В планах';
+      default:           return 'Читаю';
+    }
+  }
+
   Widget _buildPlaceholder() {
     return Container(
       color: accentColor.withOpacity(0.1),
-      child:
-          const Center(child: Icon(Icons.book_rounded, color: accentColor, size: 40)),
+      child: const Center(
+          child: Icon(Icons.book_rounded, color: accentColor, size: 40)),
     );
   }
 }

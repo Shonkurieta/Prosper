@@ -103,6 +103,50 @@ class BookmarkService {
     }
   }
 
+  /// Переводит книгу в статус «Прочитано» если она в закладках.
+  /// Вызывается Flutter-стороной при открытии последней главы.
+  /// Ошибки обрабатываются вызывающей стороной (обычно — тихо).
+  Future<void> markAsCompleted(String token, int bookId) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/bookmarks/$bookId/complete'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Ошибка обновления статуса: ${response.statusCode}');
+    }
+  }
+
+  // Подписаться на обновления новеллы
+  Future<void> subscribe(String token, int bookId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/bookmarks/$bookId/subscribe'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Ошибка подписки: ${response.statusCode}');
+    }
+  }
+
+  // Отписаться от обновлений новеллы
+  Future<void> unsubscribe(String token, int bookId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/bookmarks/$bookId/subscribe'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Ошибка отписки: ${response.statusCode}');
+    }
+  }
+
   // Удалить закладку
   Future<void> removeBookmark(String token, int bookId) async {
     final response = await http.delete(

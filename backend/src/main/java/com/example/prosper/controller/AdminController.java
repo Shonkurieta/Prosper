@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -18,6 +19,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +40,7 @@ import com.example.prosper.model.User;
 import com.example.prosper.model.Notification;
 import com.example.prosper.model.NotificationType;
 import com.example.prosper.model.UserBook;
+import com.example.prosper.repository.BookRatingRepository;
 import com.example.prosper.repository.BookRepository;
 import com.example.prosper.repository.ChapterRepository;
 import com.example.prosper.repository.GenreRepository;
@@ -67,6 +70,9 @@ public class AdminController {
 
     @Autowired
     private UserBookRepository userBookRepository;
+
+    @Autowired
+    private BookRatingRepository bookRatingRepository;
 
     @GetMapping("/books")
     public ResponseEntity<List<Book>> getAllBooks() {
@@ -174,11 +180,33 @@ public class AdminController {
     }
 
     @DeleteMapping("/books/{id}")
+    @Transactional
     public ResponseEntity<?> deleteBook(@PathVariable Long id) {
         return bookRepository.findById(id)
                 .map(book -> {
-                    chapterRepository.deleteAll(chapterRepository.findByBookIdOrderByChapterOrderAsc(id));
+                    // Собираем ID глав для удаления уведомлений (chapter_id → NO ACTION)
+                    List<Chapter> chapters = chapterRepository.findByBookIdOrderByChapterOrderAsc(id);
+                    List<Long> chapterIds = chapters.stream()
+                            .map(Chapter::getId)
+                            .collect(Collectors.toList());
+
+                    // Удаляем уведомления (book_id и chapter_id — NO ACTION FK)
+                    notificationRepository.deleteByBookId(id);
+                    if (!chapterIds.isEmpty()) {
+                        notificationRepository.deleteByChapterIdIn(chapterIds);
+                    }
+
+                    // Удаляем рейтинги (book_id — NO ACTION FK)
+                    bookRatingRepository.deleteByBookId(id);
+
+                    // Удаляем главы
+                    chapterRepository.deleteAll(chapters);
+
+                    // Удаляем файл обложки
                     deleteOldCover(book.getCoverUrl());
+
+                    // Удаляем книгу (остальные FK: CASCADE — user_books, reviews,
+                    // comments, related_books, book_genres — удалятся автоматически)
                     bookRepository.delete(book);
                     return ResponseEntity.ok(createSuccess("Новелла удалена"));
                 })
@@ -225,7 +253,7 @@ public class AdminController {
                     chapter.setContent(dto.getContent());
                     Chapter saved = chapterRepository.save(chapter);
 
-                    List<UserBook> bookmarkedUsers = userBookRepository.findByBookId(bookId);
+                    List<UserBook> bookmarkedUsers = userBookRepository.findByBookIdAndSubscribedTrue(bookId);
                     List<Notification> notifications = new ArrayList<>(bookmarkedUsers.size());
                     for (UserBook ub : bookmarkedUsers) {
                         Notification notification = new Notification();

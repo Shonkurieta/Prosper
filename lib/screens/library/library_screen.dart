@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:prosper/services/book_service.dart';
 import 'package:prosper/services/reading_progress_service.dart';
 import 'package:prosper/services/review_service.dart';
+import 'package:prosper/services/recommendation_service.dart';
 import 'package:prosper/screens/novell/novell_detail_screen.dart';
 import 'package:prosper/screens/reader/reader_screen.dart';
 import 'package:prosper/screens/all_reviews_screen.dart';
@@ -24,12 +25,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final BookService _bookService = BookService();
   final ReadingProgressService _progressService = ReadingProgressService();
   final ReviewService _reviewService = ReviewService();
+  final RecommendationService _recommendationService = RecommendationService();
   final TextEditingController _searchController = TextEditingController();
 
   List<dynamic> _searchResults = [];
   List<dynamic> _recentChapters = [];
   List<dynamic> _newestBooks = [];
   List<dynamic> _recentReviews = [];
+  List<dynamic> _recommendations = [];
+  int _recommendationLevel = 0;
   Map<String, dynamic>? _lastReadData;
   bool _isLoading = true;
   bool _isSearching = false;
@@ -67,33 +71,52 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _newestBooks = futures[1] as List<dynamic>;
       _recentReviews = futures[2] as List<dynamic>;
 
-      // Continue reading (only for authenticated)
+      // Auth-only blocks load in parallel
       if (!_isGuest) {
-        try {
-          final progressList = await _progressService.getRecentProgress(limit: 5);
-          if (progressList.isNotEmpty) {
-            final p = progressList.first;
-            final bookId = p['bookId'] as int;
-            // Launch both requests in parallel
-            final bookFuture = _bookService.getBookById(widget.token, bookId);
-            final chaptersFuture = _bookService.getBookChapters(widget.token, bookId);
-            final book = await bookFuture;
-            final chapters = await chaptersFuture;
-            _lastReadData = {
-              'book': book,
-              'chapterOrder': p['chapterOrder'],
-              'totalChapters': chapters.length,
-              'percent': chapters.isNotEmpty
-                  ? ((p['chapterOrder'] / chapters.length) * 100).toInt()
-                  : 0,
-            };
-          }
-        } catch (_) {}
+        await Future.wait([
+          _loadContinueReading(),
+          _loadRecommendations(),
+        ]);
       }
 
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadContinueReading() async {
+    try {
+      final progressList = await _progressService.getRecentProgress(limit: 5);
+      if (progressList.isNotEmpty) {
+        final p = progressList.first;
+        final bookId = p['bookId'] as int;
+        final results = await Future.wait([
+          _bookService.getBookById(widget.token, bookId),
+          _bookService.getBookChapters(widget.token, bookId),
+        ]);
+        final book = results[0];
+        final chapters = results[1] as List;
+        _lastReadData = {
+          'book': book,
+          'chapterOrder': p['chapterOrder'],
+          'totalChapters': chapters.length,
+          'percent': chapters.isNotEmpty
+              ? ((p['chapterOrder'] / chapters.length) * 100).toInt()
+              : 0,
+        };
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadRecommendations() async {
+    try {
+      final data = await _recommendationService.getRecommendations(widget.token);
+      _recommendations = data['books'] as List<dynamic>? ?? [];
+      _recommendationLevel = data['level'] as int? ?? 0;
+    } catch (_) {
+      _recommendations = [];
+      _recommendationLevel = 0;
     }
   }
 
@@ -154,7 +177,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           const SizedBox(height: 24),
                         ],
 
-                        // 3. Новинки (3 карточки)
+                        // 3. Рекомендации (только для авторизованных, если есть результаты)
+                        if (!_isGuest && _recommendations.isNotEmpty) ...[
+                          _buildSectionHeader(theme, _recommendationTitle()),
+                          const SizedBox(height: 12),
+                          _buildRecommendations(theme),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // 4. Новинки (3 карточки)
                         if (_newestBooks.isNotEmpty) ...[
                           _buildSectionHeader(theme, 'Новинки',
                               onAllTap: () => Navigator.push(context,
@@ -598,6 +629,84 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (diff.inDays < 1) return '${diff.inHours}ч';
     if (diff.inDays < 7) return '${diff.inDays}д';
     return DateFormat('dd.MM').format(date);
+  }
+
+  // ─── Рекомендации ──────────────────────────────────────────────────────────
+  String _recommendationTitle() {
+    switch (_recommendationLevel) {
+      case 2:
+        return 'Похожее на то что читаешь';
+      case 3:
+        return 'Может понравиться';
+      case 4:
+        return 'Рекомендуем для вас';
+      default:
+        return 'Рекомендации';
+    }
+  }
+
+  Widget _buildRecommendations(ThemeProvider theme) {
+    return SizedBox(
+      height: 160,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _recommendations.length,
+        itemBuilder: (context, index) => _buildRecommendedBookCard(theme, _recommendations[index]),
+      ),
+    );
+  }
+
+  Widget _buildRecommendedBookCard(ThemeProvider theme, dynamic book) {
+    final coverUrl = ApiConstants.getCoverUrl(book['coverUrl'] ?? '');
+    final bookTitle = book['title'] as String? ?? '';
+    final bookId = book['id'] as int?;
+
+    return GestureDetector(
+      onTap: () {
+        if (bookId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => NovellDetailScreen(token: widget.token, bookId: bookId),
+            ),
+          );
+        }
+      },
+      child: Container(
+        width: 100,
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 100,
+                  height: double.infinity,
+                  child: Image.network(
+                    coverUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              bookTitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                color: theme.textPrimaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

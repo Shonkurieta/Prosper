@@ -19,9 +19,23 @@ public interface ChapterRepository extends JpaRepository<Chapter, Long> {
     @Query("SELECT new com.example.prosper.dto.RecentChapterDTO(c.id, c.chapterOrder, c.title, c.book.id, c.book.title, c.book.coverUrl) FROM Chapter c ORDER BY c.id DESC")
     List<RecentChapterDTO> findAllSummariesOrderByIdDesc();
 
-    @Query(value = "SELECT * FROM chapters WHERE book_id = :bookId AND search_vector @@ to_tsquery('russian', :query) ORDER BY ts_rank(search_vector, to_tsquery('russian', :query)) DESC LIMIT 5", nativeQuery = true)
+    @Query(value = "SELECT * FROM chapters WHERE book_id = :bookId AND search_vector @@ to_tsquery('russian', :query) ORDER BY ts_rank(search_vector, to_tsquery('russian', :query)) DESC LIMIT 8", nativeQuery = true)
     List<Chapter> searchChaptersByFts(@Param("bookId") Long bookId, @Param("query") String query);
 
     @Query(value = "SELECT * FROM chapters WHERE book_id = :bookId AND title ~ CONCAT('Глава ', :num, ' ') LIMIT 1", nativeQuery = true)
-    Optional<Chapter> findByBookIdAndChapterTitleNumber(@Param("bookId") Long bookId, @Param("num") int num);  
+    Optional<Chapter> findByBookIdAndChapterTitleNumber(@Param("bookId") Long bookId, @Param("num") int num);
+
+    @Query("SELECT MAX(c.chapterOrder) FROM Chapter c WHERE c.book.id = :bookId")
+    Integer findMaxChapterOrderByBookId(@Param("bookId") Long bookId);
+
+    @Query(value = "SELECT * FROM chapters WHERE book_id IN (:bookIds) " +
+        "AND search_vector @@ to_tsquery('russian', :query) " +
+        "ORDER BY ts_rank(search_vector, to_tsquery('russian', :query)) DESC LIMIT 10",
+        nativeQuery = true)
+    List<Chapter> searchChaptersByFtsForBooks(@Param("bookIds") List<Long> bookIds, @Param("query") String query);
+
+    @Query(value = "SELECT * FROM chapters WHERE book_id IN (:bookIds) " +
+        "AND (content ILIKE :pattern OR title ILIKE :pattern) LIMIT 30",
+        nativeQuery = true)
+    List<Chapter> searchChaptersByIlikeForBooks(@Param("bookIds") List<Long> bookIds, @Param("pattern") String pattern);
 }

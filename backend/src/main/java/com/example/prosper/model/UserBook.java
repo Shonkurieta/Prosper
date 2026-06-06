@@ -35,6 +35,9 @@ public class UserBook {
     @Column(nullable = false)
     private boolean bookmarked = false;
 
+    @Column(name = "subscribed", nullable = false, columnDefinition = "boolean NOT NULL DEFAULT false")
+    private boolean subscribed = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private BookmarkStatus status = BookmarkStatus.READING;
@@ -80,6 +83,14 @@ public class UserBook {
 
     public void setBookmarked(boolean bookmarked) {
         this.bookmarked = bookmarked;
+    }
+
+    public boolean isSubscribed() {
+        return subscribed;
+    }
+
+    public void setSubscribed(boolean subscribed) {
+        this.subscribed = subscribed;
     }
 
     public BookmarkStatus getStatus() {
