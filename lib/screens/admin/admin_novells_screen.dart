@@ -193,8 +193,8 @@ class _AdminNovellScreenState extends State<AdminNovellScreen> with SingleTicker
                 : GridView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.65,
+                      crossAxisCount: 3,
+                      childAspectRatio: 0.50,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                     ),

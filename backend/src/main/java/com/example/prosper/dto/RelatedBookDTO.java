@@ -23,6 +23,24 @@ public class RelatedBookDTO {
         this.relationType = relatedBook.getRelationType().toString();
     }
 
+    public RelatedBookDTO(RelatedBook relatedBook, boolean reversed) {
+        this.id = relatedBook.getId();
+        if (reversed) {
+            this.bookId = relatedBook.getRelatedBook().getId();
+            this.relatedBookId = relatedBook.getBook().getId();
+            this.relatedBookTitle = relatedBook.getBook().getTitle();
+            this.relatedBookAuthor = relatedBook.getBook().getAuthor();
+            this.relatedBookCoverUrl = relatedBook.getBook().getCoverUrl();
+        } else {
+            this.bookId = relatedBook.getBook().getId();
+            this.relatedBookId = relatedBook.getRelatedBook().getId();
+            this.relatedBookTitle = relatedBook.getRelatedBook().getTitle();
+            this.relatedBookAuthor = relatedBook.getRelatedBook().getAuthor();
+            this.relatedBookCoverUrl = relatedBook.getRelatedBook().getCoverUrl();
+        }
+        this.relationType = relatedBook.getRelationType().toString();
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

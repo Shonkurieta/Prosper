@@ -1,7 +1,9 @@
 package com.example.prosper.controller;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -36,10 +38,24 @@ public class RelatedBookController {
 
     @GetMapping("/{bookId}")
     public ResponseEntity<List<RelatedBookDTO>> getRelatedBooks(@PathVariable Long bookId) {
-        List<RelatedBook> relatedBooks = relatedBookRepository.findByBookId(bookId);
-        List<RelatedBookDTO> dtos = relatedBooks.stream()
-                .map(RelatedBookDTO::new)
-                .collect(Collectors.toList());
+        // Deduplicate by the displayed related book's ID, not by relation row ID.
+        // Without this, rows (A→B) and (B→A) both produce a card for B when viewing A.
+        Set<Long> seenRelatedBookIds = new HashSet<>();
+        List<RelatedBookDTO> dtos = new ArrayList<>();
+
+        for (RelatedBook rb : relatedBookRepository.findByBookId(bookId)) {
+            Long displayedId = rb.getRelatedBook().getId();
+            if (seenRelatedBookIds.add(displayedId)) {
+                dtos.add(new RelatedBookDTO(rb, false));
+            }
+        }
+        for (RelatedBook rb : relatedBookRepository.findByRelatedBookId(bookId)) {
+            Long displayedId = rb.getBook().getId();
+            if (seenRelatedBookIds.add(displayedId)) {
+                dtos.add(new RelatedBookDTO(rb, true));
+            }
+        }
+
         return ResponseEntity.ok(dtos);
     }
 
@@ -63,6 +79,21 @@ public class RelatedBookController {
         }
     }
 
+    // Delete by relation row ID — works regardless of which direction the relation was stored.
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRelatedBookById(@PathVariable Long id) {
+        try {
+            if (!relatedBookRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+            relatedBookRepository.deleteById(id);
+            return ResponseEntity.ok("Related book deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    // Legacy endpoint kept for backward compatibility.
     @DeleteMapping("/{bookId}/{relatedBookId}")
     public ResponseEntity<?> deleteRelatedBook(
             @PathVariable Long bookId,

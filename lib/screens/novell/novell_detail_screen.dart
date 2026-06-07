@@ -971,82 +971,116 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
   }
 
   Widget _buildRelatedBooksSection(ThemeProvider theme) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _relatedBooks.map((related) {
+    return SizedBox(
+      height: 210,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _relatedBooks.length,
+        itemBuilder: (_, index) {
+          final related = _relatedBooks[index];
           final String relationType = related['relationType'] ?? 'SEQUEL';
+
           final String typeLabel = relationType == 'SEQUEL'
-              ? 'Продолжение'
+              ? 'Сиквел'
               : relationType == 'PREQUEL'
-                  ? 'Предыдущая'
-                  : 'Побочная история';
+                  ? 'Приквел'
+                  : 'Побочная';
+
+          final Color badgeColor = relationType == 'SEQUEL'
+              ? accentColor
+              : relationType == 'PREQUEL'
+                  ? const Color(0xFF5B8FD4)
+                  : const Color(0xFF8F6BC4);
 
           return Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: EdgeInsets.only(
+              left: index == 0 ? 0 : 10,
+              right: index == _relatedBooks.length - 1 ? 0 : 0,
+            ),
             child: GestureDetector(
               onTap: () {
+                final relatedId = related['relatedBookId'];
+                if (relatedId == null) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => NovellDetailScreen(
                       token: widget.token,
-                      bookId: related['relatedBookId'],
+                      bookId: relatedId as int,
                     ),
                   ),
                 );
               },
-              child: Container(
-                width: 140,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: theme.cardColor,
-                  border: Border.all(
-                    color: accentColor.withValues(alpha: 0.2),
-                  ),
-                ),
+              child: SizedBox(
+                width: 110,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                      child: Image.network(
-                        ApiConstants.getCoverUrl(
-                            related['relatedBookCoverUrl'] ?? ''),
-                        height: 100,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _buildPlaceholder(theme),
-                      ),
+                    // Cover + badge overlay
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            ApiConstants.getCoverUrl(
+                                related['relatedBookCoverUrl'] ?? ''),
+                            height: 158,
+                            width: 110,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 158,
+                              width: 110,
+                              decoration: BoxDecoration(
+                                color: theme.cardColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.book_outlined,
+                                  color: theme.textSecondaryColor, size: 32),
+                            ),
+                          ),
+                        ),
+                        // Type badge
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: badgeColor,
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              typeLabel,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            related['relatedBookTitle'] ?? 'Без названия',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: theme.textPrimaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            typeLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: theme.textSecondaryColor,
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 6),
+                    // Title
+                    Text(
+                      related['relatedBookTitle'] ?? 'Без названия',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textPrimaryColor,
+                        height: 1.3,
                       ),
                     ),
                   ],
@@ -1054,7 +1088,7 @@ class _NovellDetailScreenState extends State<NovellDetailScreen>
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }

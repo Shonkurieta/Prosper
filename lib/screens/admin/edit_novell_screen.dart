@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/admin_service.dart';
+import 'package:prosper/services/related_book_service.dart';
 import 'package:provider/provider.dart';
 import 'package:prosper/providers/theme_provider.dart';
 import 'package:prosper/models/book.dart';
@@ -34,6 +36,7 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
   List<String> _selectedGenres = [];
   List<dynamic> _allBooks = [];
   List<Map<String, dynamic>> _selectedRelatedBooks = [];
+  List<Map<String, dynamic>> _originalRelatedBooks = [];
 
   static const Color accentColor = Color(0xFFD46A4F);
 
@@ -58,6 +61,7 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
     _animController.forward();
     _fetchGenres();
     _fetchAllBooks();
+    _fetchExistingRelatedBooks();
   }
 
   @override
@@ -96,6 +100,26 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
     } catch (e) {
       // Silently fail
     }
+  }
+
+  Future<void> _fetchExistingRelatedBooks() async {
+    try {
+      final svc = RelatedBookService();
+      final existing = await svc.getRelatedBooks(widget.token, widget.book.id);
+      if (!mounted) return;
+      final mapped = existing.map<Map<String, dynamic>>((r) => {
+        'id': r['relatedBookId'],           // ID of the related novel (for display / re-adding)
+        'relationId': r['id'],              // ID of the relation row (for safe deletion)
+        'title': r['relatedBookTitle'],
+        'author': r['relatedBookAuthor'],
+        'coverUrl': r['relatedBookCoverUrl'],
+        'relationType': r['relationType'] ?? 'SEQUEL',
+      }).toList();
+      setState(() {
+        _selectedRelatedBooks = mapped;
+        _originalRelatedBooks = List.from(mapped);
+      });
+    } catch (_) {}
   }
 
   void _showGenrePicker() {
@@ -180,6 +204,34 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
         coverFile: _cover,
         genres: _selectedGenres,
       );
+
+      final relatedSvc = RelatedBookService();
+      debugPrint('[EditScreen] _submit: originals=${_originalRelatedBooks.length}, selected=${_selectedRelatedBooks.length}');
+      for (final original in _originalRelatedBooks) {
+        try {
+          final relationId = original['relationId'] as int?;
+          if (relationId != null) {
+            debugPrint('[EditScreen] deleting relation row id=$relationId');
+            await relatedSvc.deleteRelatedBookById(widget.token, relationId);
+          }
+        } catch (e) {
+          debugPrint('[EditScreen] delete error: $e');
+        }
+      }
+      for (final selected in _selectedRelatedBooks) {
+        try {
+          debugPrint('[EditScreen] adding relation: bookId=${widget.book.id}, relatedId=${selected['id']}, type=${selected['relationType']}');
+          await relatedSvc.addRelatedBook(
+            widget.token,
+            widget.book.id,
+            selected['id'] as int,
+            selected['relationType'] as String? ?? 'SEQUEL',
+          );
+        } catch (e) {
+          debugPrint('[EditScreen] add error: $e');
+        }
+      }
+
       if (!mounted) return;
 
       final theme = context.read<ThemeProvider>();
@@ -489,152 +541,323 @@ class _EditNovellScreenState extends State<EditNovellScreen> with SingleTickerPr
     );
   }
 
+  Future<void> _pickRelationType(
+    BuildContext ctx,
+    Map<String, dynamic> book,
+    StateSetter setDialogState,
+  ) async {
+    String selectedType = 'SEQUEL';
+    final confirmed = await showDialog<String>(
+      context: ctx,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx2, setAlertState) => AlertDialog(
+          backgroundColor: Theme.of(ctx).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Тип связи',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(ctx).textTheme.bodyLarge?.color,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final entry in const [
+                ('SEQUEL', 'Сиквел'),
+                ('PREQUEL', 'Приквел'),
+                ('SIDE_STORY', 'Побочная история'),
+              ])
+                RadioListTile<String>(
+                  value: entry.$1,
+                  groupValue: selectedType,
+                  onChanged: (v) => setAlertState(() => selectedType = v!),
+                  title: Text(entry.$2),
+                  activeColor: accentColor,
+                  contentPadding: EdgeInsets.zero,
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx2),
+              child: Text('Отмена', style: TextStyle(color: accentColor)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(dialogCtx2, selectedType),
+              child: const Text('Добавить', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != null) {
+      setDialogState(() {
+        _selectedRelatedBooks.add({
+          'id': book['id'],
+          'title': book['title'],
+          'author': book['author'],
+          'coverUrl': book['coverUrl'],
+          'relationType': confirmed,
+        });
+      });
+      setState(() {});
+    }
+  }
+
   void _showRelatedBooksModal(ThemeProvider theme) {
+    String searchQuery = '';
+    final searchController = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          decoration: BoxDecoration(
-            color: theme.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Связанные новеллы',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textPrimaryColor,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Icon(Icons.close, color: theme.textSecondaryColor),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _allBooks.length,
-                  itemBuilder: (context, index) {
-                    final book = _allBooks[index];
-                    final bookId = book['id'];
-                    final isSelected = _selectedRelatedBooks.any((b) => b['id'] == bookId);
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final filtered = searchQuery.isEmpty
+              ? _allBooks
+              : _allBooks
+                  .where((b) => (b['title'] ?? '')
+                      .toString()
+                      .toLowerCase()
+                      .contains(searchQuery.toLowerCase()))
+                  .toList();
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: GestureDetector(
-                        onTap: () {
-                          setDialogState(() {
-                            if (isSelected) {
-                              _selectedRelatedBooks.removeWhere((b) => b['id'] == bookId);
-                            } else {
-                              _selectedRelatedBooks.add(book);
-                            }
-                          });
-                          setState(() {});
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isSelected ? accentColor.withOpacity(0.1) : theme.cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? accentColor : theme.textSecondaryColor.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color: theme.backgroundColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: book['coverUrl'] != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(book['coverUrl'], fit: BoxFit.cover),
-                                      )
-                                    : Center(
-                                        child: Icon(Icons.book_outlined, color: theme.textSecondaryColor),
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      book['title'] ?? 'Новелла',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.textPrimaryColor,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      book['author'] ?? 'Неизвестный автор',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: theme.textSecondaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (isSelected)
-                                Icon(Icons.check_circle, color: accentColor, size: 24),
-                            ],
-                          ),
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.82,
+            decoration: BoxDecoration(
+              color: theme.backgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Связанные новеллы',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimaryColor,
                         ),
                       ),
-                    );
-                  },
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Icon(Icons.close, color: theme.textSecondaryColor),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Готово',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (v) => setDialogState(() => searchQuery = v),
+                    style: TextStyle(color: theme.textPrimaryColor, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Поиск по названию...',
+                      hintStyle: TextStyle(color: theme.textSecondaryColor.withOpacity(0.5)),
+                      prefixIcon: Icon(Icons.search, color: theme.textSecondaryColor, size: 20),
+                      suffixIcon: searchQuery.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () {
+                                searchController.clear();
+                                setDialogState(() => searchQuery = '');
+                              },
+                              child: Icon(Icons.clear, color: theme.textSecondaryColor, size: 18),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: theme.cardColor,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Ничего не найдено',
+                            style: TextStyle(color: theme.textSecondaryColor),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: filtered.length,
+                          itemBuilder: (_, index) {
+                            final book = filtered[index];
+                            final bookId = book['id'];
+                            final selectedEntry = _selectedRelatedBooks
+                                .where((b) => b['id'] == bookId)
+                                .firstOrNull;
+                            final isSelected = selectedEntry != null;
+                            final typeLabel = isSelected
+                                ? _relationLabel(selectedEntry['relationType'] ?? 'SEQUEL')
+                                : null;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (isSelected) {
+                                    setDialogState(() {
+                                      _selectedRelatedBooks
+                                          .removeWhere((b) => b['id'] == bookId);
+                                    });
+                                    setState(() {});
+                                  } else {
+                                    _pickRelationType(ctx, book, setDialogState);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? accentColor.withOpacity(0.1)
+                                        : theme.cardColor,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? accentColor
+                                          : theme.textSecondaryColor.withOpacity(0.2),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 50,
+                                        height: 70,
+                                        decoration: BoxDecoration(
+                                          color: theme.backgroundColor,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: book['coverUrl'] != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: Image.network(
+                                                    ApiConstants.getCoverUrl(
+                                                        book['coverUrl'] ?? ''),
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __, ___) => Center(
+                                                      child: Icon(Icons.book_outlined,
+                                                          color: theme.textSecondaryColor),
+                                                    ),
+                                                  ),
+                                              )
+                                            : Center(
+                                                child: Icon(Icons.book_outlined,
+                                                    color: theme.textSecondaryColor),
+                                              ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              book['title'] ?? 'Новелла',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.textPrimaryColor,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              book['author'] ?? 'Неизвестный автор',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: theme.textSecondaryColor,
+                                              ),
+                                            ),
+                                            if (typeLabel != null) ...[
+                                              const SizedBox(height: 4),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: accentColor.withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  typeLabel,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: accentColor,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        const Icon(Icons.check_circle,
+                                            color: accentColor, size: 24),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        'Готово',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
+  }
+
+  String _relationLabel(String type) {
+    switch (type) {
+      case 'SEQUEL':
+        return 'Сиквел';
+      case 'PREQUEL':
+        return 'Приквел';
+      case 'SIDE_STORY':
+        return 'Побочная история';
+      default:
+        return type;
+    }
   }
 
   Widget _buildSubmitButton(ThemeProvider theme) {

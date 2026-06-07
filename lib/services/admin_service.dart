@@ -48,7 +48,7 @@ class AdminService {
     }
   }
 
-  Future<void> addBookMultipart({
+  Future<int> addBookMultipart({
     required String title,
     required String author,
     String? description,
@@ -88,6 +88,8 @@ class AdminService {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Ошибка добавления новеллы: ${response.statusCode}');
     }
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    return (body['id'] as num).toInt();
   }
 
   Future<void> updateBookMultipart({
